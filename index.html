@@ -881,6 +881,23 @@
                         <i class="fa-solid fa-eraser"></i> Svuota Bozza
                     </button>
                 </div>
+
+                <div style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:flex-end; margin-bottom: 1rem; padding: 0.8rem; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 10px;">
+                    <div style="flex: 1; min-width: 180px;">
+                        <label style="display:block; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.3rem;">LOCATION COMUNE (sovrascrive quelle delle righe)</label>
+                        <select id="selectLocationComune" class="filter-select" style="width: 100%;">
+                            <option value="">— nessuna, usa quella di ogni riga —</option>
+                        </select>
+                    </div>
+                    <div style="min-width: 160px;">
+                        <label style="display:block; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.3rem;">NUOVA LOCATION</label>
+                        <input type="text" id="inputNuovaLocationComune" placeholder="es. SCATOLA 4" onkeydown="if(event.key==='Enter'){event.preventDefault(); aggiungiNuovaLocationComune();}">
+                    </div>
+                    <button type="button" class="btn-secondary" onclick="aggiungiNuovaLocationComune()" style="padding: 0.6rem 0.9rem;">
+                        <i class="fa-solid fa-plus"></i> Aggiungi
+                    </button>
+                </div>
+
                 <table>
                     <thead>
                         <tr>
@@ -1240,6 +1257,54 @@
             btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Avvia Controllo Prezzi';
         }
 
+        // ── LOCATION COMUNE (sezione Inserimento) ────────────────────────────────
+        // Stessa tabella 'location' già usata per le checkbox della sezione
+        // Prezzi — qui in più permettiamo di aggiungerne una nuova al volo,
+        // così non serve aprire l'estensione solo per registrare una location
+        // che ancora non esiste.
+        let _locationComuneCaricata = false;
+
+        async function caricaSelectLocationComune() {
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            const select = document.getElementById('selectLocationComune');
+            if (!userId || !select) return;
+
+            const { data, error } = await supabaseClient.from('location').select('nome').eq('owner_id', userId).order('nome');
+            if (error) { console.error('Errore caricamento location:', error.message); return; }
+
+            const valorePrecedente = select.value;
+            select.innerHTML = '<option value="">— nessuna, usa quella di ogni riga —</option>';
+            (data || []).forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.nome;
+                opt.textContent = r.nome;
+                select.appendChild(opt);
+            });
+            if (valorePrecedente) select.value = valorePrecedente;
+            _locationComuneCaricata = true;
+        }
+
+        async function aggiungiNuovaLocationComune() {
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) { await assicuraLoginSupabase(); return; }
+
+            const input = document.getElementById('inputNuovaLocationComune');
+            const nome = input.value.trim();
+            if (!nome) return;
+
+            const { data: esistenti } = await supabaseClient.from('location').select('nome').eq('owner_id', userId).eq('nome', nome);
+            if (!esistenti || esistenti.length === 0) {
+                const { error } = await supabaseClient.from('location').insert({ owner_id: userId, nome });
+                if (error) { alert('❌ Errore nell\'aggiungere la location: ' + error.message); return; }
+            }
+
+            input.value = '';
+            await caricaSelectLocationComune();
+            document.getElementById('selectLocationComune').value = nome;
+        }
+
         // ── INSERIMENTO CARTE — collegato alla coda persistente coda_carte ───────
         // Ogni riga della tabella diventa una riga in 'coda_carte' (espandendo
         // la quantità in righe separate, dato che il motore dell'estensione
@@ -1295,7 +1360,11 @@
                 return;
             }
 
-            const righeDb = righeValide.flatMap(r => _rigaEntryToRigheDb(r, userId));
+            const locationComune = document.getElementById('selectLocationComune')?.value.trim() || '';
+            const righeDb = righeValide.flatMap(r => _rigaEntryToRigheDb(
+                locationComune ? { ...r, loc: locationComune } : r,
+                userId
+            ));
 
             const btn = document.getElementById('btnSalvaCarte');
             const originalHtml = btn.innerHTML;
@@ -1311,6 +1380,18 @@
                 alert('❌ Errore nell\'invio delle carte: ' + error.message);
                 return;
             }
+
+            // "Campanello": un ordine leggero (nessun dato delle carte, che
+            // vivono già in 'coda_carte' qui sopra) che dice all'estensione
+            // "è arrivato QUALCOSA DI NUOVO, apri una tab se non ce n'è già
+            // una" — l'estensione lo consuma e lo segna subito completato.
+            // Senza questo, un secondo meccanismo basato sul semplice
+            // conteggio di righe 'pending' riapriva la tab anche subito dopo
+            // averla chiusa volontariamente (le righe non finite tornano
+            // 'pending' alla chiusura, vedi rilascio immediato lato estensione).
+            supabaseClient.from('ordini').insert({ tipo: 'aggiungi_carte', creato_da: userId }).then(({ error: errOrdine }) => {
+                if (errOrdine) console.error('Impossibile avvisare l\'estensione:', errOrdine.message);
+            });
 
             clearEntryDraft();
             alert(`✅ ${righeDb.length} cart${righeDb.length === 1 ? 'a inviata' : 'e inviate'} nella coda persistente!\n\nUn dispositivo con l'estensione aperta le cercherà a breve, anche se non è online in questo momento — resteranno in attesa finché qualcuno non le processa.`);
@@ -1460,7 +1541,7 @@
             const notesVal = data ? (data.notes || '') : '';
 
             tr.innerHTML = `
-                <td><input type="text" placeholder="Nome/Codice" value="${escapeHtml(nameVal)}" oninput="handleEntryInput(this)"></td>
+                <td><input type="text" placeholder="Nome/Codice" value="${escapeHtml(nameVal)}" oninput="handleEntryInput(this)" onkeydown="handleEntryCodiceKeydown(event, this)"></td>
                 <td>
                     <select onchange="handleEntryInput(this)">
                         <option value="IT" ${langVal === 'IT' ? 'selected' : ''}>IT</option>
@@ -1524,6 +1605,22 @@
                 addNewEntryRow();
             }
             saveEntryDraft();
+        }
+
+        // Invio nel campo Nome/Codice sposta subito il focus sulla riga
+        // successiva (quella nuova già aggiunta da handleEntryInput mentre
+        // si digitava, oppure quella già esistente sotto) — comodo per
+        // inserire tante carte una via l'altra senza staccare le mani dalla
+        // tastiera.
+        function handleEntryCodiceKeydown(e, input) {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            const tr = input.closest('tr');
+            const nextRow = tr.nextElementSibling;
+            if (nextRow) {
+                const nextInput = nextRow.querySelector('input[type="text"]');
+                if (nextInput) nextInput.focus();
+            }
         }
 
         function removeEntryRow(btn) {
@@ -1657,6 +1754,7 @@
                 document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
                 document.getElementById(tabId).classList.add('active');
                 if (tabId === 'prezzi' && !_locationCaricate) caricaListaLocationCheckbox();
+                if (tabId === 'inserimento' && !_locationComuneCaricata) caricaSelectLocationComune();
             } else {
                 filterTable();
             }
