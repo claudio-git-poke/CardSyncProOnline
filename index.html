@@ -901,7 +901,7 @@
                     <span class="autosave-status" id="autosaveLabel">
                         <i class="fa-solid fa-floppy-disk"></i> Salva automatico attivo
                     </span>
-                    <button class="btn-main" onclick="saveDataMock()"><i class="fa-solid fa-paper-plane"></i> Salva Carte</button>
+                    <button class="btn-main" id="btnSalvaCarte" onclick="salvaCarteReali()"><i class="fa-solid fa-paper-plane"></i> Salva Carte</button>
                 </div>
             </div>
         </div>
@@ -1176,6 +1176,82 @@
         function _resetBottonePrezzi(btn, sub) {
             btn.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Avvia Controllo Prezzi';
+        }
+
+        // ── INSERIMENTO CARTE — collegato alla coda persistente coda_carte ───────
+        // Ogni riga della tabella diventa una riga in 'coda_carte' (espandendo
+        // la quantità in righe separate, dato che il motore dell'estensione
+        // processa una carta alla volta) — niente più testo/txt intermedio:
+        // l'estensione legge direttamente questa tabella e scrive lì l'esito,
+        // così la coda sopravvive a spegnimenti/riavvii di qualunque dispositivo.
+        function _rigaEntryToRigheDb(row, userId) {
+            const nome = (row.name || '').trim();
+            if (!nome) return [];
+            const qty = Math.max(1, parseInt(row.qty, 10) || 1);
+            const rigaBase = {
+                owner_id: userId,
+                nome,
+                lingua: row.lang || 'IT',
+                condizione: row.cond || 'NM',
+                reverse: !!row.rev,
+                first_ed: !!row.first,
+                nota: (row.notes || '').trim() || null,
+                location: (row.loc && row.loc !== '?') ? row.loc : null,
+            };
+            return Array(qty).fill(null).map(() => ({ ...rigaBase }));
+        }
+
+        async function salvaCarteReali() {
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) {
+                await assicuraLoginSupabase();
+                return;
+            }
+
+            const righe = document.querySelectorAll('#entryTableBody tr');
+            const righeValide = [];
+            righe.forEach(tr => {
+                const inputs = tr.querySelectorAll('input, select');
+                if (inputs.length < 7) return;
+                const name = tr.querySelector('td:nth-child(1) input').value.trim();
+                if (!name) return;
+                righeValide.push({
+                    name,
+                    lang: tr.querySelector('td:nth-child(2) select').value,
+                    cond: tr.querySelector('td:nth-child(3) select').value,
+                    rev: tr.querySelector('td:nth-child(4) input').checked,
+                    first: tr.querySelector('td:nth-child(5) input').checked,
+                    qty: tr.querySelector('.qty-input').value,
+                    loc: tr.querySelector('td:nth-child(7) select').value,
+                    notes: tr.querySelector('td:nth-child(8) input').value
+                });
+            });
+
+            if (righeValide.length === 0) {
+                alert('Non ci sono carte da salvare — scrivi almeno un nome o un codice.');
+                return;
+            }
+
+            const righeDb = righeValide.flatMap(r => _rigaEntryToRigheDb(r, userId));
+
+            const btn = document.getElementById('btnSalvaCarte');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Invio in corso...';
+
+            const { error } = await supabaseClient.from('coda_carte').insert(righeDb);
+
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+
+            if (error) {
+                alert('❌ Errore nell\'invio delle carte: ' + error.message);
+                return;
+            }
+
+            clearEntryDraft();
+            alert(`✅ ${righeDb.length} cart${righeDb.length === 1 ? 'a inviata' : 'e inviate'} nella coda persistente!\n\nUn dispositivo con l'estensione aperta le cercherà a breve, anche se non è online in questo momento — resteranno in attesa finché qualcuno non le processa.`);
         }
 
         let currentMode = 'visualizzazione';
