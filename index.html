@@ -464,7 +464,7 @@
         }
 
         /* INPUTS & CONTROLLI */
-        input[type="text"], input[type="number"], select {
+        input[type="text"], input[type="number"], input[type="email"], input[type="password"], select {
             width: 100%;
             padding: 0.6rem;
             border: 1px solid var(--border-color);
@@ -531,6 +531,7 @@
         }
 
         .btn-main { background-color: var(--primary); color: white; }
+        .btn-main:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-secondary { background-color: var(--primary-light); color: var(--primary); }
         .btn-danger { background: none; border: none; color: #d32f2f; padding: 0.5rem; font-size: 1rem; cursor: pointer; }
 
@@ -706,9 +707,36 @@
             height: 18px;
             object-fit: contain;
         }
+
+        /* LOGIN OVERLAY */
+        .auth-field { text-align: left; margin-bottom: 0.8rem; }
+        .auth-field label { display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.3rem; color: var(--text-muted); }
+        #authError { display: none; color: var(--danger); font-size: 0.78rem; margin-bottom: 0.8rem; font-weight: 600; }
+        #userBadgeLogout { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 0.85rem; margin-left: 0.3rem; }
     </style>
 </head>
 <body>
+
+    <!-- OVERLAY DI LOGIN -->
+    <div id="authOverlay" class="modal-overlay">
+        <div class="modal-content" style="max-width: 360px;">
+            <div class="logo" style="justify-content: center; margin-bottom: 0.3rem;">
+                <img src="favicon.ico" alt="Favicon">
+                <span>CardSync Pro</span>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.2rem;">Accedi con le tue credenziali per continuare.</p>
+            <div class="auth-field">
+                <label>Email</label>
+                <input type="email" id="authEmail" placeholder="tuonome@cardsyncpro.local" autocomplete="username">
+            </div>
+            <div class="auth-field">
+                <label>Password</label>
+                <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password">
+            </div>
+            <div id="authError"></div>
+            <button class="btn-main" id="authSubmit" style="width: 100%;">Accedi</button>
+        </div>
+    </div>
 
     <!-- HEADER DESKTOP / LOGO MOBILE -->
     <header id="mainHeader">
@@ -726,8 +754,8 @@
                 <a class="nav-item" onclick="switchTab('sealed', this)"><i class="fa-solid fa-box-archive"></i> Sealed</a>
                 <a class="nav-item" onclick="switchTab('impostazioni', this)"><i class="fa-solid fa-gear"></i> Impostazioni</a>
             </nav>
-            <div class="user-badge">
-                <i class="fa-solid fa-user"></i> <span>Locale</span>
+            <div class="user-badge" id="userBadge">
+                <i class="fa-solid fa-user"></i> <span id="userBadgeLabel">Non connesso</span>
             </div>
         </div>
     </header>
@@ -884,8 +912,8 @@
                 <div style="margin-bottom: 0.5rem; font-weight: 800; font-size: 1.1rem;">
                     <i class="fa-solid fa-chart-line" style="color: var(--primary);"></i> Controllo Prezzi Automatico
                 </div>
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.2rem;">Aggiorna le quotazioni sincronizzando la tua estensione.</p>
-                <button class="btn-main" style="width: 100%; justify-content: center;" onclick="triggerExtensionPriceCheck()">
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.2rem;" id="prezziSubtext">Aggiorna le quotazioni sincronizzando la tua estensione.</p>
+                <button class="btn-main" id="btnControllaPrezzi" style="width: 100%; justify-content: center;" onclick="triggerExtensionPriceCheck()">
                     <i class="fa-solid fa-paper-plane"></i> Avvia Controllo Prezzi
                 </button>
             </div>
@@ -987,7 +1015,169 @@
         </div>
     </div>
 
+    <!-- SUPABASE JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <script>
+        // ── CONFIGURAZIONE SUPABASE ──────────────────────────────────────────────
+        // Usa SEMPRE la chiave "anon public" (mai la service_role) — vedi le
+        // Row Level Security policy sul progetto, sono loro l'unico scudo dato
+        // che questo codice gira nel browser di chiunque visiti il sito.
+        const SUPABASE_URL = 'https://iwdkgehbktvkujhwqdwq.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3ZGtnZWhia3R2a3VqaHdxZHdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMzM1MzYsImV4cCI6MjEwMTcwOTUzNn0.Pdcmuj5eXuh_z43CInsdGRkNwloHpqlhBGnBI9kvKe0';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Storage di default (localStorage) va benissimo qui: è un sito web
+        // normale, non un'estensione — nessun bisogno di chrome.storage.local.
+
+        // ── LOGIN / LOGOUT ────────────────────────────────────────────────────────
+        const authOverlay  = document.getElementById('authOverlay');
+        const authEmail    = document.getElementById('authEmail');
+        const authPassword = document.getElementById('authPassword');
+        const authError    = document.getElementById('authError');
+        const authSubmit   = document.getElementById('authSubmit');
+        const userBadgeLabel = document.getElementById('userBadgeLabel');
+
+        function mostraUtenteLoggato(email) {
+            userBadgeLabel.innerHTML = '';
+            const span = document.createElement('span');
+            span.textContent = email;
+            userBadgeLabel.appendChild(span);
+            const btnLogout = document.createElement('button');
+            btnLogout.id = 'userBadgeLogout';
+            btnLogout.title = 'Esci';
+            btnLogout.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i>';
+            btnLogout.onclick = async (e) => {
+                e.stopPropagation();
+                if (!confirm('Uscire da CardSync Pro (' + email + ')?')) return;
+                await supabaseClient.auth.signOut();
+                location.reload();
+            };
+            userBadgeLabel.appendChild(btnLogout);
+        }
+
+        async function tentaLogin() {
+            const email = authEmail.value.trim();
+            const password = authPassword.value;
+            if (!email || !password) {
+                authError.textContent = 'Inserisci email e password.';
+                authError.style.display = 'block';
+                return;
+            }
+            authSubmit.disabled = true;
+            authSubmit.textContent = 'Accesso in corso…';
+            authError.style.display = 'none';
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) {
+                authError.textContent = '❌ ' + (error.message === 'Invalid login credentials' ? 'Email o password errati.' : error.message);
+                authError.style.display = 'block';
+                authSubmit.disabled = false;
+                authSubmit.textContent = 'Accedi';
+                return;
+            }
+            authOverlay.style.display = 'none';
+            mostraUtenteLoggato(data.session.user.email);
+        }
+
+        authSubmit.addEventListener('click', tentaLogin);
+        [authEmail, authPassword].forEach((el) => {
+            el.addEventListener('keydown', (e) => { if (e.key === 'Enter') tentaLogin(); });
+        });
+
+        async function assicuraLoginSupabase() {
+            const { data } = await supabaseClient.auth.getSession();
+            if (data.session) {
+                mostraUtenteLoggato(data.session.user.email);
+                authOverlay.style.display = 'none';
+                return data.session;
+            }
+            authOverlay.style.display = 'flex';
+            authEmail.focus();
+            return null;
+        }
+
+        // ── CONTROLLO PREZZI — collegato agli ordini reali ───────────────────────
+        let _pollOrdineInterval = null;
+
+        async function triggerExtensionPriceCheck() {
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) {
+                await assicuraLoginSupabase();
+                return;
+            }
+
+            const btn = document.getElementById('btnControllaPrezzi');
+            const sub = document.getElementById('prezziSubtext');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creazione ordine...';
+
+            const { data: ordine, error } = await supabaseClient
+                .from('ordini')
+                .insert({ tipo: 'controlla_prezzi', creato_da: userId })
+                .select()
+                .single();
+
+            if (error) {
+                sub.textContent = '❌ Errore: ' + error.message;
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Avvia Controllo Prezzi';
+                return;
+            }
+
+            btn.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> In attesa che un dispositivo lo prenda in carico...';
+            sub.textContent = 'L\'ordine è stato creato — un dispositivo con l\'estensione aperta lo eseguirà a breve.';
+            _pollOrdine(ordine.id, btn, sub);
+        }
+
+        function _pollOrdine(ordineId, btn, sub) {
+            if (_pollOrdineInterval) clearInterval(_pollOrdineInterval);
+            const INTERVALLO_MS = 3000;
+            const MAX_TENTATIVI = 200; // ~10 minuti
+            let tentativi = 0;
+
+            _pollOrdineInterval = setInterval(async () => {
+                tentativi++;
+                const { data, error } = await supabaseClient
+                    .from('ordini')
+                    .select('stato, risultato, errore_msg')
+                    .eq('id', ordineId)
+                    .single();
+
+                if (error) {
+                    clearInterval(_pollOrdineInterval);
+                    _resetBottonePrezzi(btn, sub);
+                    sub.textContent = '❌ Errore nel controllo dello stato: ' + error.message;
+                    return;
+                }
+
+                if (data.stato === 'in_corso') {
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Controllo prezzi in corso...';
+                    sub.textContent = 'Un dispositivo sta controllando le quotazioni su Cardmarket adesso.';
+                } else if (data.stato === 'completato') {
+                    clearInterval(_pollOrdineInterval);
+                    const r = data.risultato || {};
+                    _resetBottonePrezzi(btn, sub);
+                    sub.innerHTML = `✅ Fatto! <span style="color:var(--success)">▲ ${r.salite ?? 0}</span> · <span style="color:var(--danger)">▼ ${r.scese ?? 0}</span> · ➖ ${r.invariate ?? 0} invariate`;
+                } else if (data.stato === 'errore') {
+                    clearInterval(_pollOrdineInterval);
+                    _resetBottonePrezzi(btn, sub);
+                    sub.textContent = '❌ ' + (data.errore_msg || 'Errore sconosciuto durante il controllo prezzi.');
+                }
+
+                if (tentativi >= MAX_TENTATIVI) {
+                    clearInterval(_pollOrdineInterval);
+                    _resetBottonePrezzi(btn, sub);
+                    sub.textContent = '⏱️ Nessun dispositivo ha ancora eseguito l\'ordine. Controlla che qualcuno del gruppo abbia l\'estensione aperta e sia online.';
+                }
+            }, INTERVALLO_MS);
+        }
+
+        function _resetBottonePrezzi(btn, sub) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Avvia Controllo Prezzi';
+        }
+
         let currentMode = 'visualizzazione';
         let highlightedRowId = null;
         let changelogClicks = 0;
@@ -1004,7 +1194,7 @@
             { id: 9, name: "UMBREON VMAX", code: "EVS 215", location: "WISHLIST", qty: 1, lang: "EN", cond: "NM", price: 650.00, variation: "—", link: "#", notes: "" }
         ];
 
-        window.onload = () => {
+        window.onload = async () => {
             // Ripristina Dark Mode e Temi salvati
             const savedTheme = localStorage.getItem('siteTheme');
             if (savedTheme) setSiteTheme(savedTheme);
@@ -1025,6 +1215,9 @@
             const savedTab = localStorage.getItem('activeTab') || 'visualizzazione';
             const navBtn = document.querySelector(`nav .nav-item[onclick*="'${savedTab}'"]`);
             switchTab(savedTab, navBtn);
+
+            // Login: mostra l'overlay se non c'è già una sessione valida
+            await assicuraLoginSupabase();
         };
 
         /* LOGICA EASTER EGG CHANGELOG */
@@ -1393,10 +1586,6 @@
 
         function closeQrModal() {
             document.getElementById('qrModal').style.display = 'none';
-        }
-
-        function triggerExtensionPriceCheck() {
-            alert("Avvio controllo prezzi in corso...");
         }
 
         function saveDataMock() {
