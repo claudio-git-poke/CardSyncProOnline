@@ -913,6 +913,18 @@
                     <i class="fa-solid fa-chart-line" style="color: var(--primary);"></i> Controllo Prezzi Automatico
                 </div>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.2rem;" id="prezziSubtext">Aggiorna le quotazioni sincronizzando la tua estensione.</p>
+
+                <div style="text-align:left; margin-bottom: 1.2rem;">
+                    <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.5rem; display:flex; justify-content:space-between; align-items:center;">
+                        <span>LOCATION DA CONTROLLARE</span>
+                        <button type="button" onclick="toggleTutteLocation()" style="background:none; border:none; color:var(--primary); font-weight:700; font-size:0.75rem; cursor:pointer;" id="btnToggleTutteLocation">Seleziona tutte</button>
+                    </div>
+                    <div id="listaLocationCheckbox" style="display:flex; flex-direction:column; gap:0.4rem; max-height:220px; overflow-y:auto; border:1px solid var(--border-color); border-radius:10px; padding:0.7rem; background:var(--bg-color);">
+                        <p style="font-size:0.78rem; color:var(--text-muted); margin:0;">Caricamento location...</p>
+                    </div>
+                    <p style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.4rem;">Nessuna spuntata = controlla tutte le location (comportamento di default).</p>
+                </div>
+
                 <button class="btn-main" id="btnControllaPrezzi" style="width: 100%; justify-content: center;" onclick="triggerExtensionPriceCheck()">
                     <i class="fa-solid fa-paper-plane"></i> Avvia Controllo Prezzi
                 </button>
@@ -1096,6 +1108,54 @@
             return null;
         }
 
+        // ── ELENCO LOCATION (checkbox) — sezione Prezzi ──────────────────────────
+        // Stessa tabella 'location' che l'estensione usa per la tendina Location
+        // (azione 'elencaLocationTab' in supabase_adapter.js) — qui la leggiamo
+        // direttamente, dato che il sito ha già il proprio client Supabase.
+        let _locationCaricate = false;
+
+        async function caricaListaLocationCheckbox() {
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            const wrap = document.getElementById('listaLocationCheckbox');
+            if (!userId) { wrap.innerHTML = '<p style="font-size:0.78rem; color:var(--text-muted); margin:0;">Accedi per vedere le tue location.</p>'; return; }
+
+            const { data, error } = await supabaseClient.from('location').select('nome').eq('owner_id', userId).order('nome');
+            if (error) {
+                wrap.innerHTML = `<p style="font-size:0.78rem; color:var(--danger); margin:0;">Errore: ${error.message}</p>`;
+                return;
+            }
+            const location = (data || []).map(r => r.nome);
+            if (location.length === 0) {
+                wrap.innerHTML = '<p style="font-size:0.78rem; color:var(--text-muted); margin:0;">Nessuna location salvata ancora.</p>';
+                return;
+            }
+            wrap.innerHTML = '';
+            location.forEach(nome => {
+                const label = document.createElement('label');
+                label.style.cssText = 'display:flex; align-items:center; gap:0.5rem; font-size:0.85rem; font-weight:600; cursor:pointer;';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.value = nome;
+                cb.className = 'checkboxLocationPrezzi';
+                label.appendChild(cb);
+                label.appendChild(document.createTextNode(nome));
+                wrap.appendChild(label);
+            });
+            _locationCaricate = true;
+        }
+
+        function toggleTutteLocation() {
+            const checkboxes = document.querySelectorAll('.checkboxLocationPrezzi');
+            const tutteSpuntate = [...checkboxes].every(cb => cb.checked);
+            checkboxes.forEach(cb => { cb.checked = !tutteSpuntate; });
+            document.getElementById('btnToggleTutteLocation').textContent = tutteSpuntate ? 'Seleziona tutte' : 'Deseleziona tutte';
+        }
+
+        function _locationSelezionate() {
+            return [...document.querySelectorAll('.checkboxLocationPrezzi:checked')].map(cb => cb.value);
+        }
+
         // ── CONTROLLO PREZZI — collegato agli ordini reali ───────────────────────
         let _pollOrdineInterval = null;
 
@@ -1112,9 +1172,11 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creazione ordine...';
 
+            const locations = _locationSelezionate();
+
             const { data: ordine, error } = await supabaseClient
                 .from('ordini')
-                .insert({ tipo: 'controlla_prezzi', creato_da: userId })
+                .insert({ tipo: 'controlla_prezzi', creato_da: userId, parametri: { locations } })
                 .select()
                 .single();
 
@@ -1594,6 +1656,7 @@
             if (tabId === 'inserimento' || tabId === 'prezzi' || tabId === 'sealed' || tabId === 'impostazioni') {
                 document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
                 document.getElementById(tabId).classList.add('active');
+                if (tabId === 'prezzi' && !_locationCaricate) caricaListaLocationCheckbox();
             } else {
                 filterTable();
             }
