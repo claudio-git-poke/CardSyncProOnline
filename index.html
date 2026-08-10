@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CardSync Pro</title>
+
+    <!-- FAVICON -->
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+
+    <!-- Font, Icone e Libreria QR Code -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        /* TEMA BASE / VIOLA PASTELLO */
+        :root {
+            --bg-color: #f3eeff;
+            --card-bg: #ffffff;
+            --primary: #7c4dff;
+            --primary-light: #ede7ff;
+            --primary-dark: #5e35b1;
+            --text-dark: #2a2438;
+            --text-muted: #756a8a;
+            --border-color: #e2d9f3;
+            --row-hover: #f9f6ff;
+            --row-selected-bg: #e5d9ff;
+            --success: #2e7d32;
+            --success-bg: #e8f5e9;
+            --danger: #d32f2f;
+            --danger-bg: #ffebee;
+            --header-bg: #ffffff;
+            --table-header-bg: #f7f3ff;
+            --badge-loc-bg: #efeaf8;
+            --shadow-soft: 0 4px 20px rgba(124, 77, 255, 0.08);
+        }
+
+        /* TEMA VERDE PASTELLO */
+        body.theme-verde {
+            --bg-color: #eef7f2;
+            --primary: #2e7d32;
+            --primary-light: #e0f2e1;
+            --primary-dark: #1b5e20;
+            --text-dark: #1b2e22;
+            --text-muted: #647d6a;
+            --border-color: #cee2d4;
+            --row-hover: #f4faf6;
+            --row-selected-bg: #c8e6c9;
+            --table-header-bg: #eaf5ed;
+            --badge-loc-bg: #e1efe5;
+            --shadow-soft: 0 4px 20px rgba(46, 125, 50, 0.08);
+        }
+
+        /* TEMA POKEMON */
+        body.theme-pokemon {
+            --bg-color: #edf4fc;
+            --primary: #2a75d3;
+            --primary-light: #dbeafe;
+            --primary-dark: #18529d;
+            --text-dark: #1a2738;
+            --text-muted: #5e728c;
+            --border-color: #cbdcf2;
+            --row-hover: #f4f8fe;
+            --row-selected-bg: #fff5c0;
+            --table-header-bg: #e3eeed;
+            --badge-loc-bg: #e2ecf8;
+            --shadow-soft: 0 4px 20px rgba(42, 117, 211, 0.08);
+        }
+
+        /* DARK MODE OVERRIDES */
+        body.dark-mode {
+            --bg-color: #121018;
+            --card-bg: #1c1826;
+            --text-dark: #f1edfa;
+            --text-muted: #9f95b5;
+            --border-color: #2f2840;
+            --primary-light: rgba(124, 77, 255, 0.2);
+            --row-hover: #231f30;
+            --row-selected-bg: #3d2c66;
+            --header-bg: #171421;
+            --table-header-bg: #15121e;
+            --badge-loc-bg: #292338;
+            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        body.dark-mode.theme-verde {
+            --bg-color: #0d1712;
+            --card-bg: #14241b;
+            --text-dark: #e8f5ed;
+            --text-muted: #83a38c;
+            --border-color: #1f382a;
+            --primary-light: rgba(46, 125, 50, 0.2);
+            --row-hover: #192e22;
+            --row-selected-bg: #1f4d2b;
+            --table-header-bg: #112017;
+            --badge-loc-bg: #1c3325;
+        }
+
+        body.dark-mode.theme-pokemon {
+            --bg-color: #0f1621;
+            --card-bg: #172130;
+            --text-dark: #eaf2fd;
+            --text-muted: #829ab8;
+            --border-color: #23344a;
+            --primary-light: rgba(42, 117, 211, 0.2);
+            --row-hover: #1d2a3d;
+            --row-selected-bg: #3a4012;
+            --table-header-bg: #131c29;
+            --badge-loc-bg: #202f45;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            min-height: 100vh;
+            padding-bottom: 75px;
+        }
+
+        @media (min-width: 900px) {
+            body { padding-bottom: 0; }
+        }
+
+        /* --- HEADER & NAVIGATION --- */
+        header {
+            background-color: var(--header-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.8rem 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        @media (min-width: 900px) {
+            .header-left { justify-content: flex-start; width: auto; }
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+        }
+
+        .logo img {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+        }
+
+        nav {
+            display: none;
+            gap: 0.3rem;
+        }
+
+        @media (min-width: 900px) {
+            nav { display: flex; }
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 0.9rem;
+            border-radius: 10px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: var(--primary-light);
+            color: var(--primary);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        /* BARRA DI NAVIGAZIONE MOBILE */
+        .mobile-nav {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--header-bg);
+            border-top: 1px solid var(--border-color);
+            z-index: 999;
+            justify-content: space-around;
+            padding: 0.5rem 0;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+        }
+
+        @media (min-width: 900px) {
+            .mobile-nav { display: none; }
+        }
+
+        .mobile-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+            color: var(--text-muted);
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-decoration: none;
+            padding: 0.2rem;
+            flex: 1;
+            text-align: center;
+        }
+
+        .mobile-nav-item i {
+            font-size: 1.15rem;
+        }
+
+        .mobile-nav-item.active {
+            color: var(--primary);
+        }
+
+        /* --- CONTAINER --- */
+        .container {
+            max-width: 1550px;
+            margin: 1.2rem auto;
+            padding: 0 1rem;
+        }
+
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+
+        /* --- STATS BAR --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.9rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .stat-card {
+            background-color: var(--card-bg);
+            padding: 1rem;
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .stat-info h3 {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.2rem;
+            font-weight: 700;
+        }
+
+        .stat-info .value {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--text-dark);
+        }
+
+        .stat-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background-color: var(--primary-light);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        /* --- TOOLBAR & FILTRI --- */
+        .toolbar {
+            background-color: var(--card-bg);
+            padding: 0.9rem;
+            border-radius: 14px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            margin-bottom: 1.2rem;
+            box-shadow: var(--shadow-soft);
+        }
+
+        @media (min-width: 768px) {
+            .toolbar {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+            }
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.6rem 0.9rem;
+            width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            .search-box { width: 320px; }
+        }
+
+        .search-box input {
+            border: none;
+            background: transparent;
+            outline: none;
+            padding-left: 0.6rem;
+            width: 100%;
+            font-size: 0.85rem;
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            .filters { width: auto; }
+        }
+
+        .filter-select {
+            flex: 1;
+            padding: 0.65rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-dark);
+            font-size: 0.8rem;
+            font-weight: 600;
+            outline: none;
+            min-width: 130px;
+        }
+
+        /* TABELLA RESPONSIVE CON EVIDENZIAZIONE RIGA */
+        .card-panel {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 0.8rem;
+            margin-bottom: 1rem;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            box-shadow: var(--shadow-soft);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            text-align: left;
+            font-size: 0.82rem;
+            min-width: 700px;
+        }
+
+        th {
+            background-color: var(--table-header-bg);
+            padding: 0.8rem 0.6rem;
+            color: var(--text-muted);
+            font-weight: 800;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 0.75rem 0.6rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+            white-space: nowrap;
+            color: var(--text-dark);
+        }
+
+        tbody tr.interactive-row {
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        tbody tr.interactive-row:hover {
+            background-color: var(--row-hover);
+        }
+
+        tbody tr.interactive-row.highlighted-row {
+            background-color: var(--row-selected-bg) !important;
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .badge-lang { background-color: #e3f2fd; color: #0d47a1; }
+        .badge-lang-kor { background-color: #ffe0b2; color: #e65100; }
+        .badge-cond { background-color: var(--success-bg); color: var(--success); }
+        .badge-cond-ex { background-color: #fff3e0; color: #ef6c00; }
+        .badge-location { background-color: var(--badge-loc-bg); color: var(--text-dark); border: 1px solid var(--border-color); }
+        .badge-rh { background-color: #f3e5f5; color: #7b1fa2; font-weight: 700; }
+
+        .price { font-weight: 800; color: var(--text-dark); }
+        .variation-up { color: var(--success); font-weight: 700; font-size: 0.75rem; }
+        .variation-none { color: var(--text-muted); }
+
+        .link-icon {
+            color: var(--primary);
+            font-size: 0.9rem;
+            padding: 0.4rem 0.6rem;
+            border-radius: 8px;
+            background-color: var(--primary-light);
+            display: inline-block;
+        }
+
+        /* INPUTS & CONTROLLI */
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            outline: none;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        .qty-control {
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+            justify-content: center;
+        }
+
+        .qty-btn {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .qty-btn:active {
+            transform: scale(0.92);
+        }
+
+        .qty-input {
+            width: 38px !important;
+            text-align: center;
+            padding: 0.3rem !important;
+            font-weight: 700;
+        }
+
+        .btn-main, .btn-secondary {
+            padding: 0.65rem 1.1rem;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            border: none;
+        }
+
+        .btn-main { background-color: var(--primary); color: white; }
+        .btn-secondary { background-color: var(--primary-light); color: var(--primary); }
+        .btn-danger { background: none; border: none; color: #d32f2f; padding: 0.5rem; font-size: 1rem; cursor: pointer; }
+
+        /* MODALI POPUP */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center; justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            color: var(--text-dark);
+            padding: 1.5rem;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 340px;
+            width: 90%;
+            position: relative;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        #qrcodeContainer { display: flex; justify-content: center; margin: 1rem 0; }
+
+        .close-modal-btn {
+            position: absolute; top: 12px; right: 16px;
+            background: none; border: none; font-size: 1.4rem;
+            color: var(--text-muted); cursor: pointer;
+        }
+
+        /* FUMETTO BULBASAUR EASTER EGG */
+        .speech-bubble {
+            position: relative;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            border: 2px solid var(--primary);
+            border-radius: 16px;
+            padding: 0.9rem 1.1rem;
+            font-weight: 800;
+            font-size: 0.9rem;
+            line-height: 1.35;
+            margin-bottom: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 12px 10px 0;
+            border-style: solid;
+            border-color: var(--primary) transparent;
+            display: block;
+            width: 0;
+        }
+        .speech-bubble::before {
+            content: '';
+            position: absolute;
+            bottom: -9px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 10px 8px 0;
+            border-style: solid;
+            border-color: var(--primary-light) transparent;
+            display: block;
+            width: 0;
+            z-index: 1;
+        }
+
+        /* SCHEDA IMPOSTAZIONI */
+        .settings-card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            max-width: 600px;
+            margin: 0 auto;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .setting-row:last-child { border-bottom: none; }
+
+        .switch {
+            position: relative; display: inline-block; width: 48px; height: 26px;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--border-color); transition: .3s; border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px;
+            background-color: white; transition: .3s; border-radius: 50%;
+        }
+
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        .theme-options-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.6rem;
+            margin-top: 0.6rem;
+            width: 100%;
+        }
+
+        .theme-btn {
+            border: 2px solid var(--border-color);
+            background: var(--bg-color);
+            padding: 0.8rem 0.4rem;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: var(--text-dark);
+            display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+        }
+
+        .theme-btn.active { border-color: var(--primary); background-color: var(--primary-light); }
+        .theme-color-preview { width: 22px; height: 22px; border-radius: 50%; display: inline-block; }
+
+        .autosave-status {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .autosave-status i { color: var(--success); }
+
+        /* FOOTER */
+        footer {
+            text-align: center;
+            padding: 1.8rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: 2.5rem;
+            background-color: var(--card-bg);
+        }
+
+        footer .footer-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 0.3rem;
+            font-weight: 800;
+            color: var(--text-dark);
+        }
+
+        footer img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER DESKTOP / LOGO MOBILE -->
+    <header id="mainHeader">
+        <div class="header-left">
+            <div class="logo">
+                <img src="favicon.ico" alt="Favicon">
+                <span>CardSync Pro</span>
+            </div>
+            <nav>
+                <a class="nav-item active" onclick="switchTab('visualizzazione', this)"><i class="fa-solid fa-list-check"></i> Visualizzazione</a>
+                <a class="nav-item" onclick="switchTab('inserimento', this)"><i class="fa-solid fa-plus"></i> Inserimento</a>
+                <a class="nav-item" onclick="switchTab('prezzi', this)"><i class="fa-solid fa-chart-line"></i> Prezzi</a>
+                <a class="nav-item" onclick="switchTab('scambio', this)"><i class="fa-solid fa-right-left"></i> Scambio</a>
+                <a class="nav-item" onclick="switchTab('wishlist', this)"><i class="fa-solid fa-bookmark"></i> Wishlist</a>
+                <a class="nav-item" onclick="switchTab('sealed', this)"><i class="fa-solid fa-box-archive"></i> Sealed</a>
+                <a class="nav-item" onclick="switchTab('impostazioni', this)"><i class="fa-solid fa-gear"></i> Impostazioni</a>
+            </nav>
+            <div class="user-badge">
+                <i class="fa-solid fa-user"></i> <span>Locale</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- BOTTOM BAR PER SMARTPHONE -->
+    <div class="mobile-nav" id="mobileNav">
+        <a class="mobile-nav-item active" id="mNav-visualizzazione" onclick="switchTab('visualizzazione', this)">
+            <i class="fa-solid fa-list-check"></i>
+            <span>Lista</span>
+        </a>
+        <a class="mobile-nav-item" id="mNav-inserimento" onclick="switchTab('inserimento', this)">
+            <i class="fa-solid fa-plus"></i>
+            <span>Aggiungi</span>
+        </a>
+        <a class="mobile-nav-item" id="mNav-scambio" onclick="switchTab('scambio', this)">
+            <i class="fa-solid fa-right-left"></i>
+            <span>Scambi</span>
+        </a>
+        <a class="mobile-nav-item" id="mNav-wishlist" onclick="switchTab('wishlist', this)">
+            <i class="fa-solid fa-bookmark"></i>
+            <span>Wishlist</span>
+        </a>
+        <a class="mobile-nav-item" id="mNav-impostazioni" onclick="switchTab('impostazioni', this)">
+            <i class="fa-solid fa-gear"></i>
+            <span>Opzioni</span>
+        </a>
+    </div>
+
+    <div class="container">
+
+        <!-- HEADER RISTRETTO PER CONDIVISIONE PUBBLICA -->
+        <div id="publicShareHeader" style="display:none; margin-bottom: 1rem; align-items: center; justify-content: space-between;">
+            <div class="logo" style="font-size: 1.2rem;">
+                <img src="favicon.ico" alt="Favicon">
+                <span id="publicShareTitle">CardSync Pro</span>
+            </div>
+            <div class="user-badge" style="background-color: var(--success-bg); color: var(--success);">
+                <i class="fa-solid fa-globe"></i> Vista Pubblica
+            </div>
+        </div>
+
+        <!-- SEZIONE TABELLA VISUALIZZAZIONE / SCAMBI / WISHLIST -->
+        <div id="visualizzazione" class="view-section active">
+            
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3 id="statLabelCount">Carte Totali</h3>
+                        <div class="value" id="stat-count">0</div>
+                    </div>
+                    <div class="stat-icon"><i class="fa-solid fa-cards"></i></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Valore Est.</h3>
+                        <div class="value" id="stat-value">€ 0,00</div>
+                    </div>
+                    <div class="stat-icon"><i class="fa-solid fa-euro-sign"></i></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Locations</h3>
+                        <div class="value" id="stat-locations">0</div>
+                    </div>
+                    <div class="stat-icon"><i class="fa-solid fa-warehouse"></i></div>
+                </div>
+            </div>
+
+            <!-- TOOLBAR E FILTRI -->
+            <div class="toolbar">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass" style="color: var(--text-muted);"></i>
+                    <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Cerca carta o codice...">
+                </div>
+
+                <div class="filters">
+                    <button id="btnCopyShareLink" class="btn-secondary" style="display:none;" onclick="copyShareLink()">
+                        <i class="fa-solid fa-share-nodes"></i> Link
+                    </button>
+
+                    <button id="btnShowQrCode" class="btn-main" style="display:none;" onclick="openQrModal()">
+                        <i class="fa-solid fa-qrcode"></i> QR
+                    </button>
+
+                    <select class="filter-select" id="filterLocation" onchange="filterTable()">
+                        <option value="">Tutte le Location</option>
+                        <option value="?">?</option>
+                        <option value="BULK">BULK</option>
+                        <option value="1025">1025</option>
+                        <option value="TOPLOADER - ALTRO">TOPLOADER - ALTRO</option>
+                        <option value="BINDER">BINDER</option>
+                        <option value="SCAMBIO">SCAMBIO</option>
+                        <option value="WISHLIST">WISHLIST</option>
+                    </select>
+
+                    <select class="filter-select" id="filterLang" onchange="filterTable()">
+                        <option value="">Tutte le lingue</option>
+                        <option value="IT">IT - Italiano</option>
+                        <option value="EN">EN - Inglese</option>
+                        <option value="KOR">KOR - Coreano</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- TABELLA DATI CON RIGHE SELEZIONABILI -->
+            <div class="card-panel">
+                <table>
+                    <thead>
+                        <tr id="tableHeaderRow"></tr>
+                    </thead>
+                    <tbody id="viewTableBody"></tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <!-- SEZIONE 2: INSERIMENTO CARTE (LOCATION DEFAULT: ?) -->
+        <div id="inserimento" class="view-section">
+            <div class="card-panel">
+                <div style="margin-bottom: 0.9rem; font-weight: 800; font-size: 1.05rem; color: var(--text-dark); display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="fa-solid fa-table-list" style="color: var(--primary);"></i> Inserimento Rapido</span>
+                    <button type="button" class="btn-secondary" onclick="clearEntryDraft()" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">
+                        <i class="fa-solid fa-eraser"></i> Svuota Bozza
+                    </button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 24%;">NOME / CODICE</th>
+                            <th style="width: 11%;">LINGUA</th>
+                            <th style="width: 11%;">COND.</th>
+                            <th style="width: 6%; text-align: center;">REV</th>
+                            <th style="width: 6%; text-align: center;">1st</th>
+                            <th style="width: 16%; text-align: center;">Q.TÀ</th>
+                            <th style="width: 14%;">LOCATION</th>
+                            <th style="width: 12%;">NOTE</th>
+                            <th style="width: 4%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="entryTableBody"></tbody>
+                </table>
+                <div style="margin-top: 1.2rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span class="autosave-status" id="autosaveLabel">
+                        <i class="fa-solid fa-floppy-disk"></i> Salva automatico attivo
+                    </span>
+                    <button class="btn-main" onclick="saveDataMock()"><i class="fa-solid fa-paper-plane"></i> Salva Carte</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SEZIONE 3: CONTROLLO PREZZI -->
+        <div id="prezzi" class="view-section">
+            <div class="card-panel" style="max-width:500px; margin:1rem auto; text-align:center; padding: 2rem;">
+                <div style="margin-bottom: 0.5rem; font-weight: 800; font-size: 1.1rem;">
+                    <i class="fa-solid fa-chart-line" style="color: var(--primary);"></i> Controllo Prezzi Automatico
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.2rem;">Aggiorna le quotazioni sincronizzando la tua estensione.</p>
+                <button class="btn-main" style="width: 100%; justify-content: center;" onclick="triggerExtensionPriceCheck()">
+                    <i class="fa-solid fa-paper-plane"></i> Avvia Controllo Prezzi
+                </button>
+            </div>
+        </div>
+
+        <!-- PLACEHOLDER SEALED -->
+        <div id="sealed" class="view-section">
+            <div style="background: var(--card-bg); padding: 2.5rem; border-radius: 16px; text-align: center; border: 1px solid var(--border-color); box-shadow: var(--shadow-soft);">
+                <h2 style="font-weight: 800;">Sealed Collection</h2>
+            </div>
+        </div>
+
+        <!-- SEZIONE 4: IMPOSTAZIONI -->
+        <div id="impostazioni" class="view-section">
+            <div class="settings-card">
+                <h3 style="margin-bottom: 1rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.6rem; font-size: 1.15rem; font-weight: 800;">
+                    <i class="fa-solid fa-sliders" style="color: var(--primary);"></i> Impostazioni
+                </h3>
+
+                <!-- TOGGLE DARK MODE -->
+                <div class="setting-row">
+                    <div>
+                        <h4 style="font-size: 0.9rem; font-weight: 700;">Modalità Scura</h4>
+                        <p style="font-size: 0.75rem; color: var(--text-muted);">Attiva tema scuro</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- TEMA DEL SITO -->
+                <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 0.6rem;">
+                    <div>
+                        <h4 style="font-size: 0.9rem; font-weight: 700;">Palette Colori</h4>
+                        <p style="font-size: 0.75rem; color: var(--text-muted);">Personalizza i toni pastello dell'interfaccia</p>
+                    </div>
+                    <div class="theme-options-grid">
+                        <button type="button" class="theme-btn active" id="themeBtn-viola" onclick="setSiteTheme('viola')">
+                            <span class="theme-color-preview" style="background-color: #7c4dff;"></span> Viola Soft
+                        </button>
+                        <button type="button" class="theme-btn" id="themeBtn-verde" onclick="setSiteTheme('verde')">
+                            <span class="theme-color-preview" style="background-color: #2e7d32;"></span> Verde Salvia
+                        </button>
+                        <button type="button" class="theme-btn" id="themeBtn-pokemon" onclick="setSiteTheme('pokemon')">
+                            <span class="theme-color-preview" style="background: linear-gradient(135deg, #2a75d3 50%, #ffcb05 50%);"></span> Pokémon
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CHANGELOG (EASTER EGG) -->
+                <div class="setting-row" onclick="handleChangelogClick()" style="cursor: pointer; user-select: none;">
+                    <div>
+                        <h4 style="font-size: 0.9rem; font-weight: 700;">changeLog</h4>
+                        <p style="font-size: 0.75rem; color: var(--text-muted);">Consulta la cronologia degli aggiornamenti dell'applicazione</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 0.85rem;"></i>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- FOOTER CON FAVICON -->
+    <footer>
+        <div class="footer-content">
+            <img src="favicon.ico" alt="Favicon">
+            <span>CardSync Pro</span>
+        </div>
+        <p>&copy; 2026 CardSync Pro. Tutti i diritti riservati.</p>
+    </footer>
+
+    <!-- MODALE POPUP QR CODE -->
+    <div id="qrModal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-modal-btn" onclick="closeQrModal()"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="font-weight: 800;">QR Code</h3>
+            <p id="qrModalSubtext" style="font-size: 0.8rem; color: var(--text-muted);">Inquadra per aprire la lista.</p>
+            <div id="qrcodeContainer"></div>
+            <button class="btn-secondary" style="width: 100%;" onclick="copyShareLink()">
+                <i class="fa-solid fa-link"></i> Copia Link
+            </button>
+        </div>
+    </div>
+
+    <!-- MODALE POPUP BULBASAUR (EASTER EGG) -->
+    <div id="bulbasaurModal" class="modal-overlay" onclick="closeBulbasaurModal()">
+        <div class="modal-content" style="max-width: 340px; padding: 2rem 1.2rem 1.2rem 1.2rem;" onclick="event.stopPropagation()">
+            <button class="close-modal-btn" onclick="closeBulbasaurModal()"><i class="fa-solid fa-xmark"></i></button>
+            
+            <!-- FUMETTO -->
+            <div class="speech-bubble">
+                dai che quella roba non la legge nessuno
+            </div>
+
+            <!-- IMMAGINE BULBASAUR -->
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png" alt="Bulbasaur" style="width: 170px; height: 170px; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.15)); margin-top: 5px;">
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'visualizzazione';
+        let highlightedRowId = null;
+        let changelogClicks = 0;
+
+        const mockCardsView = [
+            { id: 1, name: "ABSOL EX", code: "SV3 073", location: "BULK", qty: 1, lang: "KOR", cond: "NM", price: 0.05, variation: "—", link: "#", notes: "" },
+            { id: 2, name: "ACCHIAPPA-POKÉMON ECCELLENTE", code: "PRE 119", location: "BULK", qty: 1, lang: "IT", cond: "NM", price: 0.10, variation: "—", link: "#", notes: "" },
+            { id: 3, name: "ADDESTRAMENTO DI SAGE", code: "UD 77", location: "BULK", qty: 1, lang: "IT", cond: "EX", price: 0.10, variation: "—", link: "#", notes: "RH" },
+            { id: 4, name: "AGGRON V", code: "BRS 096", location: "SCAMBIO", qty: 3, lang: "EN", cond: "NM", price: 0.60, variation: "▲ +0,10€", link: "#", notes: "" },
+            { id: 5, name: "ALAKAZAM", code: "MEP 009", location: "SCAMBIO", qty: 1, lang: "IT", cond: "NM", price: 6.49, variation: "▲ +0,19€", link: "#", notes: "" },
+            { id: 6, name: "ALAKAZAM", code: "MEP 003", location: "TOPLOADER - ALTRO", qty: 1, lang: "IT", cond: "NM", price: 10.00, variation: "—", link: "#", notes: "" },
+            { id: 7, name: "CHARIZARD EX", code: "MEW 199", location: "WISHLIST", qty: 1, lang: "IT", cond: "NM", price: 120.00, variation: "—", link: "#", notes: "AOR" },
+            { id: 8, name: "ALAKAZAM V", code: "SWSH 083", location: "SCAMBIO", qty: 2, lang: "IT", cond: "NM", price: 2.50, variation: "—", link: "#", notes: "" },
+            { id: 9, name: "UMBREON VMAX", code: "EVS 215", location: "WISHLIST", qty: 1, lang: "EN", cond: "NM", price: 650.00, variation: "—", link: "#", notes: "" }
+        ];
+
+        window.onload = () => {
+            // Ripristina Dark Mode e Temi salvati
+            const savedTheme = localStorage.getItem('siteTheme');
+            if (savedTheme) setSiteTheme(savedTheme);
+            const savedDark = localStorage.getItem('darkMode') === 'true';
+            if (savedDark) {
+                document.getElementById('darkModeToggle').checked = true;
+                toggleDarkMode(true);
+            }
+
+            // Ripristina bozza d'inserimento o ne crea una vuota
+            if (!restoreEntryDraft()) {
+                initEntryTable();
+            }
+
+            renderViewTable(mockCardsView);
+
+            // Ripristina l'ultima scheda attiva dopo un refresh
+            const savedTab = localStorage.getItem('activeTab') || 'visualizzazione';
+            const navBtn = document.querySelector(`nav .nav-item[onclick*="'${savedTab}'"]`);
+            switchTab(savedTab, navBtn);
+        };
+
+        /* LOGICA EASTER EGG CHANGELOG */
+        function handleChangelogClick() {
+            changelogClicks++;
+            if (changelogClicks >= 3) {
+                document.getElementById('bulbasaurModal').style.display = 'flex';
+                changelogClicks = 0;
+            }
+        }
+
+        function closeBulbasaurModal() {
+            document.getElementById('bulbasaurModal').style.display = 'none';
+        }
+
+        /* AVVISO DI USCITA/REFRESH SE CI SONO DATI NON SALVATI */
+        window.addEventListener('beforeunload', (e) => {
+            const draft = localStorage.getItem('cardsync_entry_draft');
+            if (draft && draftHasContent(draft)) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        function draftHasContent(draftJson) {
+            try {
+                const rows = JSON.parse(draftJson);
+                return rows.some(r => r.name.trim().length > 0 || r.notes.trim().length > 0);
+            } catch(e) { return false; }
+        }
+
+        /* GESTIONE BOZZA AUTO-SAVE */
+        function saveEntryDraft() {
+            const rows = document.querySelectorAll('#entryTableBody tr');
+            const draft = [];
+            rows.forEach(tr => {
+                const inputs = tr.querySelectorAll('input, select');
+                if(inputs.length >= 7) {
+                    draft.push({
+                        name: tr.querySelector('td:nth-child(1) input').value,
+                        lang: tr.querySelector('td:nth-child(2) select').value,
+                        cond: tr.querySelector('td:nth-child(3) select').value,
+                        rev: tr.querySelector('td:nth-child(4) input').checked,
+                        first: tr.querySelector('td:nth-child(5) input').checked,
+                        qty: tr.querySelector('.qty-input').value,
+                        loc: tr.querySelector('td:nth-child(7) select').value,
+                        notes: tr.querySelector('td:nth-child(8) input').value
+                    });
+                }
+            });
+            localStorage.setItem('cardsync_entry_draft', JSON.stringify(draft));
+            
+            const label = document.getElementById('autosaveLabel');
+            if(label) {
+                label.innerHTML = `<i class="fa-solid fa-check" style="color:var(--success)"></i> Salvato`;
+                setTimeout(() => {
+                    label.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Salva automatico attivo`;
+                }, 1200);
+            }
+        }
+
+        function restoreEntryDraft() {
+            const saved = localStorage.getItem('cardsync_entry_draft');
+            if (!saved) return false;
+            try {
+                const draft = JSON.parse(saved);
+                if (!Array.isArray(draft) || draft.length === 0) return false;
+
+                const tbody = document.getElementById('entryTableBody');
+                tbody.innerHTML = '';
+                draft.forEach(item => addNewEntryRow(item));
+                return true;
+            } catch(e) {
+                return false;
+            }
+        }
+
+        function clearEntryDraft() {
+            localStorage.removeItem('cardsync_entry_draft');
+            initEntryTable();
+        }
+
+        /* INSERIMENTO CARTE CON PULSANTI + E - */
+        function initEntryTable() {
+            const tbody = document.getElementById('entryTableBody');
+            tbody.innerHTML = '';
+            addNewEntryRow();
+            addNewEntryRow();
+        }
+
+        function addNewEntryRow(data = null) {
+            const tbody = document.getElementById('entryTableBody');
+            const tr = document.createElement('tr');
+
+            const nameVal = data ? (data.name || '') : '';
+            const langVal = data ? (data.lang || 'IT') : 'IT';
+            const condVal = data ? (data.cond || 'NM') : 'NM';
+            const revVal = data ? (data.rev ? 'checked' : '') : '';
+            const firstVal = data ? (data.first ? 'checked' : '') : '';
+            const qtyVal = data ? (data.qty || 1) : 1;
+            const locVal = data ? (data.loc || '?') : '?';
+            const notesVal = data ? (data.notes || '') : '';
+
+            tr.innerHTML = `
+                <td><input type="text" placeholder="Nome/Codice" value="${escapeHtml(nameVal)}" oninput="handleEntryInput(this)"></td>
+                <td>
+                    <select onchange="handleEntryInput(this)">
+                        <option value="IT" ${langVal === 'IT' ? 'selected' : ''}>IT</option>
+                        <option value="EN" ${langVal === 'EN' ? 'selected' : ''}>EN</option>
+                        <option value="KOR" ${langVal === 'KOR' ? 'selected' : ''}>KOR</option>
+                        <option value="JP" ${langVal === 'JP' ? 'selected' : ''}>JP</option>
+                    </select>
+                </td>
+                <td>
+                    <select onchange="handleEntryInput(this)">
+                        <option value="NM" ${condVal === 'NM' ? 'selected' : ''}>NM</option>
+                        <option value="EX" ${condVal === 'EX' ? 'selected' : ''}>EX</option>
+                        <option value="GD" ${condVal === 'GD' ? 'selected' : ''}>GD</option>
+                    </select>
+                </td>
+                <td style="text-align: center;"><input type="checkbox" ${revVal} onchange="handleEntryInput(this)"></td>
+                <td style="text-align: center;"><input type="checkbox" ${firstVal} onchange="handleEntryInput(this)"></td>
+                <td>
+                    <div class="qty-control">
+                        <button type="button" class="qty-btn" onclick="stepEntryQty(this, -1)">-</button>
+                        <input type="number" value="${qtyVal}" min="1" class="qty-input" oninput="handleEntryInput(this)">
+                        <button type="button" class="qty-btn" onclick="stepEntryQty(this, 1)">+</button>
+                    </div>
+                </td>
+                <td>
+                    <select onchange="handleEntryInput(this)">
+                        <option value="?" ${locVal === '?' ? 'selected' : ''}>?</option>
+                        <option value="BULK" ${locVal === 'BULK' ? 'selected' : ''}>BULK</option>
+                        <option value="1025" ${locVal === '1025' ? 'selected' : ''}>1025</option>
+                        <option value="TOPLOADER" ${locVal === 'TOPLOADER' ? 'selected' : ''}>TOPLOADER</option>
+                        <option value="BINDER" ${locVal === 'BINDER' ? 'selected' : ''}>BINDER</option>
+                        <option value="SCAMBIO" ${locVal === 'SCAMBIO' ? 'selected' : ''}>SCAMBIO</option>
+                        <option value="WISHLIST" ${locVal === 'WISHLIST' ? 'selected' : ''}>WISHLIST</option>
+                    </select>
+                </td>
+                <td><input type="text" placeholder="Note" value="${escapeHtml(notesVal)}" oninput="handleEntryInput(this)"></td>
+                <td style="text-align: center;">
+                    <button type="button" class="btn-danger" onclick="removeEntryRow(this)"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            `;
+
+            tbody.appendChild(tr);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/"/g, '&quot;');
+        }
+
+        function stepEntryQty(btn, delta) {
+            const input = btn.parentElement.querySelector('.qty-input');
+            let val = parseInt(input.value) || 1;
+            val = Math.max(1, val + delta);
+            input.value = val;
+            handleEntryInput(input);
+        }
+
+        function handleEntryInput(element) {
+            const row = element.closest('tr');
+            const tbody = document.getElementById('entryTableBody');
+            if (row === tbody.lastElementChild) {
+                addNewEntryRow();
+            }
+            saveEntryDraft();
+        }
+
+        function removeEntryRow(btn) {
+            const tbody = document.getElementById('entryTableBody');
+            if (tbody.children.length > 1) {
+                btn.closest('tr').remove();
+            } else {
+                const inputs = tbody.querySelectorAll('input[type="text"]');
+                inputs.forEach(i => i.value = '');
+            }
+            saveEntryDraft();
+        }
+
+        /* RENDERING E SELEZIONE DELLA RIGA */
+        function renderViewTable(data) {
+            const tbody = document.getElementById('viewTableBody');
+            const theadRow = document.getElementById('tableHeaderRow');
+            tbody.innerHTML = '';
+
+            theadRow.innerHTML = `
+                <th>Q.TÀ</th>
+                <th>NOME CARTA</th>
+                <th>CODICE</th>
+                <th>LOCATION</th>
+                <th>LINGUA</th>
+                <th>COND.</th>
+                <th>PREZZO CAD.</th>
+                <th>VAR.</th>
+                <th>LINK</th>
+                <th>NOTE</th>
+                <th>AZIONI</th>
+            `;
+
+            let totalSum = 0;
+            let totalQty = 0;
+
+            data.forEach(card => {
+                const tr = document.createElement('tr');
+                tr.classList.add('interactive-row');
+                if (highlightedRowId === card.id) {
+                    tr.classList.add('highlighted-row');
+                }
+
+                tr.onclick = (e) => {
+                    if (e.target.closest('button') || e.target.closest('a')) return;
+                    toggleRowHighlight(card.id);
+                };
+
+                const langClass = card.lang === 'KOR' ? 'badge-lang-kor' : 'badge-lang';
+                const condClass = card.cond === 'EX' ? 'badge-cond-ex' : 'badge-cond';
+                const varClass = card.variation.includes('▲') ? 'variation-up' : 'variation-none';
+
+                totalSum += card.price * card.qty;
+                totalQty += card.qty;
+
+                tr.innerHTML = `
+                    <td><strong>${card.qty}</strong></td>
+                    <td><strong>${card.name}</strong></td>
+                    <td><code>${card.code}</code></td>
+                    <td><span class="badge badge-location">${card.location}</span></td>
+                    <td><span class="badge ${langClass}">${card.lang}</span></td>
+                    <td><span class="badge ${condClass}">${card.cond}</span></td>
+                    <td class="price">${card.price.toFixed(2)} €</td>
+                    <td class="${varClass}">${card.variation}</td>
+                    <td>
+                        <a href="${card.link}" target="_blank" class="link-icon">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </a>
+                    </td>
+                    <td>${card.notes ? `<span class="badge badge-rh">✨ ${card.notes}</span>` : '—'}</td>
+                    <td>
+                        <button class="btn-danger" style="color:var(--primary)"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn-danger"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('stat-count').innerText = totalQty;
+            document.getElementById('stat-value').innerText = `€ ${totalSum.toFixed(2)}`;
+            const uniqueLocs = [...new Set(data.map(item => item.location))].length;
+            document.getElementById('stat-locations').innerText = uniqueLocs;
+        }
+
+        function toggleRowHighlight(id) {
+            highlightedRowId = (highlightedRowId === id) ? null : id;
+            filterTable();
+        }
+
+        function switchTab(tabId, element) {
+            currentMode = tabId;
+            highlightedRowId = null;
+
+            localStorage.setItem('activeTab', tabId);
+
+            document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('.mobile-nav-item').forEach(item => item.classList.remove('active'));
+
+            document.getElementById('visualizzazione').classList.add('active');
+            
+            if (element) element.classList.add('active');
+            const mobileBtn = document.getElementById(`mNav-${tabId}`);
+            if (mobileBtn) mobileBtn.classList.add('active');
+
+            const copyBtn = document.getElementById('btnCopyShareLink');
+            const qrBtn = document.getElementById('btnShowQrCode');
+            const locFilter = document.getElementById('filterLocation');
+
+            if (tabId === 'scambio') {
+                copyBtn.style.display = 'inline-flex';
+                qrBtn.style.display = 'inline-flex';
+                locFilter.value = 'SCAMBIO';
+                locFilter.disabled = true;
+                document.getElementById('statLabelCount').innerText = 'In Scambio';
+            } else if (tabId === 'wishlist') {
+                copyBtn.style.display = 'inline-flex';
+                qrBtn.style.display = 'inline-flex';
+                locFilter.value = 'WISHLIST';
+                locFilter.disabled = true;
+                document.getElementById('statLabelCount').innerText = 'In Wishlist';
+            } else {
+                copyBtn.style.display = 'none';
+                qrBtn.style.display = 'none';
+                locFilter.value = '';
+                locFilter.disabled = false;
+                document.getElementById('statLabelCount').innerText = 'Carte Totali';
+            }
+
+            if (tabId === 'inserimento' || tabId === 'prezzi' || tabId === 'sealed' || tabId === 'impostazioni') {
+                document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+                document.getElementById(tabId).classList.add('active');
+            } else {
+                filterTable();
+            }
+        }
+
+        function filterTable() {
+            const searchVal = document.getElementById('searchInput').value.toLowerCase();
+            let locVal = document.getElementById('filterLocation').value;
+            const langVal = document.getElementById('filterLang').value;
+
+            if (currentMode === 'scambio') locVal = 'SCAMBIO';
+            if (currentMode === 'wishlist') locVal = 'WISHLIST';
+
+            const filtered = mockCardsView.filter(card => {
+                const matchesSearch = card.name.toLowerCase().includes(searchVal) || card.code.toLowerCase().includes(searchVal);
+                const matchesLoc = locVal === "" || card.location === locVal;
+                const matchesLang = langVal === "" || card.lang === langVal;
+                return matchesSearch && matchesLoc && matchesLang;
+            });
+
+            renderViewTable(filtered);
+        }
+
+        function toggleDarkMode(isDark) {
+            localStorage.setItem('darkMode', isDark);
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+        }
+
+        function setSiteTheme(themeName) {
+            localStorage.setItem('siteTheme', themeName);
+            document.body.classList.remove('theme-verde', 'theme-pokemon');
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+
+            if (themeName === 'verde') {
+                document.body.classList.add('theme-verde');
+                document.getElementById('themeBtn-verde').classList.add('active');
+            } else if (themeName === 'pokemon') {
+                document.body.classList.add('theme-pokemon');
+                document.getElementById('themeBtn-pokemon').classList.add('active');
+            } else {
+                document.getElementById('themeBtn-viola').classList.add('active');
+            }
+        }
+
+        function copyShareLink() {
+            alert("Link copiato negli appunti!");
+        }
+
+        function openQrModal() {
+            const modal = document.getElementById('qrModal');
+            const container = document.getElementById('qrcodeContainer');
+            container.innerHTML = '';
+            new QRCode(container, {
+                text: window.location.href,
+                width: 180,
+                height: 180,
+                colorDark : "#2a2438",
+                colorLight : "#ffffff"
+            });
+            modal.style.display = 'flex';
+        }
+
+        function closeQrModal() {
+            document.getElementById('qrModal').style.display = 'none';
+        }
+
+        function triggerExtensionPriceCheck() {
+            alert("Avvio controllo prezzi in corso...");
+        }
+
+        function saveDataMock() {
+            clearEntryDraft();
+            alert("Carte salvate con successo e bozza ripulita!");
+        }
+    </script>
+</body>
+</html>
