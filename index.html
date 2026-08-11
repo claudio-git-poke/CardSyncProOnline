@@ -487,6 +487,7 @@
 
         .price { font-weight: 800; color: var(--text-dark); }
         .variation-up { color: var(--success); font-weight: 700; font-size: 0.75rem; }
+        .variation-down { color: var(--danger); font-weight: 700; font-size: 0.75rem; }
         .variation-none { color: var(--text-muted); }
 
         .link-icon {
@@ -889,13 +890,6 @@
 
                     <select class="filter-select" id="filterLocation" onchange="filterTable()">
                         <option value="">Tutte le Location</option>
-                        <option value="?">?</option>
-                        <option value="BULK">BULK</option>
-                        <option value="1025">1025</option>
-                        <option value="TOPLOADER - ALTRO">TOPLOADER - ALTRO</option>
-                        <option value="BINDER">BINDER</option>
-                        <option value="SCAMBIO">SCAMBIO</option>
-                        <option value="WISHLIST">WISHLIST</option>
                     </select>
 
                     <select class="filter-select" id="filterLang" onchange="filterTable()">
@@ -1072,6 +1066,65 @@
             <div id="qrcodeContainer"></div>
             <button class="btn-secondary" style="width: 100%;" onclick="copyShareLink()">
                 <i class="fa-solid fa-link"></i> Copia Link
+            </button>
+        </div>
+    </div>
+
+    <!-- MODALE MODIFICA CARTA -->
+    <div id="editCardModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 380px; text-align: left;" onclick="event.stopPropagation()">
+            <button class="close-modal-btn" onclick="chiudiModificaCarta()"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="font-weight: 800; margin-bottom: 1rem; text-align:center;"><i class="fa-solid fa-pen" style="color: var(--primary);"></i> Modifica Carta</h3>
+
+            <div class="auth-field">
+                <label>Nome / Codice</label>
+                <input type="text" id="editNome">
+            </div>
+            <div class="auth-field">
+                <label>Codice Cardmarket</label>
+                <input type="text" id="editCodice">
+            </div>
+            <div style="display:flex; gap:0.6rem;">
+                <div class="auth-field" style="flex:1;">
+                    <label>Lingua</label>
+                    <select id="editLingua">
+                        <option value="IT">IT</option>
+                        <option value="EN">EN</option>
+                        <option value="KOR">KOR</option>
+                        <option value="JP">JP</option>
+                    </select>
+                </div>
+                <div class="auth-field" style="flex:1;">
+                    <label>Condizione</label>
+                    <select id="editCondizione">
+                        <option value="NM">NM</option>
+                        <option value="EX">EX</option>
+                        <option value="GD">GD</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display:flex; gap:0.6rem;">
+                <div class="auth-field" style="flex:1;">
+                    <label>Quantità</label>
+                    <input type="number" id="editQty" min="1">
+                </div>
+                <div class="auth-field" style="flex:1;">
+                    <label>Prezzo (€)</label>
+                    <input type="number" id="editPrezzo" step="0.01" min="0">
+                </div>
+            </div>
+            <div class="auth-field">
+                <label>Location</label>
+                <input type="text" id="editLocation" list="datalistEditLocation">
+                <datalist id="datalistEditLocation"></datalist>
+            </div>
+            <div class="auth-field">
+                <label>Note</label>
+                <input type="text" id="editNote">
+            </div>
+
+            <button class="btn-main" id="btnSalvaModificaCarta" style="width: 100%; justify-content:center; margin-top: 0.4rem;" onclick="salvaModificaCarta()">
+                <i class="fa-solid fa-check"></i> Salva Modifiche
             </button>
         </div>
     </div>
@@ -1436,17 +1489,72 @@
         let highlightedRowId = null;
         let changelogClicks = 0;
 
-        const mockCardsView = [
-            { id: 1, name: "ABSOL EX", code: "SV3 073", location: "BULK", qty: 1, lang: "KOR", cond: "NM", price: 0.05, variation: "—", link: "#", notes: "" },
-            { id: 2, name: "ACCHIAPPA-POKÉMON ECCELLENTE", code: "PRE 119", location: "BULK", qty: 1, lang: "IT", cond: "NM", price: 0.10, variation: "—", link: "#", notes: "" },
-            { id: 3, name: "ADDESTRAMENTO DI SAGE", code: "UD 77", location: "BULK", qty: 1, lang: "IT", cond: "EX", price: 0.10, variation: "—", link: "#", notes: "RH" },
-            { id: 4, name: "AGGRON V", code: "BRS 096", location: "SCAMBIO", qty: 3, lang: "EN", cond: "NM", price: 0.60, variation: "▲ +0,10€", link: "#", notes: "" },
-            { id: 5, name: "ALAKAZAM", code: "MEP 009", location: "SCAMBIO", qty: 1, lang: "IT", cond: "NM", price: 6.49, variation: "▲ +0,19€", link: "#", notes: "" },
-            { id: 6, name: "ALAKAZAM", code: "MEP 003", location: "TOPLOADER - ALTRO", qty: 1, lang: "IT", cond: "NM", price: 10.00, variation: "—", link: "#", notes: "" },
-            { id: 7, name: "CHARIZARD EX", code: "MEW 199", location: "WISHLIST", qty: 1, lang: "IT", cond: "NM", price: 120.00, variation: "—", link: "#", notes: "AOR" },
-            { id: 8, name: "ALAKAZAM V", code: "SWSH 083", location: "SCAMBIO", qty: 2, lang: "IT", cond: "NM", price: 2.50, variation: "—", link: "#", notes: "" },
-            { id: 9, name: "UMBREON VMAX", code: "EVS 215", location: "WISHLIST", qty: 1, lang: "EN", cond: "NM", price: 650.00, variation: "—", link: "#", notes: "" }
-        ];
+        // ── CARTE REALI (tabella 'carte' su Supabase) ────────────────────────────
+        // Prima questa pagina mostrava dati finti di esempio (mockCardsView) — mai
+        // collegata al database vero. 'stato' distingue collezione da wishlist
+        // (due cose diverse, non solo una location chiamata "WISHLIST"); la
+        // location "SCAMBIO" invece è solo un valore di location come un altro,
+        // scelto liberamente per marcare le carte in scambio dentro la collezione.
+        let carteReali = [];
+
+        async function caricaCarteReali() {
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) return;
+
+            const { data, error } = await supabaseClient
+                .from('carte')
+                .select('*')
+                .eq('owner_id', userId)
+                .in('stato', ['collezione', 'wishlist'])
+                .order('nome');
+
+            if (error) {
+                console.error('Errore caricamento carte:', error.message);
+                return;
+            }
+
+            carteReali = (data || []).map(r => {
+                let variation = '—';
+                if (r.prezzo_precedente != null && r.prezzo != null) {
+                    const diff = Number(r.prezzo) - Number(r.prezzo_precedente);
+                    if (Math.abs(diff) >= 0.005) { // ignora rumore di arrotondamento
+                        const segno = diff > 0 ? '▲' : '▼';
+                        variation = `${segno} ${diff > 0 ? '+' : ''}${diff.toFixed(2)}€`;
+                    }
+                }
+                return {
+                    id: r.id,
+                    stato: r.stato,
+                    name: r.nome || '',
+                    code: r.codice || '',
+                    location: r.location || '',
+                    qty: r.qty || 1,
+                    lang: r.lingua || 'IT',
+                    cond: r.condizione || 'NM',
+                    price: r.prezzo != null ? Number(r.prezzo) : 0,
+                    variation,
+                    link: r.url || '#',
+                    notes: r.note || ''
+                };
+            });
+
+            // Popola la tendina filtro con le location REALMENTE presenti nei
+            // tuoi dati, invece del vecchio elenco fisso scritto a mano.
+            const selectLoc = document.getElementById('filterLocation');
+            const locationPresenti = [...new Set(carteReali.map(c => c.location).filter(Boolean))].sort();
+            const valorePrecedente = selectLoc.value;
+            selectLoc.innerHTML = '<option value="">Tutte le Location</option>';
+            locationPresenti.forEach(loc => {
+                const opt = document.createElement('option');
+                opt.value = loc;
+                opt.textContent = loc;
+                selectLoc.appendChild(opt);
+            });
+            if (valorePrecedente) selectLoc.value = valorePrecedente;
+
+            filterTable();
+        }
 
         window.onload = async () => {
             // Ripristina Dark Mode e Temi salvati
@@ -1463,15 +1571,15 @@
                 initEntryTable();
             }
 
-            renderViewTable(mockCardsView);
+            // Login: mostra l'overlay se non c'è già una sessione valida —
+            // PRIMA di caricare le carte, dato che serve l'utente per la query.
+            await assicuraLoginSupabase();
+            await caricaCarteReali();
 
             // Ripristina l'ultima scheda attiva dopo un refresh
             const savedTab = localStorage.getItem('activeTab') || 'visualizzazione';
             const navBtn = document.querySelector(`nav .nav-item[onclick*="'${savedTab}'"]`);
             switchTab(savedTab, navBtn);
-
-            // Login: mostra l'overlay se non c'è già una sessione valida
-            await assicuraLoginSupabase();
         };
 
         /* LOGICA EASTER EGG CHANGELOG */
@@ -1706,7 +1814,7 @@
 
                 const langClass = card.lang === 'KOR' ? 'badge-lang-kor' : 'badge-lang';
                 const condClass = card.cond === 'EX' ? 'badge-cond-ex' : 'badge-cond';
-                const varClass = card.variation.includes('▲') ? 'variation-up' : 'variation-none';
+                const varClass = card.variation.includes('▲') ? 'variation-up' : (card.variation.includes('▼') ? 'variation-down' : 'variation-none');
 
                 totalSum += card.price * card.qty;
                 totalQty += card.qty;
@@ -1727,8 +1835,8 @@
                     </td>
                     <td>${card.notes ? `<span class="badge badge-rh">✨ ${card.notes}</span>` : '—'}</td>
                     <td>
-                        <button class="btn-danger" style="color:var(--primary)"><i class="fa-solid fa-pen"></i></button>
-                        <button class="btn-danger"><i class="fa-solid fa-trash"></i></button>
+                        <button class="btn-danger" style="color:var(--primary)" onclick="apriModificaCarta('${card.id}')"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn-danger" onclick="eliminaCarta('${card.id}')"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1738,6 +1846,80 @@
             document.getElementById('stat-value').innerText = `€ ${totalSum.toFixed(2)}`;
             const uniqueLocs = [...new Set(data.map(item => item.location))].length;
             document.getElementById('stat-locations').innerText = uniqueLocs;
+        }
+
+        // ── MODIFICA / ELIMINAZIONE CARTA ────────────────────────────────────────
+        let _cartaInModifica = null;
+
+        function apriModificaCarta(id) {
+            const card = carteReali.find(c => String(c.id) === String(id));
+            if (!card) return;
+            _cartaInModifica = card;
+
+            document.getElementById('editNome').value = card.name;
+            document.getElementById('editCodice').value = card.code;
+            document.getElementById('editLingua').value = card.lang;
+            document.getElementById('editCondizione').value = card.cond;
+            document.getElementById('editQty').value = card.qty;
+            document.getElementById('editLocation').value = card.location;
+            document.getElementById('editPrezzo').value = card.price || '';
+            document.getElementById('editNote').value = card.notes;
+
+            const datalist = document.getElementById('datalistEditLocation');
+            datalist.innerHTML = [...new Set(carteReali.map(c => c.location).filter(Boolean))]
+                .map(loc => `<option value="${loc}"></option>`).join('');
+
+            document.getElementById('editCardModal').style.display = 'flex';
+        }
+
+        function chiudiModificaCarta() {
+            document.getElementById('editCardModal').style.display = 'none';
+            _cartaInModifica = null;
+        }
+
+        async function salvaModificaCarta() {
+            if (!_cartaInModifica) return;
+
+            const aggiornamento = {
+                nome: document.getElementById('editNome').value.trim(),
+                codice: document.getElementById('editCodice').value.trim(),
+                lingua: document.getElementById('editLingua').value,
+                condizione: document.getElementById('editCondizione').value,
+                qty: Math.max(1, parseInt(document.getElementById('editQty').value, 10) || 1),
+                location: document.getElementById('editLocation').value.trim() || null,
+                prezzo: document.getElementById('editPrezzo').value !== '' ? parseFloat(document.getElementById('editPrezzo').value) : null,
+                note: document.getElementById('editNote').value.trim() || null,
+            };
+
+            const btn = document.getElementById('btnSalvaModificaCarta');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvataggio...';
+
+            const { error } = await supabaseClient.from('carte').update(aggiornamento).eq('id', _cartaInModifica.id);
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Salva Modifiche';
+
+            if (error) {
+                alert('❌ Errore nel salvare le modifiche: ' + error.message);
+                return;
+            }
+
+            chiudiModificaCarta();
+            await caricaCarteReali();
+        }
+
+        async function eliminaCarta(id) {
+            const card = carteReali.find(c => String(c.id) === String(id));
+            if (!card) return;
+            if (!confirm(`Eliminare definitivamente "${card.name}" dalla collezione?\n\nQuesta azione non si può annullare.`)) return;
+
+            const { error } = await supabaseClient.from('carte').delete().eq('id', id);
+            if (error) {
+                alert('❌ Errore nell\'eliminazione: ' + error.message);
+                return;
+            }
+            await caricaCarteReali();
         }
 
         function toggleRowHighlight(id) {
@@ -1813,13 +1995,18 @@
             const langVal = document.getElementById('filterLang').value;
 
             if (currentMode === 'scambio') locVal = 'SCAMBIO';
-            if (currentMode === 'wishlist') locVal = 'WISHLIST';
 
-            const filtered = mockCardsView.filter(card => {
+            const filtered = carteReali.filter(card => {
                 const matchesSearch = card.name.toLowerCase().includes(searchVal) || card.code.toLowerCase().includes(searchVal);
-                const matchesLoc = locVal === "" || card.location === locVal;
                 const matchesLang = langVal === "" || card.lang === langVal;
-                return matchesSearch && matchesLoc && matchesLang;
+                if (!matchesSearch || !matchesLang) return false;
+
+                // Wishlist e Scambio filtrano su cose DIVERSE: la wishlist è uno
+                // stato a parte nel database, "SCAMBIO" è solo una location come
+                // le altre dentro la collezione vera e propria.
+                if (currentMode === 'wishlist') return card.stato === 'wishlist';
+                if (card.stato !== 'collezione') return false;
+                return locVal === "" || card.location === locVal;
             });
 
             renderViewTable(filtered);
