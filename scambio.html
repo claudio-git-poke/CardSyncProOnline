@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>CardSync Pro — Catalogo Scambio</title>
 
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
@@ -35,7 +35,12 @@
             background-color: var(--bg-color);
             color: var(--text-dark);
             min-height: 100vh;
-            padding-bottom: 90px; /* spazio per la barra totale fissa in basso */
+            min-height: 100dvh; /* iOS Safari: la barra indirizzi dinamica
+                                    cambia 100vh in continuazione — dvh si
+                                    adatta subito, senza "salti" di layout */
+            /* spazio per la barra totale fissa in basso, + l'home indicator
+               di iPhone (barra bianca in fondo, senza tasto Home fisico) */
+            padding-bottom: calc(90px + env(safe-area-inset-bottom));
         }
 
         header {
@@ -208,6 +213,11 @@
             border-top: 1px solid var(--border-color);
             box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
             padding: 0.9rem 1.2rem;
+            /* iPhone senza tasto Home: aggiunge lo spazio dell'home indicator
+               SOPRA al padding normale, così il bottone non ci finisce sotto */
+            padding-bottom: calc(0.9rem + env(safe-area-inset-bottom));
+            padding-left: calc(1.2rem + env(safe-area-inset-left));
+            padding-right: calc(1.2rem + env(safe-area-inset-right));
             display: flex;
             align-items: center;
             justify-content: space-between;
