@@ -937,7 +937,16 @@
                     </button>
                 </div>
 
-                <div style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:flex-end; margin-bottom: 1rem; padding: 0.8rem; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 10px;">
+                <div style="display:flex; gap:0.5rem; margin-bottom: 1rem;">
+                    <button type="button" class="theme-btn active" id="btnModoCollezione" onclick="impostaModalitaInserimento('collezione')" style="flex:1; flex-direction:row; gap:0.5rem;">
+                        <i class="fa-solid fa-box"></i> Colleziona (con Location)
+                    </button>
+                    <button type="button" class="theme-btn" id="btnModoWishlist" onclick="impostaModalitaInserimento('wishlist')" style="flex:1; flex-direction:row; gap:0.5rem;">
+                        <i class="fa-solid fa-bookmark"></i> Wishlist (voglio comprarla)
+                    </button>
+                </div>
+
+                <div id="pannelloLocationComune" style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:flex-end; margin-bottom: 1rem; padding: 0.8rem; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 10px;">
                     <div style="flex: 1; min-width: 180px;">
                         <label style="display:block; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.3rem;">LOCATION COMUNE (sovrascrive quelle delle righe)</label>
                         <select id="selectLocationComune" class="filter-select" style="width: 100%;">
@@ -953,7 +962,7 @@
                     </button>
                 </div>
 
-                <table>
+                <table id="tabellaInserimento">
                     <thead>
                         <tr>
                             <th style="width: 24%;">NOME / CODICE</th>
@@ -962,7 +971,7 @@
                             <th style="width: 6%; text-align: center;">REV</th>
                             <th style="width: 6%; text-align: center;">1st</th>
                             <th style="width: 16%; text-align: center;">Q.TÀ</th>
-                            <th style="width: 14%;">LOCATION</th>
+                            <th style="width: 14%;" class="colonna-location">LOCATION</th>
                             <th style="width: 12%;">NOTE</th>
                             <th style="width: 4%;"></th>
                         </tr>
@@ -1526,6 +1535,42 @@
             return Array(qty).fill(null).map(() => ({ ...rigaBase }));
         }
 
+        // ── TOGGLE MODALITÀ INSERIMENTO (Colleziona / Wishlist) ──────────────────
+        let _modalitaInserimento = 'collezione';
+
+        function impostaModalitaInserimento(modo) {
+            _modalitaInserimento = modo;
+            document.getElementById('btnModoCollezione').classList.toggle('active', modo === 'collezione');
+            document.getElementById('btnModoWishlist').classList.toggle('active', modo === 'wishlist');
+            // La location comune non ha senso per la wishlist (non possiedi
+            // ancora la carta) — nascosta, non solo disabilitata, per non
+            // confondere con un campo che comunque verrebbe ignorato.
+            document.getElementById('pannelloLocationComune').style.display = modo === 'wishlist' ? 'none' : 'flex';
+            const btn = document.getElementById('btnSalvaCarte');
+            btn.innerHTML = modo === 'wishlist'
+                ? '<i class="fa-solid fa-bookmark"></i> Salva in Wishlist'
+                : '<i class="fa-solid fa-paper-plane"></i> Salva Carte';
+        }
+
+        // Analoga a _rigaEntryToRigheDb ma per 'coda_wishlist' — niente
+        // location (non possiedi ancora la carta), il campo LOCATION della
+        // riga viene semplicemente ignorato in questa modalità.
+        function _rigaEntryToRigheWishlist(row, userId) {
+            const nome = (row.name || '').trim();
+            if (!nome) return [];
+            const qty = Math.max(1, parseInt(row.qty, 10) || 1);
+            return [{
+                owner_id: userId,
+                nome,
+                lingua: row.lang || 'IT',
+                condizione: row.cond || 'NM',
+                reverse: !!row.rev,
+                first_ed: !!row.first,
+                nota: (row.notes || '').trim() || null,
+                qty,
+            }];
+        }
+
         async function salvaCarteReali() {
             const { data: sessionData } = await supabaseClient.auth.getSession();
             const userId = sessionData?.session?.user?.id;
@@ -1559,15 +1604,39 @@
             }
 
             const locationComune = document.getElementById('selectLocationComune')?.value.trim() || '';
-            const righeDb = righeValide.flatMap(r => _rigaEntryToRigheDb(
-                locationComune ? { ...r, loc: locationComune } : r,
-                userId
-            ));
-
             const btn = document.getElementById('btnSalvaCarte');
             const originalHtml = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Invio in corso...';
+
+            if (_modalitaInserimento === 'wishlist') {
+                const righeWishlist = righeValide.flatMap(r => _rigaEntryToRigheWishlist(r, userId));
+                const { error } = await supabaseClient.from('coda_wishlist').insert(righeWishlist);
+
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+
+                if (error) {
+                    alert('❌ Errore nell\'invio alla wishlist: ' + error.message);
+                    return;
+                }
+
+                // "Campanello": segnala all'estensione che è arrivato lavoro
+                // nuovo — stesso schema già usato per 'aggiungi_carte' (vedi
+                // quella funzione più sotto per i dettagli del perché).
+                supabaseClient.from('ordini').insert({ tipo: 'aggiungi_wishlist', creato_da: userId }).then(({ error: errOrdine }) => {
+                    if (errOrdine) console.error('Impossibile avvisare l\'estensione:', errOrdine.message);
+                });
+
+                clearEntryDraft();
+                alert(`✅ ${righeWishlist.length} cart${righeWishlist.length === 1 ? 'a inviata' : 'e inviate'} alla wishlist!\n\nResteranno in attesa finché un dispositivo con l'estensione aperta non le processa.`);
+                return;
+            }
+
+            const righeDb = righeValide.flatMap(r => _rigaEntryToRigheDb(
+                locationComune ? { ...r, loc: locationComune } : r,
+                userId
+            ));
 
             const { error } = await supabaseClient.from('coda_carte').insert(righeDb);
 
@@ -2104,11 +2173,13 @@
                 locFilter.disabled = true;
                 document.getElementById('statLabelCount').innerText = 'In Scambio';
             } else if (tabId === 'wishlist') {
-                // Niente link/QR pubblico qui: scambio.html esiste solo per
-                // la sezione Scambio. Il filtro location non è pertinente
-                // alla wishlist (che è uno stato a parte, non una location).
-                copyBtn.style.display = 'none';
-                qrBtn.style.display = 'none';
+                // Ora esiste anche wishlist.html — riattiva link/QR, che
+                // punteranno lì invece che a scambio.html (vedi
+                // _linkPubblicoCondivisione più sotto). Il filtro location
+                // resta non pertinente alla wishlist (che è una tabella a
+                // parte, non un valore di location).
+                copyBtn.style.display = 'inline-flex';
+                qrBtn.style.display = 'inline-flex';
                 locFilter.value = '';
                 locFilter.disabled = true;
                 document.getElementById('statLabelCount').innerText = 'In Wishlist';
@@ -2178,21 +2249,21 @@
             }
         }
 
-        // Costruisce il link pubblico a scambio.html per l'utente loggato —
-        // funziona solo per la sezione Scambio (le altre non hanno un
-        // catalogo pubblico dedicato), usando l'id utente come riferimento.
-        // scambio.html è pensato per chi NON ha e non avrà mai un account
-        // CardSync Pro: nessun login richiesto, solo le carte in scambio
-        // (vedi RLS dedicata su Supabase, scambio_pubblico_rls.sql).
-        async function _linkPubblicoScambio() {
+        // Costruisce il link pubblico alla pagina condivisa giusta per la tab
+        // attiva (scambio.html o wishlist.html), usando l'id utente come
+        // riferimento. Entrambe le pagine sono pensate per chi NON ha e non
+        // avrà mai un account CardSync Pro: nessun login richiesto — solo i
+        // dati previsti dalla rispettiva RLS pubblica su Supabase.
+        async function _linkPubblicoCondivisione() {
             const { data: sessionData } = await supabaseClient.auth.getSession();
             const userId = sessionData?.session?.user?.id;
             if (!userId) return null;
-            return new URL('scambio.html?u=' + encodeURIComponent(userId), window.location.href).href;
+            const pagina = currentMode === 'wishlist' ? 'wishlist.html' : 'scambio.html';
+            return new URL(pagina + '?u=' + encodeURIComponent(userId), window.location.href).href;
         }
 
         async function copyShareLink() {
-            const link = await _linkPubblicoScambio();
+            const link = await _linkPubblicoCondivisione();
             if (!link) { alert('Devi essere loggato per generare il link.'); return; }
             try {
                 await navigator.clipboard.writeText(link);
@@ -2203,7 +2274,7 @@
         }
 
         async function openQrModal() {
-            const link = await _linkPubblicoScambio();
+            const link = await _linkPubblicoCondivisione();
             if (!link) { alert('Devi essere loggato per generare il QR.'); return; }
             const modal = document.getElementById('qrModal');
             const container = document.getElementById('qrcodeContainer');
