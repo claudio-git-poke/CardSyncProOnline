@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CardSync Pro</title>
 
     <!-- FAVICON -->
@@ -123,7 +123,11 @@
         body {
             background-color: var(--bg-color);
             color: var(--text-dark);
-            min-height: 100vh;
+            min-height: 100vh; /* fallback per browser senza dvh */
+            min-height: 100dvh; /* iOS Safari: la barra indirizzi che appare/
+                                    scompare cambia 100vh in continuazione,
+                                    causando "salti" di layout — dvh (dynamic
+                                    viewport height) si adatta subito, senza */
         }
 
         /* --- HEADER & NAVIGATION --- */
@@ -226,10 +230,13 @@
 
         .drawer-overlay {
             position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
+            inset: 0; /* invece di top/left/width:100vw/height:100vh — su iOS
+                         Safari 100vw può causare micro-overflow orizzontale
+                         (non tiene conto di barre/notch), inset:0 no */
             background: rgba(0, 0, 0, 0.5);
             z-index: 1100;
             display: none;
+            -webkit-backdrop-filter: blur(2px); /* iOS Safari richiede il prefisso -webkit- */
             backdrop-filter: blur(2px);
         }
 
@@ -248,6 +255,11 @@
             display: flex;
             flex-direction: column;
             padding: 1rem 0.8rem;
+            /* iPhone con notch/home indicator: evita che le voci del menu
+               finiscano sotto l'area "sicura" in alto/in basso */
+            padding-top: max(1rem, env(safe-area-inset-top));
+            padding-left: max(0.8rem, env(safe-area-inset-left));
+            padding-bottom: max(1rem, env(safe-area-inset-bottom));
         }
 
         .drawer-panel.open { transform: translateX(0); }
@@ -574,12 +586,14 @@
         /* MODALI POPUP */
         .modal-overlay {
             position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
+            inset: 0;
             background: rgba(0, 0, 0, 0.6);
             display: none;
             align-items: center; justify-content: center;
             z-index: 1000;
+            -webkit-backdrop-filter: blur(4px);
             backdrop-filter: blur(4px);
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
 
         .modal-content {
@@ -987,6 +1001,16 @@
                     <i class="fa-solid fa-paper-plane"></i> Avvia Controllo Prezzi
                 </button>
             </div>
+
+            <div class="card-panel" style="max-width:500px; margin:1rem auto; text-align:center; padding: 2rem;">
+                <div style="margin-bottom: 0.5rem; font-weight: 800; font-size: 1.1rem;">
+                    <i class="fa-solid fa-bookmark" style="color: var(--primary);"></i> Controllo Prezzi Wishlist
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.2rem;" id="prezziWishlistSubtext">Aggiorna le quotazioni delle carte che desideri.</p>
+                <button class="btn-main" id="btnControllaPrezziWishlist" style="width: 100%; justify-content: center;" onclick="triggerExtensionPriceCheckWishlist()">
+                    <i class="fa-solid fa-paper-plane"></i> Avvia Controllo Prezzi Wishlist
+                </button>
+            </div>
         </div>
 
         <!-- PLACEHOLDER SEALED -->
@@ -1352,9 +1376,83 @@
             }, INTERVALLO_MS);
         }
 
-        function _resetBottonePrezzi(btn, sub) {
+        function _resetBottonePrezzi(btn, sub, testoDefault = '<i class="fa-solid fa-paper-plane"></i> Avvia Controllo Prezzi') {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Avvia Controllo Prezzi';
+            btn.innerHTML = testoDefault;
+        }
+
+        // ── CONTROLLO PREZZI WISHLIST — stesso schema, ordine dedicato ───────────
+        let _pollOrdineWishlistInterval = null;
+
+        async function triggerExtensionPriceCheckWishlist() {
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) {
+                await assicuraLoginSupabase();
+                return;
+            }
+
+            const btn = document.getElementById('btnControllaPrezziWishlist');
+            const sub = document.getElementById('prezziWishlistSubtext');
+            const testoDefault = '<i class="fa-solid fa-paper-plane"></i> Avvia Controllo Prezzi Wishlist';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creazione ordine...';
+
+            const { data: ordine, error } = await supabaseClient
+                .from('ordini')
+                .insert({ tipo: 'controlla_prezzi_wishlist', creato_da: userId })
+                .select()
+                .single();
+
+            if (error) {
+                sub.textContent = '❌ Errore: ' + error.message;
+                _resetBottonePrezzi(btn, sub, testoDefault);
+                return;
+            }
+
+            btn.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> In attesa che un dispositivo lo prenda in carico...';
+            sub.textContent = 'L\'ordine è stato creato — un dispositivo con l\'estensione aperta lo eseguirà a breve.';
+
+            if (_pollOrdineWishlistInterval) clearInterval(_pollOrdineWishlistInterval);
+            const INTERVALLO_MS = 3000;
+            const MAX_TENTATIVI = 200; // ~10 minuti
+            let tentativi = 0;
+
+            _pollOrdineWishlistInterval = setInterval(async () => {
+                tentativi++;
+                const { data, error: errPoll } = await supabaseClient
+                    .from('ordini')
+                    .select('stato, risultato, errore_msg')
+                    .eq('id', ordine.id)
+                    .single();
+
+                if (errPoll) {
+                    clearInterval(_pollOrdineWishlistInterval);
+                    _resetBottonePrezzi(btn, sub, testoDefault);
+                    sub.textContent = '❌ Errore nel controllo dello stato: ' + errPoll.message;
+                    return;
+                }
+
+                if (data.stato === 'in_corso') {
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Controllo prezzi in corso...';
+                    sub.textContent = 'Un dispositivo sta controllando le quotazioni della wishlist su Cardmarket adesso.';
+                } else if (data.stato === 'completato') {
+                    clearInterval(_pollOrdineWishlistInterval);
+                    const r = data.risultato || {};
+                    _resetBottonePrezzi(btn, sub, testoDefault);
+                    sub.textContent = `✅ Fatto! ${r.aggiornate ?? 0} su ${r.totale ?? 0} carte aggiornate.`;
+                } else if (data.stato === 'errore') {
+                    clearInterval(_pollOrdineWishlistInterval);
+                    _resetBottonePrezzi(btn, sub, testoDefault);
+                    sub.textContent = '❌ ' + (data.errore_msg || 'Errore sconosciuto durante il controllo prezzi.');
+                }
+
+                if (tentativi >= MAX_TENTATIVI) {
+                    clearInterval(_pollOrdineWishlistInterval);
+                    _resetBottonePrezzi(btn, sub, testoDefault);
+                    sub.textContent = '⏱️ Nessun dispositivo ha ancora eseguito l\'ordine. Controlla che qualcuno del gruppo abbia l\'estensione aperta e sia online.';
+                }
+            }, INTERVALLO_MS);
         }
 
         // ── LOCATION COMUNE (sezione Inserimento) ────────────────────────────────
