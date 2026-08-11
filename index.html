@@ -2026,6 +2026,7 @@
                     </td>
                     <td>${card.notes ? `<span class="badge badge-rh">✨ ${card.notes}</span>` : '—'}</td>
                     <td>
+                        ${card.tabella === 'wishlist' ? `<button class="btn-danger" style="color:var(--success)" onclick="segnaOttenuta('${card.id}')" title="Ottenuta — sposta in collezione"><i class="fa-solid fa-check"></i></button>` : ''}
                         <button class="btn-danger" style="color:var(--primary)" onclick="apriModificaCarta('${card.id}')"><i class="fa-solid fa-pen"></i></button>
                         <button class="btn-danger" onclick="eliminaCarta('${card.id}')"><i class="fa-solid fa-trash"></i></button>
                     </td>
@@ -2112,6 +2113,50 @@
             }
 
             chiudiModificaCarta();
+            await caricaCarteReali();
+        }
+
+        // Sposta una carta dalla wishlist alla collezione vera e propria —
+        // equivalente sul sito del bottone "✓ Comprata" dell'estensione.
+        // Due passaggi separati (insert poi delete), non una transazione SQL
+        // unica: se il secondo fallisse dopo il primo, la carta resterebbe
+        // duplicata in entrambe le tabelle invece che sparire da tutte e due
+        // — un doppione visibile è facile da sistemare a mano, una carta
+        // persa no.
+        async function segnaOttenuta(id) {
+            const card = carteReali.find(c => String(c.id) === String(id));
+            if (!card || card.tabella !== 'wishlist') return;
+
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) return;
+
+            const location = prompt(`In che Location metti "${card.name}"? (lascia vuoto per "?")`, '');
+            if (location === null) return; // annullato
+
+            const { error: errInsert } = await supabaseClient.from('carte').insert({
+                owner_id: userId,
+                nome: card.name,
+                codice: card.code || null,
+                location: location.trim() || '?',
+                qty: card.qty,
+                lingua: card.lang,
+                condizione: card.cond,
+                url: card.link !== '#' ? card.link : null,
+                prezzo: card.price || null,
+                note: card.notes || null,
+                stato: 'collezione',
+            });
+            if (errInsert) {
+                alert('❌ Errore nello spostare la carta in collezione: ' + errInsert.message);
+                return;
+            }
+
+            const { error: errDelete } = await supabaseClient.from('wishlist').delete().eq('id', card.id);
+            if (errDelete) {
+                alert('⚠️ Carta aggiunta alla collezione, ma non rimossa dalla wishlist: ' + errDelete.message + '\n\nRimuovila a mano dalla wishlist per evitare doppioni.');
+            }
+
             await caricaCarteReali();
         }
 
