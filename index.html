@@ -1497,47 +1497,71 @@
         // scelto liberamente per marcare le carte in scambio dentro la collezione.
         let carteReali = [];
 
+        function _mappaVariazione(r) {
+            let variation = '—';
+            if (r.prezzo_precedente != null && r.prezzo != null) {
+                const diff = Number(r.prezzo) - Number(r.prezzo_precedente);
+                if (Math.abs(diff) >= 0.005) { // ignora rumore di arrotondamento
+                    const segno = diff > 0 ? '▲' : '▼';
+                    variation = `${segno} ${diff > 0 ? '+' : ''}${diff.toFixed(2)}€`;
+                }
+            }
+            return variation;
+        }
+
         async function caricaCarteReali() {
             const { data: sessionData } = await supabaseClient.auth.getSession();
             const userId = sessionData?.session?.user?.id;
             if (!userId) return;
 
-            const { data, error } = await supabaseClient
-                .from('carte')
-                .select('*')
-                .eq('owner_id', userId)
-                .in('stato', ['collezione', 'wishlist'])
-                .order('nome');
+            // Collezione e wishlist ora vivono in DUE TABELLE separate (non
+            // più stato='wishlist' dentro 'carte') — le leggiamo insieme e le
+            // uniamo in un solo array per riusare la stessa tabella/filtri sul
+            // sito. 'tabella' su ogni riga ricorda da dove viene, così
+            // modifica/eliminazione sanno su quale tabella agire dopo.
+            const [{ data: dataCarte, error: errCarte }, { data: dataWishlist, error: errWishlist }] = await Promise.all([
+                supabaseClient.from('carte').select('*').eq('owner_id', userId).eq('stato', 'collezione').order('nome'),
+                supabaseClient.from('wishlist').select('*').eq('owner_id', userId).order('nome'),
+            ]);
 
-            if (error) {
-                console.error('Errore caricamento carte:', error.message);
+            if (errCarte || errWishlist) {
+                console.error('Errore caricamento carte:', (errCarte || errWishlist).message);
                 return;
             }
 
-            carteReali = (data || []).map(r => {
-                let variation = '—';
-                if (r.prezzo_precedente != null && r.prezzo != null) {
-                    const diff = Number(r.prezzo) - Number(r.prezzo_precedente);
-                    if (Math.abs(diff) >= 0.005) { // ignora rumore di arrotondamento
-                        const segno = diff > 0 ? '▲' : '▼';
-                        variation = `${segno} ${diff > 0 ? '+' : ''}${diff.toFixed(2)}€`;
-                    }
-                }
-                return {
-                    id: r.id,
-                    stato: r.stato,
-                    name: r.nome || '',
-                    code: r.codice || '',
-                    location: r.location || '',
-                    qty: r.qty || 1,
-                    lang: r.lingua || 'IT',
-                    cond: r.condizione || 'NM',
-                    price: r.prezzo != null ? Number(r.prezzo) : 0,
-                    variation,
-                    link: r.url || '#',
-                    notes: r.note || ''
-                };
-            });
+            const righeCarte = (dataCarte || []).map(r => ({
+                id: r.id,
+                tabella: 'carte',
+                stato: 'collezione',
+                name: r.nome || '',
+                code: r.codice || '',
+                location: r.location || '',
+                qty: r.qty || 1,
+                lang: r.lingua || 'IT',
+                cond: r.condizione || 'NM',
+                price: r.prezzo != null ? Number(r.prezzo) : 0,
+                variation: _mappaVariazione(r),
+                link: r.url || '#',
+                notes: r.note || ''
+            }));
+
+            const righeWishlist = (dataWishlist || []).map(r => ({
+                id: r.id,
+                tabella: 'wishlist',
+                stato: 'wishlist',
+                name: r.nome || '',
+                code: r.codice || '',
+                location: '', // la wishlist non ha location: non possiedi ancora la carta
+                qty: r.qty || 1,
+                lang: r.lingua || 'IT',
+                cond: r.condizione || 'NM',
+                price: r.prezzo != null ? Number(r.prezzo) : 0,
+                variation: _mappaVariazione(r),
+                link: r.url || '#',
+                notes: r.note || ''
+            }));
+
+            carteReali = [...righeCarte, ...righeWishlist];
 
             // Popola la tendina filtro con le location REALMENTE presenti nei
             // tuoi dati, invece del vecchio elenco fisso scritto a mano.
@@ -1861,9 +1885,17 @@
             document.getElementById('editLingua').value = card.lang;
             document.getElementById('editCondizione').value = card.cond;
             document.getElementById('editQty').value = card.qty;
-            document.getElementById('editLocation').value = card.location;
             document.getElementById('editPrezzo').value = card.price || '';
             document.getElementById('editNote').value = card.notes;
+
+            // La wishlist non ha una Location (non possiedi ancora la carta)
+            // — il campo viene disabilitato invece di rimosso, così il resto
+            // del modale (layout, id dei campi) resta identico per entrambe.
+            const inputLocation = document.getElementById('editLocation');
+            const isWishlist = card.tabella === 'wishlist';
+            inputLocation.value = isWishlist ? '' : card.location;
+            inputLocation.disabled = isWishlist;
+            inputLocation.placeholder = isWishlist ? 'Non applicabile alla wishlist' : '';
 
             const datalist = document.getElementById('datalistEditLocation');
             datalist.innerHTML = [...new Set(carteReali.map(c => c.location).filter(Boolean))]
@@ -1879,6 +1911,7 @@
 
         async function salvaModificaCarta() {
             if (!_cartaInModifica) return;
+            const isWishlist = _cartaInModifica.tabella === 'wishlist';
 
             const aggiornamento = {
                 nome: document.getElementById('editNome').value.trim(),
@@ -1886,16 +1919,22 @@
                 lingua: document.getElementById('editLingua').value,
                 condizione: document.getElementById('editCondizione').value,
                 qty: Math.max(1, parseInt(document.getElementById('editQty').value, 10) || 1),
-                location: document.getElementById('editLocation').value.trim() || null,
                 prezzo: document.getElementById('editPrezzo').value !== '' ? parseFloat(document.getElementById('editPrezzo').value) : null,
                 note: document.getElementById('editNote').value.trim() || null,
             };
+            // La colonna 'location' esiste solo su 'carte', non su 'wishlist'.
+            if (!isWishlist) {
+                aggiornamento.location = document.getElementById('editLocation').value.trim() || null;
+            }
 
             const btn = document.getElementById('btnSalvaModificaCarta');
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvataggio...';
 
-            const { error } = await supabaseClient.from('carte').update(aggiornamento).eq('id', _cartaInModifica.id);
+            const { error } = await supabaseClient
+                .from(isWishlist ? 'wishlist' : 'carte')
+                .update(aggiornamento)
+                .eq('id', _cartaInModifica.id);
 
             btn.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-check"></i> Salva Modifiche';
@@ -1912,9 +1951,10 @@
         async function eliminaCarta(id) {
             const card = carteReali.find(c => String(c.id) === String(id));
             if (!card) return;
-            if (!confirm(`Eliminare definitivamente "${card.name}" dalla collezione?\n\nQuesta azione non si può annullare.`)) return;
+            const isWishlist = card.tabella === 'wishlist';
+            if (!confirm(`Eliminare definitivamente "${card.name}" dalla${isWishlist ? ' wishlist' : ' collezione'}?\n\nQuesta azione non si può annullare.`)) return;
 
-            const { error } = await supabaseClient.from('carte').delete().eq('id', id);
+            const { error } = await supabaseClient.from(isWishlist ? 'wishlist' : 'carte').delete().eq('id', id);
             if (error) {
                 alert('❌ Errore nell\'eliminazione: ' + error.message);
                 return;
