@@ -1766,12 +1766,43 @@
             // PRIMA di caricare le carte, dato che serve l'utente per la query.
             await assicuraLoginSupabase();
             await caricaCarteReali();
+            await _avviaRealtimeCarte();
 
             // Ripristina l'ultima scheda attiva dopo un refresh
             const savedTab = localStorage.getItem('activeTab') || 'visualizzazione';
             const navBtn = document.querySelector(`nav .nav-item[onclick*="'${savedTab}'"]`);
             switchTab(savedTab, navBtn);
         };
+
+        // ── AGGIORNAMENTO IN TEMPO REALE ──────────────────────────────────────────
+        // Prima questa pagina caricava 'carte'/'wishlist' una sola volta,
+        // all'apertura — carte aggiunte dopo (dall'estensione, magari su un
+        // altro PC) restavano invisibili finché non si premeva F5. Supabase
+        // Realtime avvisa il browser in tempo reale a ogni insert/update/
+        // delete sulle tabelle sottoscritte, senza bisogno di ricaricare né
+        // di ripetuti controlli manuali (polling).
+        //
+        // Debounce di 600ms: durante un controllo prezzi che aggiorna decine
+        // di righe una via l'altra, altrimenti ricaricheremmo l'intera
+        // collezione ad ogni singola riga — aspettiamo che gli eventi si
+        // "calmino" prima di ricaricare una volta sola.
+        let _debounceRicaricaCarte = null;
+        function _pianificaRicaricaCarte() {
+            if (_debounceRicaricaCarte) clearTimeout(_debounceRicaricaCarte);
+            _debounceRicaricaCarte = setTimeout(() => { caricaCarteReali(); }, 600);
+        }
+
+        async function _avviaRealtimeCarte() {
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) return;
+
+            supabaseClient
+                .channel('carte-realtime-' + userId)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'carte', filter: `owner_id=eq.${userId}` }, _pianificaRicaricaCarte)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'wishlist', filter: `owner_id=eq.${userId}` }, _pianificaRicaricaCarte)
+                .subscribe();
+        }
 
         /* LOGICA EASTER EGG CHANGELOG */
         function handleChangelogClick() {
