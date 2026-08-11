@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CardSync Pro — Catalogo Scambio</title>
+
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-color: #f3eeff;
+            --card-bg: #ffffff;
+            --primary: #7c4dff;
+            --primary-light: #ede7ff;
+            --primary-dark: #5e35b1;
+            --text-dark: #2a2438;
+            --text-muted: #756a8a;
+            --border-color: #e2d9f3;
+            --success: #2e7d32;
+            --success-bg: #e8f5e9;
+            --shadow-soft: 0 4px 20px rgba(124, 77, 255, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            min-height: 100vh;
+            padding-bottom: 90px; /* spazio per la barra totale fissa in basso */
+        }
+
+        header {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 1.2rem;
+            box-shadow: var(--shadow-soft);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-weight: 800;
+            font-size: 1.15rem;
+            color: var(--primary);
+        }
+
+        .logo img { width: 24px; height: 24px; object-fit: contain; }
+
+        header p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.3rem;
+            font-weight: 600;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 1.2rem auto;
+            padding: 0 1rem;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.7rem 1rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-soft);
+        }
+
+        .search-box input {
+            border: none;
+            background: transparent;
+            outline: none;
+            padding-left: 0.6rem;
+            width: 100%;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .card-row {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 0.9rem 1rem;
+            margin-bottom: 0.7rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            box-shadow: var(--shadow-soft);
+            transition: border-color 0.15s, background-color 0.15s;
+        }
+
+        .card-row.selected {
+            border-color: var(--primary);
+            background-color: var(--primary-light);
+        }
+
+        .card-checkbox {
+            width: 22px;
+            height: 22px;
+            accent-color: var(--primary);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .card-info { flex: 1; min-width: 0; }
+
+        .card-name {
+            font-weight: 700;
+            font-size: 0.92rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            margin-top: 0.3rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 7px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            background-color: var(--bg-color);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+        }
+
+        .card-price {
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: var(--text-dark);
+            white-space: nowrap;
+            text-align: right;
+            min-width: 62px;
+        }
+
+        .card-price small {
+            display: block;
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .qty-control {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            flex-shrink: 0;
+        }
+
+        .qty-btn {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .qty-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .qty-value {
+            width: 24px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .stato-vuoto, .stato-caricamento, .stato-errore {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .stato-errore { color: #d32f2f; }
+
+        .barra-totale {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background-color: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+            padding: 0.9rem 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            z-index: 60;
+        }
+
+        .barra-totale-info { line-height: 1.3; }
+        .barra-totale-count { font-size: 0.72rem; color: var(--text-muted); font-weight: 700; }
+        .barra-totale-value { font-size: 1.25rem; font-weight: 800; color: var(--primary); }
+
+        .btn-copia {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.7rem 1.1rem;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.82rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .btn-copia:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <img src="favicon.ico" alt="Favicon">
+            <span>CardSync Pro — Catalogo Scambio</span>
+        </div>
+        <p>Seleziona le carte che ti interessano — il totale si aggiorna da solo.</p>
+    </header>
+
+    <div class="container">
+        <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass" style="color: var(--text-muted);"></i>
+            <input type="text" id="searchInput" placeholder="Cerca carta o codice..." oninput="renderLista()">
+        </div>
+
+        <div id="listaContainer">
+            <div class="stato-caricamento"><i class="fa-solid fa-spinner fa-spin"></i> Caricamento carte disponibili...</div>
+        </div>
+    </div>
+
+    <div class="barra-totale">
+        <div class="barra-totale-info">
+            <div class="barra-totale-count" id="conteggioSelezionate">0 carte selezionate</div>
+            <div class="barra-totale-value" id="totaleSelezionate">0,00 €</div>
+        </div>
+        <button class="btn-copia" id="btnCopiaRiepilogo" onclick="copiaRiepilogo()" disabled>
+            <i class="fa-solid fa-copy"></i> Copia riepilogo
+        </button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://iwdkgehbktvkujhwqdwq.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3ZGtnZWhia3R2a3VqaHdxZHdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMzM1MzYsImV4cCI6MjEwMTcwOTUzNn0.Pdcmuj5eXuh_z43CInsdGRkNwloHpqlhBGnBI9kvKe0';
+        // Client "leggero": niente persistSession/autoRefreshToken — questa
+        // pagina è pubblica, chi la apre non fa mai login, serve solo il
+        // client per interrogare Supabase come utente anonimo (ruolo 'anon',
+        // limitato dalla RLS a leggere solo le carte in scambio — vedi
+        // scambio_pubblico_rls.sql).
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: { persistSession: false, autoRefreshToken: false },
+        });
+
+        let carte = [];
+        const selezioni = {}; // { [id]: quantitaSelezionata }
+
+        function formattaEuro(v) {
+            return v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+        }
+
+        async function caricaCatalogo() {
+            const params = new URLSearchParams(window.location.search);
+            const userId = params.get('u');
+            const container = document.getElementById('listaContainer');
+
+            if (!userId) {
+                container.innerHTML = '<div class="stato-errore"><i class="fa-solid fa-triangle-exclamation"></i> Link non valido — manca il riferimento alla collezione.</div>';
+                return;
+            }
+
+            const { data, error } = await supabaseClient
+                .from('carte')
+                .select('id, nome, codice, lingua, condizione, qty, prezzo, note, url')
+                .eq('owner_id', userId)
+                .eq('location', 'SCAMBIO')
+                .eq('stato', 'collezione')
+                .order('nome');
+
+            if (error) {
+                container.innerHTML = `<div class="stato-errore"><i class="fa-solid fa-triangle-exclamation"></i> Errore nel caricamento: ${error.message}</div>`;
+                return;
+            }
+
+            carte = (data || []).map(r => ({
+                id: r.id,
+                name: r.nome || '',
+                code: r.codice || '',
+                lang: r.lingua || 'IT',
+                cond: r.condizione || 'NM',
+                qtyDisponibile: r.qty || 1,
+                price: r.prezzo != null ? Number(r.prezzo) : 0,
+                notes: r.note || '',
+            }));
+
+            if (carte.length === 0) {
+                container.innerHTML = '<div class="stato-vuoto"><i class="fa-solid fa-box-open"></i><br>Nessuna carta disponibile per lo scambio al momento.</div>';
+                return;
+            }
+
+            renderLista();
+        }
+
+        function renderLista() {
+            const container = document.getElementById('listaContainer');
+            const searchVal = document.getElementById('searchInput').value.toLowerCase();
+
+            const filtrate = carte.filter(c =>
+                c.name.toLowerCase().includes(searchVal) || c.code.toLowerCase().includes(searchVal)
+            );
+
+            if (filtrate.length === 0) {
+                container.innerHTML = '<div class="stato-vuoto"><i class="fa-solid fa-magnifying-glass"></i><br>Nessuna carta corrisponde alla ricerca.</div>';
+                return;
+            }
+
+            container.innerHTML = filtrate.map(c => {
+                const selezionata = selezioni[c.id] > 0;
+                const qtyAttuale = selezioni[c.id] || 0;
+                return `
+                    <div class="card-row ${selezionata ? 'selected' : ''}" id="row-${c.id}">
+                        <input type="checkbox" class="card-checkbox" ${selezionata ? 'checked' : ''}
+                               onchange="toggleSelezione('${c.id}', this.checked)">
+                        <div class="card-info">
+                            <div class="card-name">${c.name}${c.code ? ` <span style="color:var(--text-muted); font-weight:600;">(${c.code})</span>` : ''}</div>
+                            <div class="card-meta">
+                                <span class="badge">${c.lang}</span>
+                                <span class="badge">${c.cond}</span>
+                                <span class="badge">Disp. ${c.qtyDisponibile}</span>
+                                ${c.notes ? `<span class="badge">✨ ${c.notes}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="qty-control">
+                            <button class="qty-btn" onclick="modificaQty('${c.id}', -1)" ${qtyAttuale <= 0 ? 'disabled' : ''}>-</button>
+                            <span class="qty-value">${qtyAttuale}</span>
+                            <button class="qty-btn" onclick="modificaQty('${c.id}', 1)" ${qtyAttuale >= c.qtyDisponibile ? 'disabled' : ''}>+</button>
+                        </div>
+                        <div class="card-price">${formattaEuro(c.price)}<small>cad.</small></div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleSelezione(id, checked) {
+            selezioni[id] = checked ? 1 : 0;
+            renderLista();
+            aggiornaTotale();
+        }
+
+        function modificaQty(id, delta) {
+            const carta = carte.find(c => c.id === id);
+            if (!carta) return;
+            const attuale = selezioni[id] || 0;
+            const nuova = Math.max(0, Math.min(carta.qtyDisponibile, attuale + delta));
+            selezioni[id] = nuova;
+            renderLista();
+            aggiornaTotale();
+        }
+
+        function aggiornaTotale() {
+            let totale = 0;
+            let numCarte = 0;
+            carte.forEach(c => {
+                const q = selezioni[c.id] || 0;
+                totale += q * c.price;
+                numCarte += q;
+            });
+            document.getElementById('conteggioSelezionate').textContent =
+                `${numCarte} cart${numCarte === 1 ? 'a selezionata' : 'e selezionate'}`;
+            document.getElementById('totaleSelezionate').textContent = formattaEuro(totale);
+            document.getElementById('btnCopiaRiepilogo').disabled = numCarte === 0;
+        }
+
+        function copiaRiepilogo() {
+            const righe = [];
+            let totale = 0;
+            carte.forEach(c => {
+                const q = selezioni[c.id] || 0;
+                if (q > 0) {
+                    righe.push(`${q}x ${c.name}${c.code ? ' (' + c.code + ')' : ''} — ${formattaEuro(c.price * q)}`);
+                    totale += q * c.price;
+                }
+            });
+            if (righe.length === 0) return;
+
+            const testo = `Carte che mi interessano per lo scambio:\n\n${righe.join('\n')}\n\nTotale: ${formattaEuro(totale)}`;
+
+            navigator.clipboard.writeText(testo).then(() => {
+                const btn = document.getElementById('btnCopiaRiepilogo');
+                const originale = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Copiato!';
+                setTimeout(() => { btn.innerHTML = originale; }, 1800);
+            }).catch(() => {
+                alert(testo); // fallback se il clipboard non è disponibile (es. http non sicuro)
+            });
+        }
+
+        caricaCatalogo();
+    </script>
+</body>
+</html>
