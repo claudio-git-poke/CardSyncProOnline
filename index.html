@@ -124,11 +124,6 @@
             background-color: var(--bg-color);
             color: var(--text-dark);
             min-height: 100vh;
-            padding-bottom: 75px;
-        }
-
-        @media (min-width: 900px) {
-            body { padding-bottom: 0; }
         }
 
         /* --- HEADER & NAVIGATION --- */
@@ -213,44 +208,84 @@
             white-space: nowrap;
         }
 
-        /* BARRA DI NAVIGAZIONE MOBILE */
-        .mobile-nav {
-            display: flex;
+        /* MENU MOBILE — drawer laterale da sinistra (sostituisce la vecchia
+           barra in basso, che con 7 sezioni non ci stava più comodamente) */
+        .hamburger-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            color: var(--text-dark);
+            cursor: pointer;
+            padding: 0.3rem 0.5rem;
+        }
+
+        @media (max-width: 899px) {
+            .hamburger-btn { display: inline-flex; }
+        }
+
+        .drawer-overlay {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: var(--header-bg);
-            border-top: 1px solid var(--border-color);
-            z-index: 999;
-            justify-content: space-around;
-            padding: 0.5rem 0;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1100;
+            display: none;
+            backdrop-filter: blur(2px);
         }
 
-        @media (min-width: 900px) {
-            .mobile-nav { display: none; }
-        }
+        .drawer-overlay.open { display: block; }
 
-        .mobile-nav-item {
+        .drawer-panel {
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            width: 250px;
+            max-width: 80vw;
+            background-color: var(--card-bg);
+            z-index: 1101;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.15);
             display: flex;
             flex-direction: column;
+            padding: 1rem 0.8rem;
+        }
+
+        .drawer-panel.open { transform: translateX(0); }
+
+        .drawer-header {
+            display: flex;
             align-items: center;
-            gap: 0.2rem;
+            justify-content: space-between;
+            padding: 0.4rem 0.4rem 1rem 0.4rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 0.8rem;
+        }
+
+        .drawer-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
             color: var(--text-muted);
-            font-size: 0.65rem;
-            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .drawer-item {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 0.8rem 0.7rem;
+            border-radius: 10px;
+            color: var(--text-muted);
             text-decoration: none;
-            padding: 0.2rem;
-            flex: 1;
-            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
         }
 
-        .mobile-nav-item i {
-            font-size: 1.15rem;
-        }
+        .drawer-item i { width: 20px; text-align: center; }
 
-        .mobile-nav-item.active {
+        .drawer-item:hover, .drawer-item.active {
+            background-color: var(--primary-light);
             color: var(--primary);
         }
 
@@ -741,6 +776,9 @@
     <!-- HEADER DESKTOP / LOGO MOBILE -->
     <header id="mainHeader">
         <div class="header-left">
+            <button class="hamburger-btn" onclick="openDrawer()" aria-label="Apri menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
             <div class="logo">
                 <img src="favicon.ico" alt="Favicon">
                 <span>CardSync Pro</span>
@@ -760,27 +798,36 @@
         </div>
     </header>
 
-    <!-- BOTTOM BAR PER SMARTPHONE -->
-    <div class="mobile-nav" id="mobileNav">
-        <a class="mobile-nav-item active" id="mNav-visualizzazione" onclick="switchTab('visualizzazione', this)">
-            <i class="fa-solid fa-list-check"></i>
-            <span>Lista</span>
+    <!-- MENU MOBILE — drawer laterale (tutte le 7 sezioni, niente più tagliate) -->
+    <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+    <div class="drawer-panel" id="drawerPanel">
+        <div class="drawer-header">
+            <div class="logo" style="font-size: 1.05rem;">
+                <img src="favicon.ico" alt="Favicon">
+                <span>CardSync Pro</span>
+            </div>
+            <button class="drawer-close-btn" onclick="closeDrawer()" aria-label="Chiudi menu"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <a class="drawer-item active" id="mNav-visualizzazione" onclick="switchTab('visualizzazione', this)">
+            <i class="fa-solid fa-list-check"></i> Visualizzazione
         </a>
-        <a class="mobile-nav-item" id="mNav-inserimento" onclick="switchTab('inserimento', this)">
-            <i class="fa-solid fa-plus"></i>
-            <span>Aggiungi</span>
+        <a class="drawer-item" id="mNav-inserimento" onclick="switchTab('inserimento', this)">
+            <i class="fa-solid fa-plus"></i> Inserimento
         </a>
-        <a class="mobile-nav-item" id="mNav-scambio" onclick="switchTab('scambio', this)">
-            <i class="fa-solid fa-right-left"></i>
-            <span>Scambi</span>
+        <a class="drawer-item" id="mNav-prezzi" onclick="switchTab('prezzi', this)">
+            <i class="fa-solid fa-chart-line"></i> Prezzi
         </a>
-        <a class="mobile-nav-item" id="mNav-wishlist" onclick="switchTab('wishlist', this)">
-            <i class="fa-solid fa-bookmark"></i>
-            <span>Wishlist</span>
+        <a class="drawer-item" id="mNav-scambio" onclick="switchTab('scambio', this)">
+            <i class="fa-solid fa-right-left"></i> Scambio
         </a>
-        <a class="mobile-nav-item" id="mNav-impostazioni" onclick="switchTab('impostazioni', this)">
-            <i class="fa-solid fa-gear"></i>
-            <span>Opzioni</span>
+        <a class="drawer-item" id="mNav-wishlist" onclick="switchTab('wishlist', this)">
+            <i class="fa-solid fa-bookmark"></i> Wishlist
+        </a>
+        <a class="drawer-item" id="mNav-sealed" onclick="switchTab('sealed', this)">
+            <i class="fa-solid fa-box-archive"></i> Sealed
+        </a>
+        <a class="drawer-item" id="mNav-impostazioni" onclick="switchTab('impostazioni', this)">
+            <i class="fa-solid fa-gear"></i> Impostazioni
         </a>
     </div>
 
@@ -1381,20 +1428,8 @@
                 return;
             }
 
-            // "Campanello": un ordine leggero (nessun dato delle carte, che
-            // vivono già in 'coda_carte' qui sopra) che dice all'estensione
-            // "è arrivato QUALCOSA DI NUOVO, apri una tab se non ce n'è già
-            // una" — l'estensione lo consuma e lo segna subito completato.
-            // Senza questo, un secondo meccanismo basato sul semplice
-            // conteggio di righe 'pending' riapriva la tab anche subito dopo
-            // averla chiusa volontariamente (le righe non finite tornano
-            // 'pending' alla chiusura, vedi rilascio immediato lato estensione).
-            supabaseClient.from('ordini').insert({ tipo: 'aggiungi_carte', creato_da: userId }).then(({ error: errOrdine }) => {
-                if (errOrdine) console.error('Impossibile avvisare l\'estensione:', errOrdine.message);
-            });
-
             clearEntryDraft();
-            alert(`✅ ${righeDb.length} cart${righeDb.length === 1 ? 'a inviata' : 'e inviate'} nella coda persistente!\n\nUn dispositivo con l'estensione aperta le cercherà a breve, anche se non è online in questo momento — resteranno in attesa finché qualcuno non le processa.`);
+            alert(`✅ ${righeDb.length} cart${righeDb.length === 1 ? 'a inviata' : 'e inviate'} nella coda persistente!\n\nApri l'estensione sulla sezione "Aggiungi Carte" per farle processare — non si perdono, restano lì in attesa finché qualcuno non le lavora.`);
         }
 
         let currentMode = 'visualizzazione';
@@ -1710,6 +1745,17 @@
             filterTable();
         }
 
+        // ── MENU MOBILE (drawer laterale) ────────────────────────────────────────
+        function openDrawer() {
+            document.getElementById('drawerOverlay').classList.add('open');
+            document.getElementById('drawerPanel').classList.add('open');
+        }
+
+        function closeDrawer() {
+            document.getElementById('drawerOverlay').classList.remove('open');
+            document.getElementById('drawerPanel').classList.remove('open');
+        }
+
         function switchTab(tabId, element) {
             currentMode = tabId;
             highlightedRowId = null;
@@ -1718,13 +1764,14 @@
 
             document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            document.querySelectorAll('.mobile-nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('.drawer-item').forEach(item => item.classList.remove('active'));
 
             document.getElementById('visualizzazione').classList.add('active');
             
             if (element) element.classList.add('active');
             const mobileBtn = document.getElementById(`mNav-${tabId}`);
             if (mobileBtn) mobileBtn.classList.add('active');
+            closeDrawer();
 
             const copyBtn = document.getElementById('btnCopyShareLink');
             const qrBtn = document.getElementById('btnShowQrCode');
