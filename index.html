@@ -494,7 +494,16 @@
         .badge-lang-kor { background-color: #ffe0b2; color: #e65100; }
         .badge-cond { background-color: var(--success-bg); color: var(--success); }
         .badge-cond-ex { background-color: #fff3e0; color: #ef6c00; }
-        .badge-location { background-color: var(--badge-loc-bg); color: var(--text-dark); border: 1px solid var(--border-color); }
+        .badge-location { background-color: var(--badge-loc-bg); color: var(--text-dark); border: 1px solid var(--border-color); cursor: pointer; }
+        .badge-location:hover { filter: brightness(0.92); }
+
+        .badge-toggle {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.5rem 0.9rem; border-radius: 20px; border: 1px solid var(--border-color);
+            background-color: var(--card-bg); color: var(--text-muted);
+            font-size: 0.8rem; font-weight: 700; cursor: pointer;
+        }
+        .badge-toggle.active { background-color: var(--primary-light); color: var(--primary); border-color: var(--primary); }
         .badge-rh { background-color: #f3e5f5; color: #7b1fa2; font-weight: 700; }
 
         .price { font-weight: 800; color: var(--text-dark); }
@@ -930,6 +939,31 @@
                 </div>
             </div>
 
+            <!-- MATCH AUTOMATICO TRA AMICI — solo su Scambio/Wishlist -->
+            <div id="pannelloMatch" style="display:none; margin-bottom: 1rem;"></div>
+
+            <!-- TOGGLE TIPO — solo nella vista Visualizzazione, multi-selezione -->
+            <div class="filters" id="rigaToggleTipo" style="margin: -0.6rem 0 1rem 0; display:none;">
+                <button type="button" class="badge-toggle active" id="toggleTipoCarte" onclick="toggleFiltroTipo('carte')">
+                    <i class="fa-solid fa-clone"></i> Carte
+                </button>
+                <button type="button" class="badge-toggle active" id="toggleTipoSealed" onclick="toggleFiltroTipo('sealed')">
+                    <i class="fa-solid fa-box-archive"></i> Sealed
+                </button>
+                <button type="button" class="badge-toggle" id="toggleTipoWishlist" onclick="toggleFiltroTipo('wishlist')">
+                    <i class="fa-solid fa-bookmark"></i> Wishlist
+                </button>
+            </div>
+
+            <!-- BARRA AZIONI MULTIPLE — appare solo con righe selezionate -->
+            <div class="card-panel" id="barraSelezioneMultipla" style="display:none; padding: 0.8rem 1rem; margin-bottom: 1rem; align-items:center; justify-content:space-between; gap: 0.8rem; flex-wrap: wrap;">
+                <span style="font-weight:700; font-size:0.85rem;" id="conteggioSelezioneMultipla">0 selezionate</span>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                    <button class="btn-secondary" onclick="spostaLocationSelezionate()"><i class="fa-solid fa-warehouse"></i> Sposta Location</button>
+                    <button class="btn-secondary" style="color:var(--danger); background-color:var(--danger-bg);" onclick="eliminaSelezionate()"><i class="fa-solid fa-trash"></i> Elimina</button>
+                </div>
+            </div>
+
             <!-- TABELLA DATI CON RIGHE SELEZIONABILI -->
             <div class="card-panel">
                 <table>
@@ -1122,6 +1156,18 @@
         </div>
     </div>
 
+    <!-- MODALE GRAFICO PREZZI -->
+    <div id="graficoModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 480px;" onclick="event.stopPropagation()">
+            <button class="close-modal-btn" onclick="chiudiGraficoPrezzo()"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="font-weight: 800; margin-bottom: 0.3rem;"><i class="fa-solid fa-chart-line" style="color: var(--primary);"></i> Andamento Prezzo</h3>
+            <p id="graficoPrezzoNome" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;"></p>
+            <div id="graficoPrezzoContainer" style="min-height: 220px; display:flex; align-items:center; justify-content:center;">
+                <canvas id="graficoPrezzoCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+
     <!-- MODALE MODIFICA CARTA -->
     <div id="editCardModal" class="modal-overlay">
         <div class="modal-content" style="max-width: 380px; text-align: left;" onclick="event.stopPropagation()">
@@ -1198,6 +1244,7 @@
 
     <!-- SUPABASE JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 
     <script>
         // ── CONFIGURAZIONE SUPABASE ──────────────────────────────────────────────
@@ -1737,7 +1784,8 @@
                 price: r.prezzo != null ? Number(r.prezzo) : 0,
                 variation: _mappaVariazione(r),
                 link: r.url || '#',
-                notes: r.note || ''
+                notes: r.note || '',
+                immagine: r.immagine || null,
             }));
 
             const righeWishlist = (dataWishlist || []).map(r => ({
@@ -1746,14 +1794,16 @@
                 stato: 'wishlist',
                 name: r.nome || '',
                 code: r.codice || '',
-                location: '', // la wishlist non ha location: non possiedi ancora la carta
+                location: r.location || '', // FIX: prima era sempre vuota per errore — la wishlist ha una location vera dalla migrazione wishlist_location.sql
                 qty: r.qty || 1,
                 lang: r.lingua || 'IT',
                 cond: r.condizione || 'NM',
                 price: r.prezzo != null ? Number(r.prezzo) : 0,
                 variation: _mappaVariazione(r),
                 link: r.url || '#',
-                notes: r.note || ''
+                notes: r.note || '',
+                immagine: r.immagine || null,
+                prezzoObiettivo: r.prezzo_obiettivo != null ? Number(r.prezzo_obiettivo) : null,
             }));
 
             carteReali = [...righeCarte, ...righeWishlist];
@@ -2028,19 +2078,48 @@
         }
 
         /* RENDERING E SELEZIONE DELLA RIGA */
+        let _sortColonna = null;
+        let _sortAsc = true;
+
+        function ordinaTabella(colonna) {
+            if (_sortColonna === colonna) _sortAsc = !_sortAsc;
+            else { _sortColonna = colonna; _sortAsc = true; }
+            filterTable();
+        }
+
+        function _freccettaOrdinamento(colonna) {
+            if (_sortColonna !== colonna) return '';
+            return ` <i class="fa-solid fa-${_sortAsc ? 'arrow-up' : 'arrow-down'}" style="font-size:0.65rem;"></i>`;
+        }
+
         function renderViewTable(data) {
             const tbody = document.getElementById('viewTableBody');
             const theadRow = document.getElementById('tableHeaderRow');
             tbody.innerHTML = '';
 
+            if (_sortColonna) {
+                data = [...data].sort((a, b) => {
+                    let va = a[_sortColonna], vb = b[_sortColonna];
+                    if (typeof va === 'string') { va = va.toLowerCase(); vb = (vb || '').toLowerCase(); }
+                    if (va < vb) return _sortAsc ? -1 : 1;
+                    if (va > vb) return _sortAsc ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            const th = (label, colonna) => colonna
+                ? `<th style="cursor:pointer; user-select:none;" onclick="ordinaTabella('${colonna}')">${label}${_freccettaOrdinamento(colonna)}</th>`
+                : `<th>${label}</th>`;
+
             theadRow.innerHTML = `
-                <th>Q.TÀ</th>
-                <th>NOME CARTA</th>
-                <th>CODICE</th>
-                <th>LOCATION</th>
-                <th>LINGUA</th>
-                <th>COND.</th>
-                <th>PREZZO CAD.</th>
+                <th><input type="checkbox" id="checkAllRows" onchange="toggleSelezionaTutte(this.checked)" title="Seleziona tutte (quelle filtrate)"></th>
+                ${th('Q.TÀ', 'qty')}
+                ${th('NOME CARTA', 'name')}
+                ${th('CODICE', 'code')}
+                ${th('LOCATION', 'location')}
+                ${th('LINGUA', 'lang')}
+                ${th('COND.', 'cond')}
+                ${th('PREZZO CAD.', 'price')}
                 <th>VAR.</th>
                 <th>LINK</th>
                 <th>NOTE</th>
@@ -2058,7 +2137,7 @@
                 }
 
                 tr.onclick = (e) => {
-                    if (e.target.closest('button') || e.target.closest('a')) return;
+                    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
                     toggleRowHighlight(card.id);
                 };
 
@@ -2069,11 +2148,20 @@
                 totalSum += card.price * card.qty;
                 totalQty += card.qty;
 
+                const idAttr = String(card.id).replace(/'/g, "\\'");
+                const locAttr = (card.location || '').replace(/'/g, "\\'");
+                const thumb = card.immagine
+                    ? `<img src="${card.immagine}" alt="" style="width:32px; height:44px; object-fit:cover; border-radius:4px; vertical-align:middle; margin-right:0.5rem; box-shadow:0 1px 4px rgba(0,0,0,0.15);" loading="lazy">`
+                    : '';
+                const obiettivoRaggiunto = card.tabella === 'wishlist' && card.prezzoObiettivo != null && card.price > 0 && card.price <= card.prezzoObiettivo;
+                if (obiettivoRaggiunto) tr.style.backgroundColor = 'var(--success-bg)';
+
                 tr.innerHTML = `
+                    <td><input type="checkbox" class="riga-checkbox" data-id="${idAttr}" data-tabella="${card.tabella}" onclick="event.stopPropagation(); aggiornaSelezioneMultipla();"></td>
                     <td><strong>${card.qty}</strong></td>
-                    <td><strong>${card.name}</strong></td>
+                    <td>${thumb}<strong>${card.name}</strong>${obiettivoRaggiunto ? ` <span class="badge" style="background-color:var(--success-bg); color:var(--success);" title="Prezzo sceso al di sotto del tuo obiettivo (${card.prezzoObiettivo.toFixed(2)} €)">🎯 obiettivo!</span>` : ''}</td>
                     <td><code>${card.code}</code></td>
-                    <td><span class="badge badge-location">${card.location}</span></td>
+                    <td><span class="badge badge-location" title="Clicca per modificare" onclick="event.stopPropagation(); modificaLocationInline('${idAttr}', '${card.tabella}', '${locAttr}')">${card.location || '—'}</span></td>
                     <td><span class="badge ${langClass}">${card.lang}</span></td>
                     <td><span class="badge ${condClass}">${card.cond}</span></td>
                     <td class="price">${card.price.toFixed(2)} €</td>
@@ -2086,7 +2174,7 @@
                     <td>${card.notes ? `<span class="badge badge-rh">✨ ${card.notes}</span>` : '—'}</td>
                     <td>
                         ${card.tabella === 'wishlist' ? `<button class="btn-danger" style="color:var(--success)" onclick="segnaOttenuta('${card.id}')" title="Ottenuta — sposta in collezione"><i class="fa-solid fa-check"></i></button>` : ''}
-                        <button class="btn-danger" style="color:var(--primary)" onclick="apriModificaCarta('${card.id}')"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn-danger" style="color:var(--primary)" onclick="apriGraficoPrezzo('${idAttr}', '${card.tabella}', '${card.name.replace(/'/g, "\\'")}')" title="Andamento prezzo"><i class="fa-solid fa-chart-line"></i></button>
                         <button class="btn-danger" onclick="eliminaCarta('${card.id}')"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 `;
@@ -2097,6 +2185,11 @@
             document.getElementById('stat-value').innerText = `€ ${totalSum.toFixed(2)}`;
             const uniqueLocs = [...new Set(data.map(item => item.location))].length;
             document.getElementById('stat-locations').innerText = uniqueLocs;
+
+            // La selezione multipla non sopravvive a un nuovo render (cambio
+            // filtro, refresh realtime...) — semplifica la logica ed evita
+            // di tenere "selezionate" righe che magari non sono più visibili.
+            _aggiornaBarraSelezioneMultipla();
         }
 
         // ── MODIFICA / ELIMINAZIONE CARTA ────────────────────────────────────────
@@ -2182,6 +2275,108 @@
         // duplicata in entrambe le tabelle invece che sparire da tutte e due
         // — un doppione visibile è facile da sistemare a mano, una carta
         // persa no.
+        // ── GRAFICO ANDAMENTO PREZZO ──────────────────────────────────────────────
+        let _graficoPrezzoChart = null;
+
+        // ── MATCH AUTOMATICO TRA AMICI ────────────────────────────────────────────
+        // Due funzioni "security definer" sul database confrontano le tue
+        // carte con quelle di TUTTI gli altri senza esporre le liste intere
+        // altrui — restituiscono solo i match trovati (vedi
+        // match_e_immagini.sql per i dettagli).
+        async function caricaMatch(tabId) {
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            const container = document.getElementById('pannelloMatch');
+            if (!userId) { container.innerHTML = ''; return; }
+
+            container.innerHTML = '<div class="card-panel" style="padding:1rem; text-align:center; color:var(--text-muted); font-size:0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> Cerco corrispondenze...</div>';
+
+            const funzione = tabId === 'scambio' ? 'trova_match_scambio_wishlist' : 'trova_match_wishlist_scambio';
+            const { data, error } = await supabaseClient.rpc(funzione, { p_owner_id: userId });
+
+            if (error) {
+                container.innerHTML = `<div class="card-panel" style="padding:1rem; color:var(--danger); font-size:0.85rem;">Errore nella ricerca match: ${error.message}</div>`;
+                return;
+            }
+            if (!data || data.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const righe = data.map(m => {
+                if (tabId === 'scambio') {
+                    return `<div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0; border-bottom:1px solid var(--border-color);">
+                        <span style="font-size:0.85rem;"><strong>${m.mio_nome}</strong> (tuo, ${Number(m.mio_prezzo || 0).toFixed(2)} €) — cercato da <strong>${(m.altra_email || '').split('@')[0]}</strong>${m.altro_prezzo_obiettivo != null ? ` (fino a ${Number(m.altro_prezzo_obiettivo).toFixed(2)} €)` : ''}</span>
+                    </div>`;
+                }
+                return `<div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0; border-bottom:1px solid var(--border-color);">
+                    <span style="font-size:0.85rem;"><strong>${m.mio_nome}</strong> (in wishlist${m.mio_prezzo_obiettivo != null ? `, fino a ${Number(m.mio_prezzo_obiettivo).toFixed(2)} €` : ''}) — in scambio da <strong>${(m.altra_email || '').split('@')[0]}</strong> a ${Number(m.altro_prezzo || 0).toFixed(2)} €</span>
+                </div>`;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="card-panel" style="padding:1rem;">
+                    <div style="font-weight:800; font-size:0.9rem; margin-bottom:0.5rem; color:var(--primary);">
+                        <i class="fa-solid fa-handshake"></i> ${data.length} corrispondenz${data.length === 1 ? 'a trovata' : 'e trovate'} nel gruppo!
+                    </div>
+                    ${righe}
+                </div>
+            `;
+        }
+
+        async function apriGraficoPrezzo(id, tabella, nome) {
+            document.getElementById('graficoPrezzoNome').textContent = nome;
+            document.getElementById('graficoModal').style.display = 'flex';
+
+            const { data, error } = await supabaseClient
+                .from('storico_prezzi')
+                .select('prezzo, registrato_il')
+                .eq('carta_id', id)
+                .eq('tabella', tabella)
+                .order('registrato_il');
+
+            const container = document.getElementById('graficoPrezzoContainer');
+            if (error) {
+                container.innerHTML = `<p style="color:var(--danger); font-size:0.85rem;">Errore: ${error.message}</p>`;
+                return;
+            }
+            if (!data || data.length < 2) {
+                container.innerHTML = `<p style="color:var(--text-muted); font-size:0.85rem; text-align:center;">Non ci sono ancora abbastanza dati per un grafico.<br>Il prezzo viene registrato ad ogni controllo prezzi — da qui in poi lo storico crescerà da solo.</p>`;
+                return;
+            }
+            container.innerHTML = '<canvas id="graficoPrezzoCanvas"></canvas>';
+
+            const etichette = data.map(r => new Date(r.registrato_il).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }));
+            const valori = data.map(r => Number(r.prezzo));
+
+            if (_graficoPrezzoChart) _graficoPrezzoChart.destroy();
+            _graficoPrezzoChart = new Chart(document.getElementById('graficoPrezzoCanvas'), {
+                type: 'line',
+                data: {
+                    labels: etichette,
+                    datasets: [{
+                        label: 'Prezzo (€)',
+                        data: valori,
+                        borderColor: '#7c4dff',
+                        backgroundColor: 'rgba(124, 77, 255, 0.12)',
+                        tension: 0.25,
+                        fill: true,
+                        pointRadius: 3,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { ticks: { callback: v => v.toFixed(2) + ' €' } } },
+                },
+            });
+        }
+
+        function chiudiGraficoPrezzo() {
+            document.getElementById('graficoModal').style.display = 'none';
+            if (_graficoPrezzoChart) { _graficoPrezzoChart.destroy(); _graficoPrezzoChart = null; }
+        }
+
         async function segnaOttenuta(id) {
             const card = carteReali.find(c => String(c.id) === String(id));
             if (!card || card.tabella !== 'wishlist') return;
@@ -2233,6 +2428,94 @@
             await caricaCarteReali();
         }
 
+        // Modifica la Location direttamente dal badge in tabella, senza dover
+        // aprire il modale di modifica — chiede conferma prima di salvare,
+        // così un click per sbaglio non sposta nulla per errore.
+        async function modificaLocationInline(id, tabella, locationAttuale) {
+            const nuovo = prompt('Nuova location per questa riga:', locationAttuale || '');
+            if (nuovo === null) return; // annullato
+            const valore = nuovo.trim();
+            if (valore === (locationAttuale || '')) return; // nessuna modifica reale
+            if (!confirm(`Spostare in "${valore || '(vuota)'}"?`)) return;
+
+            const { error } = await supabaseClient.from(tabella).update({ location: valore || null }).eq('id', id);
+            if (error) { alert('❌ Errore nello spostare la location: ' + error.message); return; }
+            await caricaCarteReali();
+        }
+
+        // ── SELEZIONE MULTIPLA ────────────────────────────────────────────────────
+        function toggleSelezionaTutte(checked) {
+            document.querySelectorAll('.riga-checkbox').forEach(cb => { cb.checked = checked; });
+            aggiornaSelezioneMultipla();
+        }
+
+        function _righeSelezionate() {
+            return [...document.querySelectorAll('.riga-checkbox:checked')].map(cb => ({
+                id: cb.dataset.id, tabella: cb.dataset.tabella,
+            }));
+        }
+
+        function aggiornaSelezioneMultipla() {
+            _aggiornaBarraSelezioneMultipla();
+        }
+
+        function _aggiornaBarraSelezioneMultipla() {
+            const selezionate = document.querySelectorAll('.riga-checkbox:checked').length;
+            const barra = document.getElementById('barraSelezioneMultipla');
+            barra.style.display = selezionate > 0 ? 'flex' : 'none';
+            document.getElementById('conteggioSelezioneMultipla').textContent =
+                `${selezionate} cart${selezionate === 1 ? 'a selezionata' : 'e selezionate'}`;
+        }
+
+        async function eliminaSelezionate() {
+            const righe = _righeSelezionate();
+            if (righe.length === 0) return;
+            if (!confirm(`Eliminare definitivamente ${righe.length} cart${righe.length === 1 ? 'a' : 'e'}?\n\nQuesta azione non si può annullare.`)) return;
+
+            // Raggruppa per tabella (carte/wishlist) — un batch delete per
+            // tabella invece di N chiamate singole.
+            const idsPerTabella = {};
+            righe.forEach(r => { (idsPerTabella[r.tabella] ||= []).push(r.id); });
+
+            for (const [tabella, ids] of Object.entries(idsPerTabella)) {
+                const { error } = await supabaseClient.from(tabella).delete().in('id', ids);
+                if (error) { alert(`❌ Errore nell'eliminazione (${tabella}): ` + error.message); return; }
+            }
+            await caricaCarteReali();
+        }
+
+        async function spostaLocationSelezionate() {
+            const righe = _righeSelezionate();
+            if (righe.length === 0) return;
+            const nuovo = prompt(`Sposta ${righe.length} cart${righe.length === 1 ? 'a' : 'e'} in quale Location?`, '');
+            if (nuovo === null) return;
+            const valore = nuovo.trim();
+            if (!confirm(`Spostare ${righe.length} cart${righe.length === 1 ? 'a' : 'e'} in "${valore || '(vuota)'}"?`)) return;
+
+            const idsPerTabella = {};
+            righe.forEach(r => { (idsPerTabella[r.tabella] ||= []).push(r.id); });
+
+            for (const [tabella, ids] of Object.entries(idsPerTabella)) {
+                const { error } = await supabaseClient.from(tabella).update({ location: valore || null }).in('id', ids);
+                if (error) { alert(`❌ Errore nello spostare la location (${tabella}): ` + error.message); return; }
+            }
+            await caricaCarteReali();
+        }
+
+        // ── FILTRO TIPO (Carte / Sealed / Wishlist) — solo in Visualizzazione ────
+        // Multi-selezione: tutti e tre attivi insieme = vedi tutto quanto,
+        // uno solo attivo = vedi solo quello. Wishlist parte disattivata di
+        // default, per non alterare le statistiche (Carte Totali/Valore Est.
+        // rappresentano concettualmente solo ciò che possiedi davvero).
+        let _filtriTipo = { carte: true, sealed: true, wishlist: false };
+
+        function toggleFiltroTipo(tipo) {
+            _filtriTipo[tipo] = !_filtriTipo[tipo];
+            document.getElementById('toggleTipo' + tipo.charAt(0).toUpperCase() + tipo.slice(1))
+                .classList.toggle('active', _filtriTipo[tipo]);
+            filterTable();
+        }
+
         function toggleRowHighlight(id) {
             highlightedRowId = (highlightedRowId === id) ? null : id;
             filterTable();
@@ -2265,6 +2548,21 @@
             const mobileBtn = document.getElementById(`mNav-${tabId}`);
             if (mobileBtn) mobileBtn.classList.add('active');
             closeDrawer();
+
+            // I tre toggle Carte/Sealed/Wishlist hanno senso solo nella vista
+            // Visualizzazione (le altre tab sono già filtrate di loro).
+            document.getElementById('rigaToggleTipo').style.display = tabId === 'visualizzazione' ? 'flex' : 'none';
+
+            // Match automatico tra amici — solo dove ha senso (Scambio: cosa
+            // vuoi tu che qualcun altro ha; Wishlist: cosa vuole qualcun
+            // altro che hai tu).
+            const pannelloMatch = document.getElementById('pannelloMatch');
+            if (tabId === 'scambio' || tabId === 'wishlist') {
+                pannelloMatch.style.display = 'block';
+                caricaMatch(tabId);
+            } else {
+                pannelloMatch.style.display = 'none';
+            }
 
             const copyBtn = document.getElementById('btnCopyShareLink');
             const qrBtn = document.getElementById('btnShowQrCode');
@@ -2333,11 +2631,19 @@
                 // una location come le altre dentro la collezione, "sealed"
                 // è il campo 'tipo' (stessa tabella, non una location).
                 if (currentMode === 'wishlist') return card.stato === 'wishlist';
-                if (card.stato !== 'collezione') return false;
                 if (currentMode === 'sealed') {
-                    if (card.tipo !== 'sealed') return false;
+                    if (card.stato !== 'collezione' || card.tipo !== 'sealed') return false;
                     return locVal === "" || card.location === locVal;
                 }
+                if (currentMode === 'visualizzazione') {
+                    // Multi-selezione indipendente dei tre "tipi" di riga —
+                    // vedi _filtriTipo e toggleFiltroTipo più sotto.
+                    if (card.stato === 'wishlist') { if (!_filtriTipo.wishlist) return false; }
+                    else if (card.tipo === 'sealed') { if (!_filtriTipo.sealed) return false; }
+                    else { if (!_filtriTipo.carte) return false; }
+                    return locVal === "" || card.location === locVal;
+                }
+                if (card.stato !== 'collezione') return false;
                 return locVal === "" || card.location === locVal;
             });
 
