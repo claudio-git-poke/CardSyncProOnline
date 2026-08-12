@@ -2167,9 +2167,9 @@
                     <td class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'qty', ${card.qty}, 'Quantità', 'intero')"><strong>${card.qty}</strong></td>
                     <td class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'nome', '${nomeAttr}', 'Nome')">${thumb}<strong>${card.name}</strong>${obiettivoRaggiunto ? ` <span class="badge" style="background-color:var(--success-bg); color:var(--success);" title="Prezzo sceso al di sotto del tuo obiettivo (${card.prezzoObiettivo.toFixed(2)} €)">🎯 obiettivo!</span>` : ''}</td>
                     <td class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'codice', '${codeAttr}', 'Codice')"><code>${card.code}</code></td>
-                    <td><span class="badge badge-location" title="Clicca per modificare" onclick="event.stopPropagation(); modificaLocationInline('${idAttr}', '${card.tabella}', '${locAttr}')">${card.location || '—'}</span></td>
-                    <td><span class="badge ${langClass}">${card.lang}</span></td>
-                    <td><span class="badge ${condClass}">${card.cond}</span></td>
+                    <td><span class="badge badge-location" title="Clicca per modificare" onclick="event.stopPropagation(); modificaLocationInline(event, '${idAttr}', '${card.tabella}', '${locAttr}')">${card.location || '—'}</span></td>
+                    <td><span class="badge ${langClass} cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaLinguaInline(event, '${idAttr}', '${card.tabella}', '${card.lang}')">${card.lang}</span></td>
+                    <td><span class="badge ${condClass} cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCondizioneInline(event, '${idAttr}', '${card.tabella}', '${card.cond}')">${card.cond}</span></td>
                     <td class="price cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'prezzo', ${card.price}, 'Prezzo (€)', 'numero')">${card.price.toFixed(2)} €</td>
                     <td class="${varClass}">${card.variation}</td>
                     <td>
@@ -2434,19 +2434,64 @@
             await caricaCarteReali();
         }
 
-        // Modifica la Location direttamente dal badge in tabella, senza dover
-        // aprire il modale di modifica — chiede conferma prima di salvare,
-        // così un click per sbaglio non sposta nulla per errore.
-        async function modificaLocationInline(id, tabella, locationAttuale) {
-            const nuovo = prompt('Nuova location per questa riga:', locationAttuale || '');
-            if (nuovo === null) return; // annullato
-            const valore = nuovo.trim();
-            if (valore === (locationAttuale || '')) return; // nessuna modifica reale
-            if (!confirm(`Spostare in "${valore || '(vuota)'}"?`)) return;
+        // ── LOCATION / LINGUA / CONDIZIONE — tendine in linea ────────────────────
+        // A differenza di Nome/Codice/Q.tà/Prezzo (testo libero via prompt),
+        // questi tre campi hanno un set di valori noti — si sostituisce il
+        // badge con una vera <select> al click, niente testo libero digitato
+        // a mano che potrebbe non corrispondere a un valore valido.
+        let _locationDisponibiliCache = null;
+        async function _locationDisponibili() {
+            if (_locationDisponibiliCache) return _locationDisponibiliCache;
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) return [];
+            const { data } = await supabaseClient.from('location').select('nome').eq('owner_id', userId).order('nome');
+            _locationDisponibiliCache = (data || []).map(r => r.nome);
+            return _locationDisponibiliCache;
+        }
 
-            const { error } = await supabaseClient.from(tabella).update({ location: valore || null }).eq('id', id);
-            if (error) { alert('❌ Errore nello spostare la location: ' + error.message); return; }
-            await caricaCarteReali();
+        async function modificaLocationInline(event, id, tabella, valoreAttuale) {
+            const span = event.target.closest('span');
+            let opzioni = await _locationDisponibili();
+            if (valoreAttuale && !opzioni.includes(valoreAttuale)) opzioni = [valoreAttuale, ...opzioni];
+            _apriSelectInline(span, id, tabella, 'location', valoreAttuale, opzioni);
+        }
+
+        function modificaLinguaInline(event, id, tabella, valoreAttuale) {
+            const span = event.target.closest('span');
+            _apriSelectInline(span, id, tabella, 'lingua', valoreAttuale, ['IT', 'EN', 'KOR', 'JP']);
+        }
+
+        function modificaCondizioneInline(event, id, tabella, valoreAttuale) {
+            const span = event.target.closest('span');
+            _apriSelectInline(span, id, tabella, 'condizione', valoreAttuale, ['NM', 'EX', 'GD']);
+        }
+
+        function _apriSelectInline(elemento, id, tabella, campo, valoreAttuale, opzioni) {
+            const select = document.createElement('select');
+            select.style.cssText = 'font-size:0.75rem; padding:0.25rem; border-radius:6px; border:1px solid var(--primary); font-weight:700;';
+            opzioni.forEach(opt => {
+                const o = document.createElement('option');
+                o.value = opt;
+                o.textContent = opt;
+                if (opt === valoreAttuale) o.selected = true;
+                select.appendChild(o);
+            });
+            select.onclick = (e) => e.stopPropagation();
+            // Click fuori dalla tendina senza scegliere nulla → ripristina la
+            // vista normale senza salvare (nessuna conferma richiesta, dato
+            // che non è stata fatta nessuna scelta).
+            select.onblur = () => filterTable();
+            select.onchange = async () => {
+                const nuovo = select.value;
+                if (nuovo === valoreAttuale) { filterTable(); return; }
+                if (!confirm(`Salvare "${campo}" = "${nuovo}"?`)) { filterTable(); return; }
+                const { error } = await supabaseClient.from(tabella).update({ [campo]: nuovo }).eq('id', id);
+                if (error) { alert(`❌ Errore nel salvare: ` + error.message); filterTable(); return; }
+                await caricaCarteReali();
+            };
+            elemento.replaceWith(select);
+            select.focus();
         }
 
         // Stesso meccanismo di modificaLocationInline ma generico — usato per
