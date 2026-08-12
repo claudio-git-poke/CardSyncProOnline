@@ -2166,9 +2166,8 @@
                 // images.weserv.nl le recupera lato server e le riserve dal
                 // proprio dominio, stesso proxy già usato in sidebar.html.
                 const immagineProxy = card.immagine ? `https://images.weserv.nl/?url=${encodeURIComponent(card.immagine)}&w=64` : null;
-                const immagineProxyGrande = card.immagine ? `https://images.weserv.nl/?url=${encodeURIComponent(card.immagine)}&w=400` : null;
                 const thumb = immagineProxy
-                    ? `<img src="${immagineProxy}" alt="" style="width:32px; height:44px; object-fit:cover; border-radius:4px; vertical-align:middle; margin-right:0.5rem; box-shadow:0 1px 4px rgba(0,0,0,0.15); cursor:pointer;" loading="lazy" title="Ingrandisci" onclick="event.stopPropagation(); apriImmagineIngrandita('${immagineProxyGrande}')">`
+                    ? `<img src="${immagineProxy}" alt="" style="width:32px; height:44px; object-fit:cover; border-radius:4px; vertical-align:middle; margin-right:0.5rem; box-shadow:0 1px 4px rgba(0,0,0,0.15); cursor:pointer;" loading="lazy" title="Ingrandisci" onclick="event.stopPropagation(); apriImmagineIngrandita('${idAttr}')">`
                     : '';
                 const obiettivoRaggiunto = card.tabella === 'wishlist' && card.prezzoObiettivo != null && card.price > 0 && card.price <= card.prezzoObiettivo;
                 if (obiettivoRaggiunto) tr.style.backgroundColor = 'var(--success-bg)';
@@ -2397,8 +2396,10 @@
             if (_graficoPrezzoChart) { _graficoPrezzoChart.destroy(); _graficoPrezzoChart = null; }
         }
 
-        function apriImmagineIngrandita(url) {
-            document.getElementById('immagineIngranditaImg').src = url;
+        function apriImmagineIngrandita(id) {
+            const card = carteReali.find(c => String(c.id) === String(id));
+            if (!card || !card.immagine) return;
+            document.getElementById('immagineIngranditaImg').src = `https://images.weserv.nl/?url=${encodeURIComponent(card.immagine)}&w=400`;
             document.getElementById('immagineModal').style.display = 'flex';
         }
 
