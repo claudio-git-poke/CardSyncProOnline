@@ -1532,11 +1532,9 @@
         }
 
         // ── INSERIMENTO CARTE — collegato alla coda UNICA coda_carte ─────────────
-        // Ogni riga della tabella diventa una riga in 'coda_carte' (espandendo
-        // la quantità in righe separate, dato che il motore dell'estensione
-        // processa una carta alla volta) — niente più testo/txt intermedio:
-        // l'estensione legge direttamente questa tabella e scrive lì l'esito,
-        // così la coda sopravvive a spegnimenti/riavvii di qualunque dispositivo.
+        // Ogni riga della tabella diventa UNA riga in 'coda_carte' con il suo
+        // qty — prima veniva "spacchettata" in N righe separate (N ricerche
+        // identiche su Cardmarket per la stessa carta): inutile e più lenta.
         // 'destinazione' (collezione/wishlist) e 'tipo' (carta/sealed) sono
         // due scelte indipendenti — la STESSA coda le gestisce entrambe, non
         // più due tabelle/motori separati (vedi coda_unificata.sql).
@@ -1544,7 +1542,7 @@
             const nome = (row.name || '').trim();
             if (!nome) return [];
             const qty = Math.max(1, parseInt(row.qty, 10) || 1);
-            const rigaBase = {
+            return [{
                 owner_id: userId,
                 nome,
                 lingua: row.lang || 'IT',
@@ -1554,9 +1552,9 @@
                 nota: (row.notes || '').trim() || null,
                 location: (row.loc && row.loc !== '?') ? row.loc : null,
                 destinazione,
+                qty,
                 ...(tipo ? { tipo } : {}),
-            };
-            return Array(qty).fill(null).map(() => ({ ...rigaBase }));
+            }];
         }
 
         // ── TOGGLE INSERIMENTO — due dimensioni indipendenti ─────────────────────
