@@ -1163,7 +1163,8 @@
     <div id="immagineModal" class="modal-overlay" onclick="chiudiImmagineIngrandita()">
         <div class="modal-content" style="max-width: 320px; padding: 1rem;" onclick="event.stopPropagation()">
             <button class="close-modal-btn" onclick="chiudiImmagineIngrandita()"><i class="fa-solid fa-xmark"></i></button>
-            <img id="immagineIngranditaImg" src="" alt="" style="width:100%; border-radius:12px; margin-top:0.5rem;">
+            <img id="immagineIngranditaImg" src="" alt="" style="width:100%; border-radius:12px; margin-top:0.5rem;" onerror="this.style.display='none'; document.getElementById('immagineErroreMsg').style.display='block';">
+            <p id="immagineErroreMsg" style="display:none; color:var(--text-muted); font-size:0.85rem; padding:2rem 0;">Immagine non disponibile al momento.</p>
         </div>
     </div>
 
@@ -2165,9 +2166,21 @@
                 // immagini (per questo il <img src> mostrava l'icona rotta) —
                 // images.weserv.nl le recupera lato server e le riserve dal
                 // proprio dominio, stesso proxy già usato in sidebar.html.
-                const immagineProxy = card.immagine ? `https://images.weserv.nl/?url=${encodeURIComponent(card.immagine)}&w=64` : null;
-                const thumb = immagineProxy
-                    ? `<img src="${immagineProxy}" alt="" style="width:32px; height:44px; object-fit:cover; border-radius:4px; vertical-align:middle; margin-right:0.5rem; box-shadow:0 1px 4px rgba(0,0,0,0.15); cursor:pointer;" loading="lazy" title="Ingrandisci" onclick="event.stopPropagation(); apriImmagineIngrandita('${idAttr}')">`
+                // Da ora l'estensione salva l'immagine come "data URI"
+                // (incorporata, scaricata direttamente dalla pagina
+                // Cardmarket vera) invece di un semplice link esterno — che
+                // Cardmarket blocca se richiesto da un dominio diverso (da
+                // qui il problema delle miniature sempre rotte). Se il
+                // valore è già un data URI (inizia con "data:") lo uso
+                // direttamente; se invece è ancora un vecchio URL esterno
+                // (carte aggiunte prima di questa correzione), tento il
+                // proxy come ripiego — funziona per alcune immagini, non per
+                // tutte, ma è meglio di niente per lo storico.
+                const immagineSrc = card.immagine
+                    ? (card.immagine.startsWith('data:') ? card.immagine : `https://images.weserv.nl/?url=${encodeURIComponent(card.immagine)}&w=64`)
+                    : null;
+                const thumb = immagineSrc
+                    ? `<img src="${immagineSrc}" alt="" style="width:32px; height:44px; object-fit:cover; border-radius:4px; vertical-align:middle; margin-right:0.5rem; box-shadow:0 1px 4px rgba(0,0,0,0.15); cursor:pointer;" loading="lazy" title="Ingrandisci" onclick="event.stopPropagation(); apriImmagineIngrandita('${idAttr}')" onerror="this.style.display='none';">`
                     : '';
                 const obiettivoRaggiunto = card.tabella === 'wishlist' && card.prezzoObiettivo != null && card.price > 0 && card.price <= card.prezzoObiettivo;
                 if (obiettivoRaggiunto) tr.style.backgroundColor = 'var(--success-bg)';
@@ -2399,7 +2412,12 @@
         function apriImmagineIngrandita(id) {
             const card = carteReali.find(c => String(c.id) === String(id));
             if (!card || !card.immagine) return;
-            document.getElementById('immagineIngranditaImg').src = `https://images.weserv.nl/?url=${encodeURIComponent(card.immagine)}&w=400`;
+            document.getElementById('immagineErroreMsg').style.display = 'none';
+            const img = document.getElementById('immagineIngranditaImg');
+            img.style.display = '';
+            img.src = card.immagine.startsWith('data:')
+                ? card.immagine
+                : `https://images.weserv.nl/?url=${encodeURIComponent(card.immagine)}&w=64`;
             document.getElementById('immagineModal').style.display = 'flex';
         }
 
