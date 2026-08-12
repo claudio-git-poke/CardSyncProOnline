@@ -497,6 +497,9 @@
         .badge-location { background-color: var(--badge-loc-bg); color: var(--text-dark); border: 1px solid var(--border-color); cursor: pointer; }
         .badge-location:hover { filter: brightness(0.92); }
 
+        .cella-editabile { cursor: pointer; }
+        .cella-editabile:hover { background-color: var(--row-hover); }
+
         .badge-toggle {
             display: inline-flex; align-items: center; gap: 0.4rem;
             padding: 0.5rem 0.9rem; border-radius: 20px; border: 1px solid var(--border-color);
@@ -2156,15 +2159,18 @@
                 const obiettivoRaggiunto = card.tabella === 'wishlist' && card.prezzoObiettivo != null && card.price > 0 && card.price <= card.prezzoObiettivo;
                 if (obiettivoRaggiunto) tr.style.backgroundColor = 'var(--success-bg)';
 
+                const nomeAttr = card.name.replace(/'/g, "\\'");
+                const codeAttr = (card.code || '').replace(/'/g, "\\'");
+
                 tr.innerHTML = `
                     <td><input type="checkbox" class="riga-checkbox" data-id="${idAttr}" data-tabella="${card.tabella}" onclick="event.stopPropagation(); aggiornaSelezioneMultipla();"></td>
-                    <td><strong>${card.qty}</strong></td>
-                    <td>${thumb}<strong>${card.name}</strong>${obiettivoRaggiunto ? ` <span class="badge" style="background-color:var(--success-bg); color:var(--success);" title="Prezzo sceso al di sotto del tuo obiettivo (${card.prezzoObiettivo.toFixed(2)} €)">🎯 obiettivo!</span>` : ''}</td>
-                    <td><code>${card.code}</code></td>
+                    <td class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'qty', ${card.qty}, 'Quantità', 'intero')"><strong>${card.qty}</strong></td>
+                    <td class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'nome', '${nomeAttr}', 'Nome')">${thumb}<strong>${card.name}</strong>${obiettivoRaggiunto ? ` <span class="badge" style="background-color:var(--success-bg); color:var(--success);" title="Prezzo sceso al di sotto del tuo obiettivo (${card.prezzoObiettivo.toFixed(2)} €)">🎯 obiettivo!</span>` : ''}</td>
+                    <td class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'codice', '${codeAttr}', 'Codice')"><code>${card.code}</code></td>
                     <td><span class="badge badge-location" title="Clicca per modificare" onclick="event.stopPropagation(); modificaLocationInline('${idAttr}', '${card.tabella}', '${locAttr}')">${card.location || '—'}</span></td>
                     <td><span class="badge ${langClass}">${card.lang}</span></td>
                     <td><span class="badge ${condClass}">${card.cond}</span></td>
-                    <td class="price">${card.price.toFixed(2)} €</td>
+                    <td class="price cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'prezzo', ${card.price}, 'Prezzo (€)', 'numero')">${card.price.toFixed(2)} €</td>
                     <td class="${varClass}">${card.variation}</td>
                     <td>
                         <a href="${card.link}" target="_blank" class="link-icon">
@@ -2440,6 +2446,34 @@
 
             const { error } = await supabaseClient.from(tabella).update({ location: valore || null }).eq('id', id);
             if (error) { alert('❌ Errore nello spostare la location: ' + error.message); return; }
+            await caricaCarteReali();
+        }
+
+        // Stesso meccanismo di modificaLocationInline ma generico — usato per
+        // Nome, Codice, Quantità e Prezzo (click sulla cella → chiede il
+        // nuovo valore → conferma → salva). 'tipo' converte e valida
+        // l'input: 'intero' per la quantità, 'numero' per il prezzo,
+        // altrimenti testo libero.
+        async function modificaCampoInline(id, tabella, campo, valoreAttuale, etichetta, tipo) {
+            const nuovo = prompt(`Nuovo valore per "${etichetta}":`, valoreAttuale ?? '');
+            if (nuovo === null) return; // annullato
+            let valore = nuovo.trim();
+
+            if (tipo === 'intero') {
+                valore = parseInt(valore, 10);
+                if (isNaN(valore) || valore < 1) { alert('Inserisci un numero intero maggiore di zero.'); return; }
+            } else if (tipo === 'numero') {
+                valore = parseFloat(valore.replace(',', '.'));
+                if (isNaN(valore) || valore < 0) { alert('Inserisci un prezzo valido (es. 12.50).'); return; }
+            } else if (valore === '') {
+                alert(`"${etichetta}" non può essere vuoto.`); return;
+            }
+
+            if (String(valore) === String(valoreAttuale)) return; // nessuna modifica reale
+            if (!confirm(`Salvare "${etichetta}" = "${valore}"?`)) return;
+
+            const { error } = await supabaseClient.from(tabella).update({ [campo]: valore }).eq('id', id);
+            if (error) { alert(`❌ Errore nel salvare "${etichetta}": ` + error.message); return; }
             await caricaCarteReali();
         }
 
