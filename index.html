@@ -716,6 +716,21 @@
             font-size: 0.75rem;
             color: var(--text-dark);
             display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+            /* FIX (bottoni che "sparivano" fuori schermo su telefoni stretti):
+               un elemento flex con flex:1 non si restringe MAI sotto la
+               larghezza naturale del proprio contenuto, a meno di dirglielo
+               esplicitamente — con etichette lunghe tipo "Colleziona (con
+               Location)" questo spingeva l'intera riga di bottoni oltre il
+               bordo dello schermo invece di restringersi o andare a capo. */
+            min-width: 0;
+        }
+
+        .testo-esteso { white-space: normal; }
+        @media (max-width: 480px) {
+            /* Sotto i 480px lo spazio è poco: mostra solo l'etichetta breve
+               ("Colleziona", "Wishlist") e nascondi la parte descrittiva tra
+               parentesi, invece di farla traboccare o accavallare. */
+            .testo-esteso { display: none; }
         }
 
         .theme-btn.active { border-color: var(--primary); background-color: var(--primary-light); }
@@ -937,14 +952,14 @@
                     </button>
                 </div>
 
-                <div style="display:flex; gap:0.5rem; margin-bottom: 1rem;">
-                    <button type="button" class="theme-btn active" id="btnModoCollezione" onclick="impostaModalitaInserimento('collezione')" style="flex:1; flex-direction:row; gap:0.5rem;">
-                        <i class="fa-solid fa-box"></i> Colleziona (con Location)
+                <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom: 1rem;">
+                    <button type="button" class="theme-btn active" id="btnModoCollezione" onclick="impostaModalitaInserimento('collezione')" style="flex:1; flex-direction:row; gap:0.5rem; min-width:110px;">
+                        <i class="fa-solid fa-box"></i> Colleziona <span class="testo-esteso">(con Location)</span>
                     </button>
-                    <button type="button" class="theme-btn" id="btnModoWishlist" onclick="impostaModalitaInserimento('wishlist')" style="flex:1; flex-direction:row; gap:0.5rem;">
-                        <i class="fa-solid fa-bookmark"></i> Wishlist (voglio comprarla)
+                    <button type="button" class="theme-btn" id="btnModoWishlist" onclick="impostaModalitaInserimento('wishlist')" style="flex:1; flex-direction:row; gap:0.5rem; min-width:110px;">
+                        <i class="fa-solid fa-bookmark"></i> Wishlist <span class="testo-esteso">(voglio comprarla)</span>
                     </button>
-                    <button type="button" class="theme-btn" id="btnModoSealed" onclick="impostaModalitaInserimento('sealed')" style="flex:1; flex-direction:row; gap:0.5rem;">
+                    <button type="button" class="theme-btn" id="btnModoSealed" onclick="impostaModalitaInserimento('sealed')" style="flex:1; flex-direction:row; gap:0.5rem; min-width:110px;">
                         <i class="fa-solid fa-box-archive"></i> Sealed
                     </button>
                 </div>
@@ -1540,22 +1555,43 @@
             document.getElementById('btnModoCollezione').classList.toggle('active', modo === 'collezione');
             document.getElementById('btnModoWishlist').classList.toggle('active', modo === 'wishlist');
             document.getElementById('btnModoSealed').classList.toggle('active', modo === 'sealed');
-            // La location comune non ha senso per la wishlist (non possiedi
-            // ancora la carta) — nascosta, non solo disabilitata, per non
-            // confondere con un campo che comunque verrebbe ignorato. Per i
-            // prodotti sealed invece la location resta utile (occupano
-            // spazio fisico come le carte), quindi il pannello resta visibile.
-            document.getElementById('pannelloLocationComune').style.display = modo === 'wishlist' ? 'none' : 'flex';
+
+            // Wishlist e Sealed non hanno (per ora) location diverse da
+            // riga a riga come la collezione — la tendina resta comunque
+            // visibile e modificabile (in caso servisse in futuro), ma parte
+            // già impostata su un valore fisso, senza dover scegliere nulla.
+            document.getElementById('pannelloLocationComune').style.display = 'flex';
+            const selectLoc = document.getElementById('selectLocationComune');
+            if (modo === 'wishlist') _impostaLocationComuneFissa(selectLoc, 'WISHLIST');
+            else if (modo === 'sealed') _impostaLocationComuneFissa(selectLoc, 'SEALED');
+            else selectLoc.value = '';
+
             const btn = document.getElementById('btnSalvaCarte');
             if (modo === 'wishlist') btn.innerHTML = '<i class="fa-solid fa-bookmark"></i> Salva in Wishlist';
             else if (modo === 'sealed') btn.innerHTML = '<i class="fa-solid fa-box-archive"></i> Salva Sealed';
             else btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Salva Carte';
         }
 
-        // Analoga a _rigaEntryToRigheDb ma per 'coda_wishlist' — niente
-        // location (non possiedi ancora la carta), il campo LOCATION della
-        // riga viene semplicemente ignorato in questa modalità.
-        function _rigaEntryToRigheWishlist(row, userId) {
+        // Imposta la location comune su un valore fisso (WISHLIST/SEALED),
+        // aggiungendolo alla tendina se non è già tra le opzioni presenti
+        // (non serve registrarlo nella tabella 'location' vera e propria —
+        // qui basta che sia selezionabile e venga inviato correttamente).
+        function _impostaLocationComuneFissa(select, valore) {
+            if (![...select.options].some(o => o.value === valore)) {
+                const opt = document.createElement('option');
+                opt.value = valore;
+                opt.textContent = valore;
+                select.appendChild(opt);
+            }
+            select.value = valore;
+        }
+
+        // Analoga a _rigaEntryToRigheDb ma per 'coda_wishlist'. Per ora la
+        // location è sempre un valore unico ('WISHLIST' di default, vedi
+        // impostaModalitaInserimento) — il campo esiste comunque già in
+        // tabella, pronto per il giorno in cui servissero location diverse
+        // anche qui.
+        function _rigaEntryToRigheWishlist(row, userId, location) {
             const nome = (row.name || '').trim();
             if (!nome) return [];
             const qty = Math.max(1, parseInt(row.qty, 10) || 1);
@@ -1568,6 +1604,7 @@
                 first_ed: !!row.first,
                 nota: (row.notes || '').trim() || null,
                 qty,
+                location: location || 'WISHLIST',
             }];
         }
 
@@ -1610,7 +1647,7 @@
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Invio in corso...';
 
             if (_modalitaInserimento === 'wishlist') {
-                const righeWishlist = righeValide.flatMap(r => _rigaEntryToRigheWishlist(r, userId));
+                const righeWishlist = righeValide.flatMap(r => _rigaEntryToRigheWishlist(r, userId, locationComune));
                 const { error } = await supabaseClient.from('coda_wishlist').insert(righeWishlist);
 
                 btn.disabled = false;
