@@ -944,6 +944,9 @@
                     <button type="button" class="theme-btn" id="btnModoWishlist" onclick="impostaModalitaInserimento('wishlist')" style="flex:1; flex-direction:row; gap:0.5rem;">
                         <i class="fa-solid fa-bookmark"></i> Wishlist (voglio comprarla)
                     </button>
+                    <button type="button" class="theme-btn" id="btnModoSealed" onclick="impostaModalitaInserimento('sealed')" style="flex:1; flex-direction:row; gap:0.5rem;">
+                        <i class="fa-solid fa-box-archive"></i> Sealed
+                    </button>
                 </div>
 
                 <div id="pannelloLocationComune" style="display:flex; flex-wrap:wrap; gap:0.6rem; align-items:flex-end; margin-bottom: 1rem; padding: 0.8rem; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 10px;">
@@ -1511,7 +1514,7 @@
         // processa una carta alla volta) — niente più testo/txt intermedio:
         // l'estensione legge direttamente questa tabella e scrive lì l'esito,
         // così la coda sopravvive a spegnimenti/riavvii di qualunque dispositivo.
-        function _rigaEntryToRigheDb(row, userId) {
+        function _rigaEntryToRigheDb(row, userId, tipo = null) {
             const nome = (row.name || '').trim();
             if (!nome) return [];
             const qty = Math.max(1, parseInt(row.qty, 10) || 1);
@@ -1524,25 +1527,29 @@
                 first_ed: !!row.first,
                 nota: (row.notes || '').trim() || null,
                 location: (row.loc && row.loc !== '?') ? row.loc : null,
+                ...(tipo ? { tipo } : {}),
             };
             return Array(qty).fill(null).map(() => ({ ...rigaBase }));
         }
 
-        // ── TOGGLE MODALITÀ INSERIMENTO (Colleziona / Wishlist) ──────────────────
+        // ── TOGGLE MODALITÀ INSERIMENTO (Colleziona / Wishlist / Sealed) ─────────
         let _modalitaInserimento = 'collezione';
 
         function impostaModalitaInserimento(modo) {
             _modalitaInserimento = modo;
             document.getElementById('btnModoCollezione').classList.toggle('active', modo === 'collezione');
             document.getElementById('btnModoWishlist').classList.toggle('active', modo === 'wishlist');
+            document.getElementById('btnModoSealed').classList.toggle('active', modo === 'sealed');
             // La location comune non ha senso per la wishlist (non possiedi
             // ancora la carta) — nascosta, non solo disabilitata, per non
-            // confondere con un campo che comunque verrebbe ignorato.
+            // confondere con un campo che comunque verrebbe ignorato. Per i
+            // prodotti sealed invece la location resta utile (occupano
+            // spazio fisico come le carte), quindi il pannello resta visibile.
             document.getElementById('pannelloLocationComune').style.display = modo === 'wishlist' ? 'none' : 'flex';
             const btn = document.getElementById('btnSalvaCarte');
-            btn.innerHTML = modo === 'wishlist'
-                ? '<i class="fa-solid fa-bookmark"></i> Salva in Wishlist'
-                : '<i class="fa-solid fa-paper-plane"></i> Salva Carte';
+            if (modo === 'wishlist') btn.innerHTML = '<i class="fa-solid fa-bookmark"></i> Salva in Wishlist';
+            else if (modo === 'sealed') btn.innerHTML = '<i class="fa-solid fa-box-archive"></i> Salva Sealed';
+            else btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Salva Carte';
         }
 
         // Analoga a _rigaEntryToRigheDb ma per 'coda_wishlist' — niente
@@ -1628,7 +1635,8 @@
 
             const righeDb = righeValide.flatMap(r => _rigaEntryToRigheDb(
                 locationComune ? { ...r, loc: locationComune } : r,
-                userId
+                userId,
+                _modalitaInserimento === 'sealed' ? 'sealed' : null
             ));
 
             const { error } = await supabaseClient.from('coda_carte').insert(righeDb);
