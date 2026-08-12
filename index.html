@@ -952,15 +952,23 @@
                     </button>
                 </div>
 
-                <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom: 1rem;">
-                    <button type="button" class="theme-btn active" id="btnModoCollezione" onclick="impostaModalitaInserimento('collezione')" style="flex:1; flex-direction:row; gap:0.5rem; min-width:110px;">
+                <div style="margin-bottom: 0.4rem; font-size: 0.72rem; font-weight: 700; color: var(--text-muted);">DESTINAZIONE</div>
+                <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom: 0.8rem;">
+                    <button type="button" class="theme-btn active" id="btnDestCollezione" onclick="impostaDestinazioneInserimento('collezione')" style="flex:1; flex-direction:row; gap:0.5rem; min-width:110px;">
                         <i class="fa-solid fa-box"></i> Colleziona <span class="testo-esteso">(con Location)</span>
                     </button>
-                    <button type="button" class="theme-btn" id="btnModoWishlist" onclick="impostaModalitaInserimento('wishlist')" style="flex:1; flex-direction:row; gap:0.5rem; min-width:110px;">
+                    <button type="button" class="theme-btn" id="btnDestWishlist" onclick="impostaDestinazioneInserimento('wishlist')" style="flex:1; flex-direction:row; gap:0.5rem; min-width:110px;">
                         <i class="fa-solid fa-bookmark"></i> Wishlist <span class="testo-esteso">(voglio comprarla)</span>
                     </button>
-                    <button type="button" class="theme-btn" id="btnModoSealed" onclick="impostaModalitaInserimento('sealed')" style="flex:1; flex-direction:row; gap:0.5rem; min-width:110px;">
-                        <i class="fa-solid fa-box-archive"></i> Sealed
+                </div>
+
+                <div style="margin-bottom: 0.4rem; font-size: 0.72rem; font-weight: 700; color: var(--text-muted);">TIPO PRODOTTO</div>
+                <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom: 1rem;">
+                    <button type="button" class="theme-btn active" id="btnTipoCarta" onclick="impostaTipoInserimento('carta')" style="flex:1; flex-direction:row; gap:0.5rem; min-width:110px;">
+                        <i class="fa-solid fa-clone"></i> Carta singola
+                    </button>
+                    <button type="button" class="theme-btn" id="btnTipoSealed" onclick="impostaTipoInserimento('sealed')" style="flex:1; flex-direction:row; gap:0.5rem; min-width:110px;">
+                        <i class="fa-solid fa-box-archive"></i> Sealed <span class="testo-esteso">(ETB, box, UPC...)</span>
                     </button>
                 </div>
 
@@ -1547,28 +1555,48 @@
             return Array(qty).fill(null).map(() => ({ ...rigaBase }));
         }
 
-        // ── TOGGLE MODALITÀ INSERIMENTO (Colleziona / Wishlist / Sealed) ─────────
-        let _modalitaInserimento = 'collezione';
+        // ── TOGGLE INSERIMENTO — due dimensioni indipendenti ─────────────────────
+        // Prima era un'unica scelta a 3 vie (Colleziona/Wishlist/Sealed), che
+        // non permetteva di mettere un prodotto sealed IN wishlist (una cosa
+        // che vuoi comprare potrebbe benissimo essere un ETB, non solo una
+        // carta). Ora sono due scelte indipendenti che si combinano:
+        // destinazione (dove finisce) × tipo (come viene cercato su
+        // Cardmarket — le carte singole e i prodotti sealed vivono in
+        // sezioni diverse del sito).
+        let _destinazioneInserimento = 'collezione';
+        let _tipoInserimento = 'carta';
 
-        function impostaModalitaInserimento(modo) {
-            _modalitaInserimento = modo;
-            document.getElementById('btnModoCollezione').classList.toggle('active', modo === 'collezione');
-            document.getElementById('btnModoWishlist').classList.toggle('active', modo === 'wishlist');
-            document.getElementById('btnModoSealed').classList.toggle('active', modo === 'sealed');
+        function impostaDestinazioneInserimento(dest) {
+            _destinazioneInserimento = dest;
+            document.getElementById('btnDestCollezione').classList.toggle('active', dest === 'collezione');
+            document.getElementById('btnDestWishlist').classList.toggle('active', dest === 'wishlist');
+            _aggiornaLocationEBottoneInserimento();
+        }
 
-            // Wishlist e Sealed non hanno (per ora) location diverse da
-            // riga a riga come la collezione — la tendina resta comunque
-            // visibile e modificabile (in caso servisse in futuro), ma parte
-            // già impostata su un valore fisso, senza dover scegliere nulla.
+        function impostaTipoInserimento(tipo) {
+            _tipoInserimento = tipo;
+            document.getElementById('btnTipoCarta').classList.toggle('active', tipo === 'carta');
+            document.getElementById('btnTipoSealed').classList.toggle('active', tipo === 'sealed');
+            _aggiornaLocationEBottoneInserimento();
+        }
+
+        function _aggiornaLocationEBottoneInserimento() {
+            // Wishlist e Sealed non hanno (per ora) location diverse da riga
+            // a riga come la collezione di carte singole — la tendina resta
+            // comunque visibile e modificabile (in caso servisse in futuro),
+            // ma parte già impostata su un valore fisso, senza dover
+            // scegliere nulla. La destinazione conta più del tipo: qualunque
+            // cosa vada in Wishlist prende quella location, a prescindere se
+            // è una carta o un sealed.
             document.getElementById('pannelloLocationComune').style.display = 'flex';
             const selectLoc = document.getElementById('selectLocationComune');
-            if (modo === 'wishlist') _impostaLocationComuneFissa(selectLoc, 'WISHLIST');
-            else if (modo === 'sealed') _impostaLocationComuneFissa(selectLoc, 'SEALED');
+            if (_destinazioneInserimento === 'wishlist') _impostaLocationComuneFissa(selectLoc, 'WISHLIST');
+            else if (_tipoInserimento === 'sealed') _impostaLocationComuneFissa(selectLoc, 'SEALED');
             else selectLoc.value = '';
 
             const btn = document.getElementById('btnSalvaCarte');
-            if (modo === 'wishlist') btn.innerHTML = '<i class="fa-solid fa-bookmark"></i> Salva in Wishlist';
-            else if (modo === 'sealed') btn.innerHTML = '<i class="fa-solid fa-box-archive"></i> Salva Sealed';
+            if (_destinazioneInserimento === 'wishlist') btn.innerHTML = '<i class="fa-solid fa-bookmark"></i> Salva in Wishlist';
+            else if (_tipoInserimento === 'sealed') btn.innerHTML = '<i class="fa-solid fa-box-archive"></i> Salva Sealed';
             else btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Salva Carte';
         }
 
@@ -1588,10 +1616,13 @@
 
         // Analoga a _rigaEntryToRigheDb ma per 'coda_wishlist'. Per ora la
         // location è sempre un valore unico ('WISHLIST' di default, vedi
-        // impostaModalitaInserimento) — il campo esiste comunque già in
-        // tabella, pronto per il giorno in cui servissero location diverse
-        // anche qui.
-        function _rigaEntryToRigheWishlist(row, userId, location) {
+        // _aggiornaLocationEBottoneInserimento) — il campo esiste comunque
+        // già in tabella, pronto per il giorno in cui servissero location
+        // diverse anche qui. 'tipo' invece è già pienamente supportato: una
+        // riga di wishlist può essere una carta singola o un prodotto
+        // sealed (ETB, UPC, box...), cercati in due sezioni diverse di
+        // Cardmarket dall'estensione.
+        function _rigaEntryToRigheWishlist(row, userId, location, tipo) {
             const nome = (row.name || '').trim();
             if (!nome) return [];
             const qty = Math.max(1, parseInt(row.qty, 10) || 1);
@@ -1605,6 +1636,7 @@
                 nota: (row.notes || '').trim() || null,
                 qty,
                 location: location || 'WISHLIST',
+                ...(tipo ? { tipo } : {}),
             }];
         }
 
@@ -1646,8 +1678,10 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Invio in corso...';
 
-            if (_modalitaInserimento === 'wishlist') {
-                const righeWishlist = righeValide.flatMap(r => _rigaEntryToRigheWishlist(r, userId, locationComune));
+            if (_destinazioneInserimento === 'wishlist') {
+                const righeWishlist = righeValide.flatMap(r => _rigaEntryToRigheWishlist(
+                    r, userId, locationComune, _tipoInserimento === 'sealed' ? 'sealed' : null
+                ));
                 const { error } = await supabaseClient.from('coda_wishlist').insert(righeWishlist);
 
                 btn.disabled = false;
@@ -1673,7 +1707,7 @@
             const righeDb = righeValide.flatMap(r => _rigaEntryToRigheDb(
                 locationComune ? { ...r, loc: locationComune } : r,
                 userId,
-                _modalitaInserimento === 'sealed' ? 'sealed' : null
+                _tipoInserimento === 'sealed' ? 'sealed' : null
             ));
 
             const { error } = await supabaseClient.from('coda_carte').insert(righeDb);
