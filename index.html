@@ -1531,13 +1531,16 @@
             document.getElementById('selectLocationComune').value = nome;
         }
 
-        // ── INSERIMENTO CARTE — collegato alla coda persistente coda_carte ───────
+        // ── INSERIMENTO CARTE — collegato alla coda UNICA coda_carte ─────────────
         // Ogni riga della tabella diventa una riga in 'coda_carte' (espandendo
         // la quantità in righe separate, dato che il motore dell'estensione
         // processa una carta alla volta) — niente più testo/txt intermedio:
         // l'estensione legge direttamente questa tabella e scrive lì l'esito,
         // così la coda sopravvive a spegnimenti/riavvii di qualunque dispositivo.
-        function _rigaEntryToRigheDb(row, userId, tipo = null) {
+        // 'destinazione' (collezione/wishlist) e 'tipo' (carta/sealed) sono
+        // due scelte indipendenti — la STESSA coda le gestisce entrambe, non
+        // più due tabelle/motori separati (vedi coda_unificata.sql).
+        function _rigaEntryToRigheDb(row, userId, tipo = null, destinazione = 'collezione') {
             const nome = (row.name || '').trim();
             if (!nome) return [];
             const qty = Math.max(1, parseInt(row.qty, 10) || 1);
@@ -1550,6 +1553,7 @@
                 first_ed: !!row.first,
                 nota: (row.notes || '').trim() || null,
                 location: (row.loc && row.loc !== '?') ? row.loc : null,
+                destinazione,
                 ...(tipo ? { tipo } : {}),
             };
             return Array(qty).fill(null).map(() => ({ ...rigaBase }));
@@ -1614,32 +1618,6 @@
             select.value = valore;
         }
 
-        // Analoga a _rigaEntryToRigheDb ma per 'coda_wishlist'. Per ora la
-        // location è sempre un valore unico ('WISHLIST' di default, vedi
-        // _aggiornaLocationEBottoneInserimento) — il campo esiste comunque
-        // già in tabella, pronto per il giorno in cui servissero location
-        // diverse anche qui. 'tipo' invece è già pienamente supportato: una
-        // riga di wishlist può essere una carta singola o un prodotto
-        // sealed (ETB, UPC, box...), cercati in due sezioni diverse di
-        // Cardmarket dall'estensione.
-        function _rigaEntryToRigheWishlist(row, userId, location, tipo) {
-            const nome = (row.name || '').trim();
-            if (!nome) return [];
-            const qty = Math.max(1, parseInt(row.qty, 10) || 1);
-            return [{
-                owner_id: userId,
-                nome,
-                lingua: row.lang || 'IT',
-                condizione: row.cond || 'NM',
-                reverse: !!row.rev,
-                first_ed: !!row.first,
-                nota: (row.notes || '').trim() || null,
-                qty,
-                location: location || 'WISHLIST',
-                ...(tipo ? { tipo } : {}),
-            }];
-        }
-
         async function salvaCarteReali() {
             const { data: sessionData } = await supabaseClient.auth.getSession();
             const userId = sessionData?.session?.user?.id;
@@ -1678,36 +1656,15 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Invio in corso...';
 
-            if (_destinazioneInserimento === 'wishlist') {
-                const righeWishlist = righeValide.flatMap(r => _rigaEntryToRigheWishlist(
-                    r, userId, locationComune, _tipoInserimento === 'sealed' ? 'sealed' : null
-                ));
-                const { error } = await supabaseClient.from('coda_wishlist').insert(righeWishlist);
-
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
-
-                if (error) {
-                    alert('❌ Errore nell\'invio alla wishlist: ' + error.message);
-                    return;
-                }
-
-                // "Campanello": segnala all'estensione che è arrivato lavoro
-                // nuovo — stesso schema già usato per 'aggiungi_carte' (vedi
-                // quella funzione più sotto per i dettagli del perché).
-                supabaseClient.from('ordini').insert({ tipo: 'aggiungi_wishlist', creato_da: userId }).then(({ error: errOrdine }) => {
-                    if (errOrdine) console.error('Impossibile avvisare l\'estensione:', errOrdine.message);
-                });
-
-                clearEntryDraft();
-                alert(`✅ ${righeWishlist.length} cart${righeWishlist.length === 1 ? 'a inviata' : 'e inviate'} alla wishlist!\n\nResteranno in attesa finché un dispositivo con l'estensione aperta non le processa.`);
-                return;
-            }
-
+            // Coda UNICA: qualunque combinazione di destinazione/tipo passa
+            // sempre da 'coda_carte' — un solo motore (aggiungi_carta_popup.js)
+            // la elabora una riga alla volta, mai due ricerche in parallelo
+            // anche con più dispositivi online insieme.
             const righeDb = righeValide.flatMap(r => _rigaEntryToRigheDb(
                 locationComune ? { ...r, loc: locationComune } : r,
                 userId,
-                _tipoInserimento === 'sealed' ? 'sealed' : null
+                _tipoInserimento === 'sealed' ? 'sealed' : null,
+                _destinazioneInserimento
             ));
 
             const { error } = await supabaseClient.from('coda_carte').insert(righeDb);
