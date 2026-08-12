@@ -2153,8 +2153,13 @@
 
                 const idAttr = String(card.id).replace(/'/g, "\\'");
                 const locAttr = (card.location || '').replace(/'/g, "\\'");
-                const thumb = card.immagine
-                    ? `<img src="${card.immagine}" alt="" style="width:32px; height:44px; object-fit:cover; border-radius:4px; vertical-align:middle; margin-right:0.5rem; box-shadow:0 1px 4px rgba(0,0,0,0.15);" loading="lazy">`
+                // FIX: Cardmarket blocca l'hotlinking diretto delle proprie
+                // immagini (per questo il <img src> mostrava l'icona rotta) —
+                // images.weserv.nl le recupera lato server e le riserve dal
+                // proprio dominio, stesso proxy già usato in sidebar.html.
+                const immagineProxy = card.immagine ? `https://images.weserv.nl/?url=${encodeURIComponent(card.immagine)}&w=64` : null;
+                const thumb = immagineProxy
+                    ? `<img src="${immagineProxy}" alt="" style="width:32px; height:44px; object-fit:cover; border-radius:4px; vertical-align:middle; margin-right:0.5rem; box-shadow:0 1px 4px rgba(0,0,0,0.15); cursor:pointer;" loading="lazy" title="Apri su Cardmarket" onclick="event.stopPropagation(); window.open('${card.link}', '_blank')">`
                     : '';
                 const obiettivoRaggiunto = card.tabella === 'wishlist' && card.prezzoObiettivo != null && card.price > 0 && card.price <= card.prezzoObiettivo;
                 if (obiettivoRaggiunto) tr.style.backgroundColor = 'var(--success-bg)';
@@ -2459,12 +2464,19 @@
 
         function modificaLinguaInline(event, id, tabella, valoreAttuale) {
             const span = event.target.closest('span');
-            _apriSelectInline(span, id, tabella, 'lingua', valoreAttuale, ['IT', 'EN', 'KOR', 'JP']);
+            // Stesso elenco di LINGUA_MAP_SHARED nell'estensione — prima ne
+            // mostravo solo 4 (IT/EN/KOR/JP), non erano "quelle del database"
+            // ma un sottoinsieme scritto a mano incompleto.
+            _apriSelectInline(span, id, tabella, 'lingua', valoreAttuale,
+                ['IT', 'EN', 'DE', 'FR', 'ES', 'PT', 'JP', 'KOR', 'CHN', 'CHN-T', 'IND', 'THAI', 'RU']);
         }
 
         function modificaCondizioneInline(event, id, tabella, valoreAttuale) {
             const span = event.target.closest('span');
-            _apriSelectInline(span, id, tabella, 'condizione', valoreAttuale, ['NM', 'EX', 'GD']);
+            // Scala completa Cardmarket (7 livelli), non solo i 3 usati nella
+            // tabella rapida di Inserimento.
+            _apriSelectInline(span, id, tabella, 'condizione', valoreAttuale,
+                ['MT', 'NM', 'EX', 'GD', 'LP', 'PL', 'PO']);
         }
 
         function _apriSelectInline(elemento, id, tabella, campo, valoreAttuale, opzioni) {
