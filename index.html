@@ -1000,11 +1000,11 @@
                     <a class="nav-item" style="position:relative;" onclick="switchTab('scambio', this)"><i class="fa-solid fa-right-left"></i> Scambio<span class="badge-pallino" data-badge-tab="scambio" style="display:none;"></span></a>
                     <a class="nav-item" style="position:relative;" onclick="switchTab('wishlist', this)"><i class="fa-solid fa-bookmark"></i> Wishlist<span class="badge-pallino" data-badge-tab="wishlist" style="display:none;"></span></a>
                     <a class="nav-item" onclick="switchTab('sealed', this)"><i class="fa-solid fa-box-archive"></i> Sealed</a>
-                    <a class="nav-item" onclick="switchTab('impostazioni', this)"><i class="fa-solid fa-gear"></i> Impostazioni</a>
                 </nav>
             </div>
             <div class="header-actions-group">
                 <button class="header-search-btn" onclick="apriRicercaGlobale()" aria-label="Cerca ovunque"><i class="fa-solid fa-magnifying-glass"></i></button>
+                <button class="header-search-btn" onclick="switchTab('impostazioni', document.getElementById('mNav-impostazioni'))" aria-label="Impostazioni" title="Impostazioni"><i class="fa-solid fa-gear"></i></button>
                 <div class="profilo-container" id="profiloContainer">
                     <button class="profilo-avatar" id="profiloAvatar" onclick="toggleMenuProfilo()" aria-label="Profilo">?</button>
                     <div class="profilo-menu" id="profiloMenu" style="display:none;">
