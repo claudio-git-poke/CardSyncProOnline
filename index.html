@@ -2698,9 +2698,7 @@
                 // (carte aggiunte prima di questa correzione), tento il
                 // proxy come ripiego — funziona per alcune immagini, non per
                 // tutte, ma è meglio di niente per lo storico.
-                const immagineSrc = card.immagine
-                    ? (card.immagine.startsWith('data:') ? card.immagine : `https://images.weserv.nl/?url=${encodeURIComponent(card.immagine)}&w=64`)
-                    : null;
+                const immagineSrc = _urlImmagineVisualizzabile(card.immagine);
                 const thumb = immagineSrc
                     ? `<img src="${immagineSrc}" alt="" style="width:32px; height:44px; object-fit:cover; border-radius:4px; vertical-align:middle; margin-right:0.5rem; box-shadow:0 1px 4px rgba(0,0,0,0.15); cursor:pointer;" loading="lazy" title="Ingrandisci" onclick="event.stopPropagation(); apriImmagineIngrandita('${idAttr}')" onerror="this.style.display='none';">`
                     : '';
@@ -3082,15 +3080,29 @@
             if (_graficoPrezzoChart) { _graficoPrezzoChart.destroy(); _graficoPrezzoChart = null; }
         }
 
+        // Il campo 'immagine' può contenere tre formati diversi, a seconda
+        // di quando la carta è stata processata:
+        // 1. Link a Supabase Storage (nuovo, leggero — riconoscibile da
+        //    "supabase.co") → si usa direttamente.
+        // 2. Data URI base64 (vecchio formato, prima che passassimo a
+        //    Storage) → si usa direttamente, funziona comunque.
+        // 3. URL esterno grezzo di Cardmarket (carte processate PRIMA di
+        //    qualunque correzione) → Cardmarket lo blocca se richiesto da
+        //    un altro dominio, tentiamo il proxy come ripiego (funziona
+        //    solo per alcune, meglio di niente per lo storico).
+        function _urlImmagineVisualizzabile(immagine) {
+            if (!immagine) return null;
+            if (immagine.startsWith('data:') || immagine.includes('supabase.co')) return immagine;
+            return `https://images.weserv.nl/?url=${encodeURIComponent(immagine)}&w=64`;
+        }
+
         function apriImmagineIngrandita(id) {
             const card = carteReali.find(c => String(c.id) === String(id));
             if (!card || !card.immagine) return;
             document.getElementById('immagineErroreMsg').style.display = 'none';
             const img = document.getElementById('immagineIngranditaImg');
             img.style.display = '';
-            img.src = card.immagine.startsWith('data:')
-                ? card.immagine
-                : `https://images.weserv.nl/?url=${encodeURIComponent(card.immagine)}&w=64`;
+            img.src = _urlImmagineVisualizzabile(card.immagine);
             document.getElementById('immagineModal').style.display = 'flex';
         }
 
