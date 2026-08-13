@@ -444,16 +444,16 @@
             border-collapse: separate;
             border-spacing: 0;
             text-align: left;
-            font-size: 0.82rem;
-            min-width: 700px;
+            font-size: 0.8rem;
+            min-width: 600px;
         }
 
         th {
             background-color: var(--table-header-bg);
-            padding: 0.8rem 0.6rem;
+            padding: 0.7rem 0.4rem;
             color: var(--text-muted);
             font-weight: 800;
-            font-size: 0.7rem;
+            font-size: 0.68rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             border-bottom: 1px solid var(--border-color);
@@ -461,7 +461,7 @@
         }
 
         td {
-            padding: 0.75rem 0.6rem;
+            padding: 0.6rem 0.4rem;
             border-bottom: 1px solid var(--border-color);
             vertical-align: middle;
             white-space: nowrap;
@@ -551,7 +551,7 @@
             font-size: 0.8rem; font-weight: 700; cursor: pointer;
         }
         .badge-toggle.active { background-color: var(--primary-light); color: var(--primary); border-color: var(--primary); }
-        .badge-rh { background-color: #f3e5f5; color: #7b1fa2; font-weight: 700; }
+        .badge-rh { background-color: #f3e5f5; color: #7b1fa2; font-weight: 700; max-width: 140px; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; }
 
         .price { font-weight: 800; color: var(--text-dark); }
         .variation-up { color: var(--success); font-weight: 700; font-size: 0.75rem; }
@@ -2447,10 +2447,10 @@
                 });
             }
 
-            // Vista compatta: solo tab Visualizzazione, solo sotto i 640px —
-            // le altre tab (Scambio/Wishlist/Sealed) restano sulla tabella
-            // classica (che comunque su mobile si trasforma già in
-            // "schedine etichetta:valore", vedi @media più sopra).
+            // Vista compatta: solo tab Visualizzazione, solo telefono vero
+            // (sotto i 640px) — non su finestre desktop ridotte, dove invece
+            // vogliamo che la tabella classica entri semplicemente tutta
+            // senza scorrimento (vedi CSS più stretto qui sotto).
             const modalitaCompatta = currentMode === 'visualizzazione' && window.innerWidth <= 640;
             pannelloTabella.style.display = modalitaCompatta ? 'none' : '';
             contenitoreCompatto.style.display = modalitaCompatta ? '' : 'none';
