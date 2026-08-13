@@ -2951,6 +2951,28 @@
             localStorage.setItem('matchVisti', JSON.stringify([...visti]));
         }
 
+        // ── ALLERTA PREZZO WISHLIST — stesso sistema letto/non letto ──────────────
+        // Una carta in wishlist "scatta" quando il prezzo attuale scende al
+        // di sotto (o è uguale) al prezzo obiettivo che hai impostato —
+        // stesso calcolo già usato per il badge "🎯 obiettivo!" nelle righe.
+        function _alertPrezzoVisti() {
+            try { return new Set(JSON.parse(localStorage.getItem('alertPrezzoVisti') || '[]')); } catch (_) { return new Set(); }
+        }
+        function _segnaAlertPrezzoVisti(chiavi) {
+            const visti = _alertPrezzoVisti();
+            chiavi.forEach(c => visti.add(c));
+            localStorage.setItem('alertPrezzoVisti', JSON.stringify([...visti]));
+        }
+        function _cardeConAllertaPrezzo() {
+            return carteReali.filter(c => c.tabella === 'wishlist' && c.prezzoObiettivo != null && c.price > 0 && c.price <= c.prezzoObiettivo);
+        }
+        function _contaAlertPrezzoNonVisti() {
+            const visti = _alertPrezzoVisti();
+            const conCard = _cardeConAllertaPrezzo();
+            const nonVisti = conCard.filter(c => !visti.has(String(c.id)));
+            return { count: nonVisti.length, chiavi: conCard.map(c => String(c.id)) };
+        }
+
         // Controlla i match SENZA aprire nessuna tab — usata all'avvio per
         // sapere subito se mostrare i pallini sul menu, senza dover
         // aspettare che l'utente clicchi su Scambio o Wishlist.
@@ -2967,9 +2989,13 @@
             const visti = _matchVisti();
             const nuoviScambio = (dataScambio || []).filter(m => !visti.has(_chiaveMatch(m, 'scambio')));
             const nuoviWishlist = (dataWishlist || []).filter(m => !visti.has(_chiaveMatch(m, 'wishlist')));
+            const { count: alertPrezzoNonVisti } = _contaAlertPrezzoNonVisti();
 
             _aggiornaPallinoMenu('scambio', nuoviScambio.length);
-            _aggiornaPallinoMenu('wishlist', nuoviWishlist.length);
+            // Il pallino Wishlist conta ENTRAMBE le cose: match trovati +
+            // carte scese sotto il prezzo obiettivo — un solo numero, non
+            // due pallini diversi a confondere.
+            _aggiornaPallinoMenu('wishlist', nuoviWishlist.length + alertPrezzoNonVisti);
         }
 
         function _aggiornaPallinoMenu(tabId, conteggio) {
@@ -2996,13 +3022,17 @@
             }
             if (!data || data.length === 0) {
                 container.innerHTML = '';
+                if (tabId === 'wishlist') _segnaAlertPrezzoVisti(_contaAlertPrezzoNonVisti().chiavi);
                 _aggiornaPallinoMenu(tabId, 0);
                 return;
             }
 
             // Aprire questa tab equivale ad "aver visto" tutti i match
             // mostrati qui — li segniamo visti e azzeriamo il pallino.
+            // Per Wishlist, segniamo visti anche gli avvisi prezzo (stesso
+            // pallino, mostra la somma di entrambi).
             _segnaMatchVisti(data.map(m => _chiaveMatch(m, tabId)));
+            if (tabId === 'wishlist') _segnaAlertPrezzoVisti(_contaAlertPrezzoNonVisti().chiavi);
             _aggiornaPallinoMenu(tabId, 0);
 
             const righe = data.map(m => {
