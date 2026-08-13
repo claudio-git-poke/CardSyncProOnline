@@ -3539,7 +3539,15 @@
         function setSiteTheme(themeName) {
             localStorage.setItem('siteTheme', themeName);
             document.body.classList.remove('theme-verde', 'theme-pokemon');
-            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+            // FIX (Colleziona/Carta singola sembravano "mai attivi"): questa
+            // funzione girava document.querySelectorAll('.theme-btn') senza
+            // restringere ai soli bottoni del selettore tema — ma la STESSA
+            // classe CSS è riusata anche dai toggle di Inserimento
+            // (Destinazione/Tipo Prodotto), che quindi perdevano "active" ad
+            // ogni caricamento pagina (questa funzione gira sempre, per
+            // applicare il tema salvato). Elenco esplicito dei 3 id invece
+            // di un selettore generico che finiva per toccare bottoni non suoi.
+            ['themeBtn-viola', 'themeBtn-verde', 'themeBtn-pokemon'].forEach(id => document.getElementById(id)?.classList.remove('active'));
 
             if (themeName === 'verde') {
                 document.body.classList.add('theme-verde');
