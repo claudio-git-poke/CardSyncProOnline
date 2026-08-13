@@ -569,15 +569,26 @@
             td:first-child, td:last-child { padding-left: 0; }
             td:first-child::before, td:last-child::before { content: none; }
 
-            /* INSERIMENTO — versione più compatta della trasformazione
-               generica qui sopra: qui i campi sono un MODULO da compilare
-               (non dati già inseriti da leggere), quindi restano input/
-               select/checkbox veri, ma raggruppati in coppie sulla stessa
-               riga (Lingua+Cond., Rev+1st, Q.tà+Location) invece che uno
-               sotto l'altro — decisamente meno lungo da scorrere. */
+            /* INSERIMENTO — versione compatta con griglia vera (non flex con
+               percentuali manuali + posizionamento assoluto: si è rivelato
+               fragile, causava sovrapposizioni). Prima di tutto, NEUTRALIZZA
+               esplicitamente le regole generiche pensate per la tabella
+               Visualizzazione (td:first-child/td:last-child con
+               position:absolute, pensate per la casella di selezione) — si
+               applicavano per errore ANCHE al campo Nome/Codice di questa
+               tabella (è "il primo td" anche lui), staccandolo dal flusso
+               normale e sovrapponendolo ad altri campi. Una regola con ID
+               ha priorità più alta e vince sempre su quella generica.
+            */
+            #tabellaInserimento td:first-child, #tabellaInserimento td:last-child {
+                position: static; padding-left: 0; width: auto; justify-content: normal;
+                gap: 0; padding-top: 0; margin-top: 0; border-top: none;
+            }
+            #tabellaInserimento td:first-child::before { content: attr(data-label); }
+
             #tabellaInserimento tr {
-                display: flex;
-                flex-wrap: wrap;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
                 gap: 0.5rem 0.6rem;
                 padding: 0.7rem 0.6rem;
             }
@@ -585,7 +596,6 @@
                 display: block;
                 padding: 0;
                 min-height: 0;
-                flex: 1 1 100%;
             }
             #tabellaInserimento td::before {
                 content: attr(data-label);
@@ -599,34 +609,17 @@
                 color: var(--text-muted);
                 margin-bottom: 0.15rem;
             }
-            /* Coppie/gruppi affiancati sulla stessa riga: Lingua+Cond.+Rev+1st
-               tutti insieme (4 campi piccoli, stessa riga), poi Q.tà+Location
-               — invece di uno sotto l'altro. */
-            #tabellaInserimento td:nth-child(2), #tabellaInserimento td:nth-child(3) {
-                flex: 1 1 calc(28% - 0.45rem);
-            }
-            #tabellaInserimento td:nth-child(4), #tabellaInserimento td:nth-child(5) {
-                flex: 1 1 calc(22% - 0.45rem);
-            }
-            #tabellaInserimento td:nth-child(6), #tabellaInserimento td:nth-child(7) {
-                flex: 1 1 calc(50% - 0.3rem);
-            }
-            /* Nome/Codice e Note restano su tutta la larghezza — sono gli
-               unici campi di testo libero, meritano più spazio. */
-            #tabellaInserimento td:nth-child(1), #tabellaInserimento td:nth-child(8) {
-                flex: 1 1 100%;
-            }
-            #tabellaInserimento td:nth-child(4), #tabellaInserimento td:nth-child(5) {
-                text-align: center;
-            }
-            /* Bottone elimina: piccolo, in alto a destra della card invece
-               di occupare una riga intera in fondo. */
-            #tabellaInserimento td:last-child {
-                position: absolute; top: 0.5rem; right: 0.5rem; flex: 0 0 auto;
-            }
-            #tabellaInserimento tr { position: relative; padding-right: 2.5rem; }
-            td:first-child { position: absolute; top: 0.5rem; right: 0.6rem; width: auto; }
-            td:last-child { justify-content: flex-end; gap: 0.3rem; padding-top: 0.6rem; margin-top: 0.3rem; border-top: 1px dashed var(--border-color); }
+            /* Ogni campo nella sua cella di griglia — molto più prevedibile
+               di percentuali flessibili calcolate a mano. */
+            #tabellaInserimento td:nth-child(1) { grid-column: 1 / -1; } /* Nome/Codice: riga intera */
+            #tabellaInserimento td:nth-child(2) { grid-column: 1; } /* Lingua */
+            #tabellaInserimento td:nth-child(3) { grid-column: 2; } /* Cond. */
+            #tabellaInserimento td:nth-child(4) { grid-column: 1; text-align: center; } /* Rev */
+            #tabellaInserimento td:nth-child(5) { grid-column: 2; text-align: center; } /* 1st */
+            #tabellaInserimento td:nth-child(6) { grid-column: 1; } /* Q.tà */
+            #tabellaInserimento td:nth-child(7) { grid-column: 2; } /* Location */
+            #tabellaInserimento td:nth-child(8) { grid-column: 1 / -1; } /* Note: riga intera */
+            #tabellaInserimento td:last-child { grid-column: 1 / -1; text-align: right; } /* Elimina: riga intera, allineato a destra */
         }
 
         tbody tr.interactive-row {
