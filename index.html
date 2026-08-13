@@ -2162,7 +2162,14 @@
             // Ripristina l'ultima scheda visitata; se non c'è (prima visita
             // su questo dispositivo, o storage svuotato), usa la sezione
             // predefinita scelta nelle Impostazioni.
-            const savedTab = localStorage.getItem('activeTab') || prefUtente?.tab_predefinita || 'visualizzazione';
+            // FIX: prima "ricorda l'ultima tab visitata" (salvato ad ogni
+            // navigazione) aveva SEMPRE la precedenza sulla preferenza
+            // esplicita "Sezione all'apertura" — quindi quest'ultima non
+            // aveva mai effetto reale, dato che dopo la prima visita
+            // qualunque restava sempre salvato qualcosa in activeTab. Una
+            // scelta fatta apposta nelle Impostazioni deve vincere sempre
+            // su un comportamento "di comodo" automatico.
+            const savedTab = prefUtente?.tab_predefinita || localStorage.getItem('activeTab') || 'visualizzazione';
             const navBtn = document.querySelector(`nav .nav-item[onclick*="'${savedTab}'"]`);
             switchTab(savedTab, navBtn);
         };
