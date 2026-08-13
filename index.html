@@ -538,7 +538,7 @@
         .badge-lang-kor { background-color: #ffe0b2; color: #e65100; }
         .badge-cond { background-color: var(--success-bg); color: var(--success); }
         .badge-cond-ex { background-color: #fff3e0; color: #ef6c00; }
-        .badge-location { background-color: var(--badge-loc-bg); color: var(--text-dark); border: 1px solid var(--border-color); cursor: pointer; }
+        .badge-location { background-color: var(--badge-loc-bg); color: var(--text-dark); border: 1px solid var(--border-color); cursor: pointer; max-width: 100px; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; }
         .badge-location:hover { filter: brightness(0.92); }
 
         .cella-editabile { cursor: pointer; }
@@ -604,6 +604,23 @@
             padding: 0.35rem 0.6rem; font-size: 0.72rem; font-weight: 700; color: var(--text-dark);
             cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;
         }
+
+        /* Menu azioni a comparsa nella tabella desktop — stessa idea della
+           vista compatta mobile, così la colonna AZIONI non deve più
+           ospitare 3-4 bottoni affiancati (uno dei maggiori responsabili
+           dello scorrimento orizzontale con tante colonne). */
+        .menu-azioni-tabella {
+            position: absolute; top: 100%; right: 0; z-index: 50;
+            background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px;
+            box-shadow: var(--shadow-soft); padding: 0.4rem; min-width: 170px;
+            display: flex; flex-direction: column; gap: 0.2rem;
+        }
+        .menu-azioni-tabella button {
+            background: none; border: none; text-align: left; padding: 0.5rem 0.6rem; border-radius: 6px;
+            font-size: 0.78rem; font-weight: 600; color: var(--text-dark); cursor: pointer;
+            display: flex; align-items: center; gap: 0.5rem; white-space: nowrap;
+        }
+        .menu-azioni-tabella button:hover { background-color: var(--bg-color); }
 
         .link-icon {
             color: var(--primary);
@@ -2533,9 +2550,9 @@
                 tr.innerHTML = `
                     <td><input type="checkbox" class="riga-checkbox" data-id="${idAttr}" data-tabella="${card.tabella}" onclick="event.stopPropagation(); aggiornaSelezioneMultipla();"></td>
                     <td data-label="Q.tà" class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'qty', ${card.qty}, 'Quantità', 'intero')"><strong>${card.qty}</strong></td>
-                    <td data-label="Nome" class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'nome', '${nomeAttr}', 'Nome')">${thumb}<strong>${card.name}</strong>${obiettivoRaggiunto ? ` <span class="badge" style="background-color:var(--success-bg); color:var(--success);" title="Prezzo sceso al di sotto del tuo obiettivo (${card.prezzoObiettivo.toFixed(2)} €)">🎯 obiettivo!</span>` : ''}</td>
+                    <td data-label="Nome" class="cella-editabile" title="${card.name.replace(/"/g, '&quot;')} — clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'nome', '${nomeAttr}', 'Nome')" style="max-width:170px; overflow:hidden; text-overflow:ellipsis;">${thumb}<strong>${card.name}</strong>${obiettivoRaggiunto ? ` <span class="badge" style="background-color:var(--success-bg); color:var(--success);" title="Prezzo sceso al di sotto del tuo obiettivo (${card.prezzoObiettivo.toFixed(2)} €)">🎯 obiettivo!</span>` : ''}</td>
                     <td data-label="Codice" class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'codice', '${codeAttr}', 'Codice')"><code>${card.code}</code></td>
-                    <td data-label="Location"><span class="badge badge-location" title="Clicca per modificare" onclick="event.stopPropagation(); modificaLocationInline(event, '${idAttr}', '${card.tabella}', '${locAttr}')">${card.location || '—'}</span></td>
+                    <td data-label="Location"><span class="badge badge-location" title="${(card.location || '').replace(/"/g, '&quot;')} — clicca per modificare" onclick="event.stopPropagation(); modificaLocationInline(event, '${idAttr}', '${card.tabella}', '${locAttr}')">${card.location || '—'}</span></td>
                     <td data-label="Lingua"><span class="badge ${langClass} cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaLinguaInline(event, '${idAttr}', '${card.tabella}', '${card.lang}')">${card.lang}</span></td>
                     <td data-label="Cond."><span class="badge ${condClass} cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCondizioneInline(event, '${idAttr}', '${card.tabella}', '${card.cond}')">${card.cond}</span></td>
                     <td data-label="Prezzo" class="price cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'prezzo', ${card.price}, 'Prezzo (€)', 'numero')">${card.price.toFixed(2)} €</td>
@@ -2546,11 +2563,16 @@
                         </a>
                     </td>
                     <td data-label="Note">${card.notes ? `<span onclick="event.stopPropagation(); alert('📝 Nota:\\n\\n${card.notes.replace(/'/g, "\\'")}')" title="${card.notes.replace(/"/g, '&quot;')}" style="cursor:pointer; color:var(--text-muted); font-size:0.75rem; display:inline-block; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;">${card.notes}</span>` : '—'}</td>
-                    <td>
-                        ${card.tabella === 'wishlist' ? `<button class="btn-danger" style="color:var(--success)" onclick="segnaOttenuta('${card.id}')" title="Ottenuta — sposta in collezione"><i class="fa-solid fa-check"></i></button>` : ''}
-                        <button class="btn-danger" style="color:var(--primary)" onclick="apriGraficoPrezzo('${idAttr}', '${card.tabella}', '${card.name.replace(/'/g, "\\'")}')" title="Andamento prezzo"><i class="fa-solid fa-chart-line"></i></button>
-                        <button class="btn-danger" style="color:var(--primary)" onclick="apriFotoDettaglio('${idAttr}', '${card.tabella}', '${card.name.replace(/'/g, "\\'")}')" title="Foto dettaglio (angoli, pieghe...)"><i class="fa-solid fa-camera"></i></button>
-                        <button class="btn-danger" onclick="eliminaCarta('${card.id}')"><i class="fa-solid fa-trash"></i></button>
+                    <td style="text-align:center;">
+                        <div style="position:relative; display:inline-block;">
+                            <button class="btn-danger" style="color:var(--text-muted);" onclick="event.stopPropagation(); toggleMenuAzioniTabella('${idAttr}')" title="Azioni"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                            <div id="menuAzioniTabella-${idAttr}" class="menu-azioni-tabella" style="display:none;">
+                                ${card.tabella === 'wishlist' ? `<button onclick="segnaOttenuta('${card.id}')" style="color:var(--success);"><i class="fa-solid fa-check"></i> Ottenuta</button>` : ''}
+                                <button onclick="apriGraficoPrezzo('${idAttr}', '${card.tabella}', '${card.name.replace(/'/g, "\\'")}')"><i class="fa-solid fa-chart-line"></i> Andamento prezzo</button>
+                                <button onclick="apriFotoDettaglio('${idAttr}', '${card.tabella}', '${card.name.replace(/'/g, "\\'")}')"><i class="fa-solid fa-camera"></i> Foto dettaglio</button>
+                                <button onclick="eliminaCarta('${card.id}')" style="color:var(--danger);"><i class="fa-solid fa-trash"></i> Elimina</button>
+                            </div>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -2624,6 +2646,23 @@
             const menu = document.getElementById('menuCompatto-' + id);
             if (menu) menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
         }
+
+        // Stesso concetto di toggleMenuCompatto ma per il menu azioni della
+        // tabella desktop — chiude sempre eventuali altri menu aperti prima,
+        // mai due aperti insieme, e si chiude da solo cliccando fuori.
+        function toggleMenuAzioniTabella(id) {
+            const menu = document.getElementById('menuAzioniTabella-' + id);
+            if (!menu) return;
+            const eraAperto = menu.style.display === 'flex';
+            document.querySelectorAll('.menu-azioni-tabella').forEach(m => { m.style.display = 'none'; });
+            menu.style.display = eraAperto ? 'none' : 'flex';
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.menu-azioni-tabella') && !e.target.closest('[onclick*="toggleMenuAzioniTabella"]')) {
+                document.querySelectorAll('.menu-azioni-tabella').forEach(m => { m.style.display = 'none'; });
+            }
+        });
 
         // Ricalcola la vista compatta se lo schermo cambia larghezza
         // attraversando la soglia (es. ruotando il telefono, o ridimensionando
