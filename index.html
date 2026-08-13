@@ -445,7 +445,7 @@
             border-spacing: 0;
             text-align: left;
             font-size: 0.8rem;
-            min-width: 600px;
+            min-width: 560px;
         }
 
         th {
@@ -2545,7 +2545,7 @@
                             <i class="fa-solid fa-arrow-up-right-from-square"></i>
                         </a>
                     </td>
-                    <td data-label="Note">${card.notes ? `<span class="badge badge-rh">✨ ${card.notes}</span>` : '—'}</td>
+                    <td data-label="Note" style="text-align:center;">${card.notes ? `<span onclick="event.stopPropagation(); alert('📝 Nota:\\n\\n${card.notes.replace(/'/g, "\\'")}')" title="${card.notes.replace(/"/g, '&quot;')}" style="cursor:pointer; font-size:0.95rem;">✨</span>` : '—'}</td>
                     <td>
                         ${card.tabella === 'wishlist' ? `<button class="btn-danger" style="color:var(--success)" onclick="segnaOttenuta('${card.id}')" title="Ottenuta — sposta in collezione"><i class="fa-solid fa-check"></i></button>` : ''}
                         <button class="btn-danger" style="color:var(--primary)" onclick="apriGraficoPrezzo('${idAttr}', '${card.tabella}', '${card.name.replace(/'/g, "\\'")}')" title="Andamento prezzo"><i class="fa-solid fa-chart-line"></i></button>
