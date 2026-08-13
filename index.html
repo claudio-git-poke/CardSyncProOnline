@@ -152,9 +152,22 @@
             justify-content: space-between;
         }
 
-        @media (min-width: 1150px) {
-            .header-left { justify-content: flex-start; width: auto; }
+        /* FIX (spazio vuoto enorme a destra su schermi larghi): prima
+           TUTTO l'header (logo+menu+ricerca+profilo) viveva in un unico
+           blocco che, oltre i 1150px, diventava largo solo quanto il suo
+           contenuto (width:auto) — restando incollato a sinistra, con
+           tutto il resto della larghezza semplicemente vuoto (space-between
+           non ha alcun effetto quando c'è un solo blocco a cui applicarlo).
+           Ora ci sono DUE gruppi separati (marchio+menu / ricerca+profilo)
+           che si distribuiscono sempre sull'intera larghezza dell'header,
+           a qualunque risoluzione — niente più larghezza fissa "shrink to
+           fit" che lascia spazio morto. */
+        .header-brand-group, .header-actions-group {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
         }
+        .header-actions-group { gap: 0.8rem; flex-shrink: 0; }
 
         .logo {
             display: flex;
@@ -975,26 +988,30 @@
             <button class="hamburger-btn" onclick="openDrawer()" aria-label="Apri menu">
                 <i class="fa-solid fa-bars"></i>
             </button>
-            <div class="logo">
-                <img src="favicon.ico" alt="Favicon">
-                <span>CardSync Pro</span>
+            <div class="header-brand-group">
+                <div class="logo">
+                    <img src="favicon.ico" alt="Favicon">
+                    <span>CardSync Pro</span>
+                </div>
+                <nav>
+                    <a class="nav-item active" onclick="switchTab('visualizzazione', this)"><i class="fa-solid fa-list-check"></i> Visualizzazione</a>
+                    <a class="nav-item" onclick="switchTab('inserimento', this)"><i class="fa-solid fa-plus"></i> Inserimento</a>
+                    <a class="nav-item" onclick="switchTab('prezzi', this)"><i class="fa-solid fa-chart-line"></i> Prezzi</a>
+                    <a class="nav-item" style="position:relative;" onclick="switchTab('scambio', this)"><i class="fa-solid fa-right-left"></i> Scambio<span class="badge-pallino" data-badge-tab="scambio" style="display:none;"></span></a>
+                    <a class="nav-item" style="position:relative;" onclick="switchTab('wishlist', this)"><i class="fa-solid fa-bookmark"></i> Wishlist<span class="badge-pallino" data-badge-tab="wishlist" style="display:none;"></span></a>
+                    <a class="nav-item" onclick="switchTab('sealed', this)"><i class="fa-solid fa-box-archive"></i> Sealed</a>
+                    <a class="nav-item" onclick="switchTab('impostazioni', this)"><i class="fa-solid fa-gear"></i> Impostazioni</a>
+                </nav>
             </div>
-            <nav>
-                <a class="nav-item active" onclick="switchTab('visualizzazione', this)"><i class="fa-solid fa-list-check"></i> Visualizzazione</a>
-                <a class="nav-item" onclick="switchTab('inserimento', this)"><i class="fa-solid fa-plus"></i> Inserimento</a>
-                <a class="nav-item" onclick="switchTab('prezzi', this)"><i class="fa-solid fa-chart-line"></i> Prezzi</a>
-                <a class="nav-item" style="position:relative;" onclick="switchTab('scambio', this)"><i class="fa-solid fa-right-left"></i> Scambio<span class="badge-pallino" data-badge-tab="scambio" style="display:none;"></span></a>
-                <a class="nav-item" style="position:relative;" onclick="switchTab('wishlist', this)"><i class="fa-solid fa-bookmark"></i> Wishlist<span class="badge-pallino" data-badge-tab="wishlist" style="display:none;"></span></a>
-                <a class="nav-item" onclick="switchTab('sealed', this)"><i class="fa-solid fa-box-archive"></i> Sealed</a>
-                <a class="nav-item" onclick="switchTab('impostazioni', this)"><i class="fa-solid fa-gear"></i> Impostazioni</a>
-            </nav>
-            <button class="header-search-btn" onclick="apriRicercaGlobale()" aria-label="Cerca ovunque"><i class="fa-solid fa-magnifying-glass"></i></button>
-            <div class="profilo-container" id="profiloContainer">
-                <button class="profilo-avatar" id="profiloAvatar" onclick="toggleMenuProfilo()" aria-label="Profilo">?</button>
-                <div class="profilo-menu" id="profiloMenu" style="display:none;">
-                    <div class="profilo-menu-nome" id="profiloMenuNome">—</div>
-                    <div class="profilo-menu-email" id="profiloMenuEmail">—</div>
-                    <button class="profilo-menu-logout" id="profiloMenuLogout"><i class="fa-solid fa-right-from-bracket"></i> Esci</button>
+            <div class="header-actions-group">
+                <button class="header-search-btn" onclick="apriRicercaGlobale()" aria-label="Cerca ovunque"><i class="fa-solid fa-magnifying-glass"></i></button>
+                <div class="profilo-container" id="profiloContainer">
+                    <button class="profilo-avatar" id="profiloAvatar" onclick="toggleMenuProfilo()" aria-label="Profilo">?</button>
+                    <div class="profilo-menu" id="profiloMenu" style="display:none;">
+                        <div class="profilo-menu-nome" id="profiloMenuNome">—</div>
+                        <div class="profilo-menu-email" id="profiloMenuEmail">—</div>
+                        <button class="profilo-menu-logout" id="profiloMenuLogout"><i class="fa-solid fa-right-from-bracket"></i> Esci</button>
+                    </div>
                 </div>
             </div>
         </div>
