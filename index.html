@@ -3049,7 +3049,12 @@
                 const opzioniHtml = opzioni.length > 0 ? `
                     <div style="width:100%; margin-top:0.4rem; display:flex; flex-direction:column; gap:0.3rem;">
                         <span style="font-size:0.7rem; color:var(--text-muted); font-weight:700;">${opzioni.length} corrispondenz${opzioni.length === 1 ? 'a possibile' : 'e possibili'} trovate — scegli quella giusta:</span>
-                        ${opzioni.map(o => `<button class="btn-secondary" style="text-align:left; font-size:0.75rem; padding:0.4rem 0.6rem;" onclick="sceglieOpzioneDisambiguazione('${r.id}', '${(o.label || '').replace(/'/g, "\\'")}')">▸ ${o.label || o.urlSingles || 'opzione senza nome'}</button>`).join('')}
+                        ${opzioni.map(o => `
+                            <div style="display:flex; align-items:stretch; gap:0.3rem;">
+                                <button class="btn-secondary" style="flex:1; text-align:left; font-size:0.75rem; padding:0.4rem 0.6rem;" onclick="sceglieOpzioneDisambiguazione('${r.id}', '${(o.label || '').replace(/'/g, "\\'")}')">▸ ${o.label || o.urlSingles || 'opzione senza nome'}</button>
+                                ${o.urlSingles ? `<a href="${o.urlSingles}" target="_blank" onclick="event.stopPropagation()" class="btn-secondary" style="flex-shrink:0; padding:0.4rem 0.6rem;" title="Apri su Cardmarket per vederla prima di scegliere"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>` : ''}
+                            </div>
+                        `).join('')}
                     </div>
                 ` : '';
                 return `
