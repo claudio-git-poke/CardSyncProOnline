@@ -957,8 +957,8 @@
             </div>
             <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.2rem;">Accedi con le tue credenziali per continuare.</p>
             <div class="auth-field">
-                <label>Email</label>
-                <input type="email" id="authEmail" placeholder="tuonome@cardsyncpro.local" autocomplete="username">
+                <label>Nome utente</label>
+                <input type="text" id="authEmail" placeholder="es. irene" autocomplete="username">
             </div>
             <div class="auth-field">
                 <label>Password</label>
@@ -1572,20 +1572,26 @@
         });
 
         async function tentaLogin() {
-            const email = authEmail.value.trim();
+            const inputUtente = authEmail.value.trim();
             const password = authPassword.value;
-            if (!email || !password) {
-                authError.textContent = 'Inserisci email e password.';
+            if (!inputUtente || !password) {
+                authError.textContent = 'Inserisci nome utente e password.';
                 authError.style.display = 'block';
                 return;
             }
+            // Chi digita solo il nome ("irene") lo trasformiamo in email
+            // completa dietro le quinte — Supabase Auth richiede comunque
+            // un'email valida, ma l'utente non deve più saperlo né
+            // digitarla per intero. Se qualcuno incolla già l'email
+            // completa (abitudine precedente), la usiamo così com'è.
+            const email = inputUtente.includes('@') ? inputUtente : `${inputUtente.toLowerCase()}@cardsyncpro.local`;
             authSubmit.disabled = true;
             authSubmit.textContent = 'Accesso in corso…';
             authError.style.display = 'none';
 
             const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
             if (error) {
-                authError.textContent = '❌ ' + (error.message === 'Invalid login credentials' ? 'Email o password errati.' : error.message);
+                authError.textContent = '❌ ' + (error.message === 'Invalid login credentials' ? 'Nome utente o password errati.' : error.message);
                 authError.style.display = 'block';
                 authSubmit.disabled = false;
                 authSubmit.textContent = 'Accedi';
