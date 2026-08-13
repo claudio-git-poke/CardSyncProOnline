@@ -1048,7 +1048,7 @@
                 </div>
                 <nav>
                     <a class="nav-item active" onclick="switchTab('visualizzazione', this)"><i class="fa-solid fa-list-check"></i> Visualizzazione</a>
-                    <a class="nav-item" onclick="switchTab('inserimento', this)"><i class="fa-solid fa-plus"></i> Inserimento</a>
+                    <a class="nav-item" style="position:relative;" onclick="switchTab('inserimento', this)"><i class="fa-solid fa-plus"></i> Inserimento<span class="badge-pallino" data-badge-tab="inserimento" style="display:none;"></span></a>
                     <a class="nav-item" onclick="switchTab('prezzi', this)"><i class="fa-solid fa-chart-line"></i> Prezzi</a>
                     <a class="nav-item" style="position:relative;" onclick="switchTab('scambio', this)"><i class="fa-solid fa-right-left"></i> Scambio<span class="badge-pallino" data-badge-tab="scambio" style="display:none;"></span></a>
                     <a class="nav-item" style="position:relative;" onclick="switchTab('wishlist', this)"><i class="fa-solid fa-bookmark"></i> Wishlist<span class="badge-pallino" data-badge-tab="wishlist" style="display:none;"></span></a>
@@ -1083,8 +1083,8 @@
         <a class="drawer-item active" id="mNav-visualizzazione" onclick="switchTab('visualizzazione', this)">
             <i class="fa-solid fa-list-check"></i> Visualizzazione
         </a>
-        <a class="drawer-item" id="mNav-inserimento" onclick="switchTab('inserimento', this)">
-            <i class="fa-solid fa-plus"></i> Inserimento
+        <a class="drawer-item" id="mNav-inserimento" style="position:relative;" onclick="switchTab('inserimento', this)">
+            <i class="fa-solid fa-plus"></i> Inserimento<span class="badge-pallino" data-badge-tab="inserimento" style="display:none; position:static; margin-left:auto;"></span>
         </a>
         <a class="drawer-item" id="mNav-prezzi" onclick="switchTab('prezzi', this)">
             <i class="fa-solid fa-chart-line"></i> Prezzi
@@ -1280,6 +1280,15 @@
                     </span>
                     <button class="btn-main" id="btnSalvaCarte" onclick="salvaCarteReali()"><i class="fa-solid fa-paper-plane"></i> Salva Carte</button>
                 </div>
+            </div>
+
+            <!-- CARTE CON PROBLEMI — visibile solo se ce ne sono -->
+            <div class="settings-card" id="pannelloCarteProblemi" style="display:none; margin-top: 1.5rem;">
+                <h3 style="margin-bottom: 0.3rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.6rem; font-size: 1.15rem; font-weight: 800;">
+                    <i class="fa-solid fa-triangle-exclamation" style="color: var(--danger);"></i> Carte con problemi
+                </h3>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">L'estensione non è riuscita a trovarle su Cardmarket — correggi il nome e riprova, o elimina la richiesta.</p>
+                <div id="listaCarteProblemi"></div>
             </div>
         </div>
 
@@ -2251,6 +2260,7 @@
 
             const prefUtente = await caricaPreferenzeUtente();
             aggiornaBadgeMatch();
+            caricaCarteConProblemi();
 
             // Ripristina l'ultima scheda visitata; se non c'è (prima visita
             // su questo dispositivo, o storage svuotato), usa la sezione
@@ -3008,6 +3018,92 @@
         // Controlla i match SENZA aprire nessuna tab — usata all'avvio per
         // sapere subito se mostrare i pallini sul menu, senza dover
         // aspettare che l'utente clicchi su Scambio o Wishlist.
+        // ── CARTE CON PROBLEMI ─────────────────────────────────────────────────────
+        // Righe di coda_carte finite in stato 'errore' (l'estensione non è
+        // riuscita a trovarle su Cardmarket) — prima l'errore restava
+        // scritto nel database ma nessuno lo vedeva mai.
+        async function caricaCarteConProblemi() {
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) return;
+
+            const { data, error } = await supabaseClient
+                .from('coda_carte')
+                .select('*')
+                .eq('owner_id', userId)
+                .eq('stato', 'errore')
+                .order('completato_il', { ascending: false });
+
+            const pannello = document.getElementById('pannelloCarteProblemi');
+            const lista = document.getElementById('listaCarteProblemi');
+            if (error) { console.error('Errore caricamento carte con problemi:', error.message); return; }
+
+            const conteggio = (data || []).length;
+            _aggiornaPallinoMenu('inserimento', conteggio);
+            pannello.style.display = conteggio > 0 ? 'block' : 'none';
+            if (conteggio === 0) return;
+
+            lista.innerHTML = data.map(r => {
+                const opzioni = Array.isArray(r.opzioni_disambiguazione) ? r.opzioni_disambiguazione : [];
+                const nomeAttr = r.nome.replace(/'/g, "\\'");
+                const opzioniHtml = opzioni.length > 0 ? `
+                    <div style="width:100%; margin-top:0.4rem; display:flex; flex-direction:column; gap:0.3rem;">
+                        <span style="font-size:0.7rem; color:var(--text-muted); font-weight:700;">${opzioni.length} corrispondenz${opzioni.length === 1 ? 'a possibile' : 'e possibili'} trovate — scegli quella giusta:</span>
+                        ${opzioni.map(o => `<button class="btn-secondary" style="text-align:left; font-size:0.75rem; padding:0.4rem 0.6rem;" onclick="sceglieOpzioneDisambiguazione('${r.id}', '${(o.label || '').replace(/'/g, "\\'")}')">▸ ${o.label || o.urlSingles || 'opzione senza nome'}</button>`).join('')}
+                    </div>
+                ` : '';
+                return `
+                    <div style="display:flex; align-items:center; gap:0.6rem; padding:0.6rem 0; border-bottom:1px solid var(--border-color); flex-wrap:wrap;">
+                        <div style="flex:1; min-width:160px;">
+                            <strong style="font-size:0.85rem;">${r.nome}</strong>
+                            <div style="font-size:0.72rem; color:var(--danger);">${r.errore_msg || 'Errore sconosciuto'}</div>
+                        </div>
+                        <button class="btn-secondary" onclick="modificaERiprovaCartaFallita('${r.id}', '${nomeAttr}')" style="font-size:0.75rem; padding:0.4rem 0.7rem;"><i class="fa-solid fa-pen"></i> Correggi e riprova</button>
+                        <button class="btn-secondary" onclick="riprovaCartaFallita('${r.id}')" style="font-size:0.75rem; padding:0.4rem 0.7rem;"><i class="fa-solid fa-rotate-right"></i> Riprova</button>
+                        <button class="btn-secondary" style="color:var(--danger); background-color:var(--danger-bg); font-size:0.75rem; padding:0.4rem 0.7rem;" onclick="eliminaCartaFallita('${r.id}')"><i class="fa-solid fa-trash"></i></button>
+                        ${opzioniHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Sceglie una delle opzioni trovate durante la disambiguazione:
+        // aggiorna il nome con l'etichetta esatta di quella carta (di
+        // solito abbastanza specifica da non essere più ambigua) e rimette
+        // la riga in coda.
+        async function sceglieOpzioneDisambiguazione(id, etichetta) {
+            const { error } = await supabaseClient.from('coda_carte').update({
+                nome: etichetta, stato: 'pending', errore_msg: null, claimed_by: null, claimed_at: null, completato_il: null, opzioni_disambiguazione: null,
+            }).eq('id', id);
+            if (error) { alert('❌ Errore: ' + error.message); return; }
+            await caricaCarteConProblemi();
+        }
+
+        async function riprovaCartaFallita(id) {
+            const { error } = await supabaseClient.from('coda_carte').update({
+                stato: 'pending', errore_msg: null, claimed_by: null, claimed_at: null, completato_il: null,
+            }).eq('id', id);
+            if (error) { alert('❌ Errore: ' + error.message); return; }
+            await caricaCarteConProblemi();
+        }
+
+        async function modificaERiprovaCartaFallita(id, nomeAttuale) {
+            const nuovo = prompt('Correggi il nome della carta:', nomeAttuale);
+            if (nuovo === null || !nuovo.trim()) return;
+            const { error } = await supabaseClient.from('coda_carte').update({
+                nome: nuovo.trim(), stato: 'pending', errore_msg: null, claimed_by: null, claimed_at: null, completato_il: null,
+            }).eq('id', id);
+            if (error) { alert('❌ Errore: ' + error.message); return; }
+            await caricaCarteConProblemi();
+        }
+
+        async function eliminaCartaFallita(id) {
+            if (!confirm('Eliminare definitivamente questa richiesta?')) return;
+            const { error } = await supabaseClient.from('coda_carte').delete().eq('id', id);
+            if (error) { alert('❌ Errore: ' + error.message); return; }
+            await caricaCarteConProblemi();
+        }
+
         async function aggiornaBadgeMatch() {
             const { data: sessionData } = await supabaseClient.auth.getSession();
             const userId = sessionData?.session?.user?.id;
@@ -3650,6 +3746,7 @@
                 document.getElementById(tabId).classList.add('active');
                 if (tabId === 'prezzi' && !_locationCaricate) caricaListaLocationCheckbox();
                 if (tabId === 'inserimento' && !_locationComuneCaricata) caricaSelectLocationComune();
+                if (tabId === 'inserimento') caricaCarteConProblemi();
             } else {
                 filterTable();
             }
