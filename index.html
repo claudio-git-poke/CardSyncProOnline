@@ -1407,6 +1407,23 @@
                 <button class="btn-main" onclick="salvaPreferenzeNotifiche()"><i class="fa-solid fa-floppy-disk"></i> Salva preferenze</button>
             </div>
 
+            <!-- PRIVACY MATCH -->
+            <div class="settings-card">
+                <h3 style="margin-bottom: 0.3rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.6rem; font-size: 1.15rem; font-weight: 800;">
+                    <i class="fa-solid fa-eye-slash" style="color: var(--primary);"></i> Privacy — Match automatico
+                </h3>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem;">Il resto del gruppo non vedrà le tue carte in questa/e sezione/i quando cerca corrispondenze — restano visibili solo a te, in tutto il resto del sito.</p>
+
+                <div style="display:flex; flex-direction:column; gap:0.7rem;">
+                    <label style="display:flex; align-items:center; gap:0.6rem; font-size:0.85rem; cursor:pointer;">
+                        <input type="checkbox" id="nascondiScambioCheck" style="width:auto;" onchange="salvaPreferenzePrivacy()"> Nascondi i miei Scambi dal match automatico
+                    </label>
+                    <label style="display:flex; align-items:center; gap:0.6rem; font-size:0.85rem; cursor:pointer;">
+                        <input type="checkbox" id="nascondiWishlistCheck" style="width:auto;" onchange="salvaPreferenzePrivacy()"> Nascondi la mia Wishlist dal match automatico
+                    </label>
+                </div>
+            </div>
+
             <!-- ESPORTAZIONE DATI -->
             <div class="settings-card">
                 <h3 style="margin-bottom: 0.3rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.6rem; font-size: 1.15rem; font-weight: 800;">
@@ -2309,8 +2326,23 @@
                 document.getElementById('notificaPrezziSoglia').value = data.soglia_prezzi ?? 5;
                 document.getElementById('notificaWishlistCheck').checked = !!data.notifica_wishlist;
                 document.getElementById('tabPredefinitaSelect').value = data.tab_predefinita || 'visualizzazione';
+                document.getElementById('nascondiScambioCheck').checked = !!data.nascondi_scambio_da_match;
+                document.getElementById('nascondiWishlistCheck').checked = !!data.nascondi_wishlist_da_match;
             }
             return data;
+        }
+
+        async function salvaPreferenzePrivacy() {
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) return;
+            const { error } = await supabaseClient.from('preferenze_utente').upsert({
+                owner_id: userId,
+                nascondi_scambio_da_match: document.getElementById('nascondiScambioCheck').checked,
+                nascondi_wishlist_da_match: document.getElementById('nascondiWishlistCheck').checked,
+                aggiornato_il: new Date().toISOString(),
+            });
+            if (error) { alert('❌ Errore nel salvare la preferenza: ' + error.message); return; }
         }
 
         async function salvaPreferenzeNotifiche() {
