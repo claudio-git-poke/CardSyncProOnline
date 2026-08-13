@@ -207,6 +207,32 @@
 
         .profilo-container { position: relative; flex-shrink: 0; }
 
+        .header-search-btn {
+            width: 38px; height: 38px; border-radius: 50%;
+            background-color: var(--primary-light); color: var(--primary);
+            border: none; cursor: pointer; font-size: 0.95rem;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .badge-pallino {
+            position: absolute; top: 0.15rem; right: 0.15rem;
+            min-width: 16px; height: 16px; border-radius: 8px;
+            background-color: var(--danger); color: white;
+            font-size: 0.62rem; font-weight: 800;
+            align-items: center; justify-content: center; padding: 0 3px;
+        }
+
+        .risultato-ricerca-globale {
+            display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+            padding: 0.6rem 0.3rem; border-bottom: 1px solid var(--border-color); cursor: pointer;
+        }
+        .risultato-ricerca-globale:hover { background-color: var(--bg-color); }
+        .risultato-ricerca-globale-nome { font-size: 0.85rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .risultato-ricerca-globale-pill {
+            font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 20px; flex-shrink: 0;
+        }
+
         .profilo-avatar {
             width: 38px; height: 38px; border-radius: 50%;
             background-color: var(--primary); color: white;
@@ -957,11 +983,12 @@
                 <a class="nav-item active" onclick="switchTab('visualizzazione', this)"><i class="fa-solid fa-list-check"></i> Visualizzazione</a>
                 <a class="nav-item" onclick="switchTab('inserimento', this)"><i class="fa-solid fa-plus"></i> Inserimento</a>
                 <a class="nav-item" onclick="switchTab('prezzi', this)"><i class="fa-solid fa-chart-line"></i> Prezzi</a>
-                <a class="nav-item" onclick="switchTab('scambio', this)"><i class="fa-solid fa-right-left"></i> Scambio</a>
-                <a class="nav-item" onclick="switchTab('wishlist', this)"><i class="fa-solid fa-bookmark"></i> Wishlist</a>
+                <a class="nav-item" style="position:relative;" onclick="switchTab('scambio', this)"><i class="fa-solid fa-right-left"></i> Scambio<span class="badge-pallino" data-badge-tab="scambio" style="display:none;"></span></a>
+                <a class="nav-item" style="position:relative;" onclick="switchTab('wishlist', this)"><i class="fa-solid fa-bookmark"></i> Wishlist<span class="badge-pallino" data-badge-tab="wishlist" style="display:none;"></span></a>
                 <a class="nav-item" onclick="switchTab('sealed', this)"><i class="fa-solid fa-box-archive"></i> Sealed</a>
                 <a class="nav-item" onclick="switchTab('impostazioni', this)"><i class="fa-solid fa-gear"></i> Impostazioni</a>
             </nav>
+            <button class="header-search-btn" onclick="apriRicercaGlobale()" aria-label="Cerca ovunque"><i class="fa-solid fa-magnifying-glass"></i></button>
             <div class="profilo-container" id="profiloContainer">
                 <button class="profilo-avatar" id="profiloAvatar" onclick="toggleMenuProfilo()" aria-label="Profilo">?</button>
                 <div class="profilo-menu" id="profiloMenu" style="display:none;">
@@ -992,11 +1019,11 @@
         <a class="drawer-item" id="mNav-prezzi" onclick="switchTab('prezzi', this)">
             <i class="fa-solid fa-chart-line"></i> Prezzi
         </a>
-        <a class="drawer-item" id="mNav-scambio" onclick="switchTab('scambio', this)">
-            <i class="fa-solid fa-right-left"></i> Scambio
+        <a class="drawer-item" id="mNav-scambio" style="position:relative;" onclick="switchTab('scambio', this)">
+            <i class="fa-solid fa-right-left"></i> Scambio<span class="badge-pallino" data-badge-tab="scambio" style="display:none; position:static; margin-left:auto;"></span>
         </a>
-        <a class="drawer-item" id="mNav-wishlist" onclick="switchTab('wishlist', this)">
-            <i class="fa-solid fa-bookmark"></i> Wishlist
+        <a class="drawer-item" id="mNav-wishlist" style="position:relative;" onclick="switchTab('wishlist', this)">
+            <i class="fa-solid fa-bookmark"></i> Wishlist<span class="badge-pallino" data-badge-tab="wishlist" style="display:none; position:static; margin-left:auto;"></span>
         </a>
         <a class="drawer-item" id="mNav-sealed" onclick="switchTab('sealed', this)">
             <i class="fa-solid fa-box-archive"></i> Sealed
@@ -1364,6 +1391,16 @@
             <button class="btn-secondary" style="width: 100%;" onclick="copyShareLink()">
                 <i class="fa-solid fa-link"></i> Copia Link
             </button>
+        </div>
+    </div>
+
+    <!-- MODALE RICERCA GLOBALE -->
+    <div id="ricercaGlobaleModal" class="modal-overlay" onclick="chiudiRicercaGlobale()">
+        <div class="modal-content" style="max-width: 440px; text-align:left;" onclick="event.stopPropagation()">
+            <button class="close-modal-btn" onclick="chiudiRicercaGlobale()"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="font-weight: 800; margin-bottom: 0.8rem;"><i class="fa-solid fa-magnifying-glass" style="color: var(--primary);"></i> Cerca ovunque</h3>
+            <input type="text" id="ricercaGlobaleInput" placeholder="Nome o codice carta..." oninput="eseguiRicercaGlobale(this.value)" style="margin-bottom: 0.8rem;">
+            <div id="ricercaGlobaleRisultati" style="max-height: 50vh; overflow-y: auto;"></div>
         </div>
     </div>
 
@@ -2120,6 +2157,7 @@
             await _avviaRealtimeCarte();
 
             const prefUtente = await caricaPreferenzeUtente();
+            aggiornaBadgeMatch();
 
             // Ripristina l'ultima scheda visitata; se non c'è (prima visita
             // su questo dispositivo, o storage svuotato), usa la sezione
@@ -2807,6 +2845,52 @@
         // carte con quelle di TUTTI gli altri senza esporre le liste intere
         // altrui — restituiscono solo i match trovati (vedi
         // match_e_immagini.sql per i dettagli).
+
+        // Sistema "letto/non letto": ogni match ha una chiave stabile
+        // (coppia di id che non cambia tra un controllo e l'altro) —
+        // salviamo su localStorage quali abbiamo già visto, così il
+        // pallino sul menu sparisce dopo aver aperto la tab, e ricompare
+        // solo per corrispondenze DAVVERO nuove.
+        function _chiaveMatch(m, tipo) {
+            return tipo === 'scambio' ? `${m.mia_carta_id}_${m.altra_wishlist_id}` : `${m.mia_wishlist_id}_${m.altra_carta_id}`;
+        }
+        function _matchVisti() {
+            try { return new Set(JSON.parse(localStorage.getItem('matchVisti') || '[]')); } catch (_) { return new Set(); }
+        }
+        function _segnaMatchVisti(chiavi) {
+            const visti = _matchVisti();
+            chiavi.forEach(c => visti.add(c));
+            localStorage.setItem('matchVisti', JSON.stringify([...visti]));
+        }
+
+        // Controlla i match SENZA aprire nessuna tab — usata all'avvio per
+        // sapere subito se mostrare i pallini sul menu, senza dover
+        // aspettare che l'utente clicchi su Scambio o Wishlist.
+        async function aggiornaBadgeMatch() {
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) return;
+
+            const [{ data: dataScambio }, { data: dataWishlist }] = await Promise.all([
+                supabaseClient.rpc('trova_match_scambio_wishlist', { p_owner_id: userId }),
+                supabaseClient.rpc('trova_match_wishlist_scambio', { p_owner_id: userId }),
+            ]);
+
+            const visti = _matchVisti();
+            const nuoviScambio = (dataScambio || []).filter(m => !visti.has(_chiaveMatch(m, 'scambio')));
+            const nuoviWishlist = (dataWishlist || []).filter(m => !visti.has(_chiaveMatch(m, 'wishlist')));
+
+            _aggiornaPallinoMenu('scambio', nuoviScambio.length);
+            _aggiornaPallinoMenu('wishlist', nuoviWishlist.length);
+        }
+
+        function _aggiornaPallinoMenu(tabId, conteggio) {
+            document.querySelectorAll(`[data-badge-tab="${tabId}"]`).forEach(el => {
+                el.textContent = conteggio > 9 ? '9+' : conteggio;
+                el.style.display = conteggio > 0 ? 'flex' : 'none';
+            });
+        }
+
         async function caricaMatch(tabId) {
             const { data: sessionData } = await supabaseClient.auth.getSession();
             const userId = sessionData?.session?.user?.id;
@@ -2824,8 +2908,14 @@
             }
             if (!data || data.length === 0) {
                 container.innerHTML = '';
+                _aggiornaPallinoMenu(tabId, 0);
                 return;
             }
+
+            // Aprire questa tab equivale ad "aver visto" tutti i match
+            // mostrati qui — li segniamo visti e azzeriamo il pallino.
+            _segnaMatchVisti(data.map(m => _chiaveMatch(m, tabId)));
+            _aggiornaPallinoMenu(tabId, 0);
 
             const righe = data.map(m => {
                 if (tabId === 'scambio') {
@@ -2847,6 +2937,7 @@
                 </div>
             `;
         }
+
 
         async function apriGraficoPrezzo(id, tabella, nome) {
             document.getElementById('graficoPrezzoNome').textContent = nome;
@@ -2931,6 +3022,86 @@
         // ── FOTO DETTAGLIO (angoli, pieghe...) — caricate dall'utente ─────────────
         let _fotoDettaglioCartaId = null;
         let _fotoDettaglioTabella = null;
+
+        // ── RICERCA UNICA SU TUTTO ─────────────────────────────────────────────────
+        // Cerca in TUTTO carteReali (già unisce carte+wishlist), ignorando
+        // la tab/filtri attivi al momento — a differenza della barra di
+        // ricerca dentro Visualizzazione, che filtra solo quello che è già
+        // visibile lì.
+        function apriRicercaGlobale() {
+            document.getElementById('ricercaGlobaleModal').style.display = 'flex';
+            document.getElementById('ricercaGlobaleInput').value = '';
+            document.getElementById('ricercaGlobaleRisultati').innerHTML = '<p style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:1rem 0;">Scrivi per cercare tra tutte le tue carte.</p>';
+            setTimeout(() => document.getElementById('ricercaGlobaleInput').focus(), 50);
+        }
+
+        function chiudiRicercaGlobale() {
+            document.getElementById('ricercaGlobaleModal').style.display = 'none';
+        }
+
+        // Determina l'etichetta e il colore in base a dove vive la carta —
+        // priorità: wishlist, poi sealed, poi scambio, altrimenti collezione.
+        function _etichettaSezione(card) {
+            if (card.tabella === 'wishlist') return { testo: 'Wishlist', bg: 'var(--bg-success)', colore: 'var(--success)' };
+            if (card.tipo === 'sealed') return { testo: 'Sealed', bg: 'var(--primary-light)', colore: 'var(--primary)' };
+            if (card.location === 'SCAMBIO') return { testo: 'Scambio', bg: 'var(--bg-accent, var(--primary-light))', colore: 'var(--primary)' };
+            return { testo: 'Collezione', bg: 'var(--bg-color)', colore: 'var(--text-muted)' };
+        }
+
+        function eseguiRicercaGlobale(query) {
+            const container = document.getElementById('ricercaGlobaleRisultati');
+            const q = query.trim().toLowerCase();
+            if (q.length < 2) {
+                container.innerHTML = '<p style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:1rem 0;">Scrivi almeno 2 caratteri.</p>';
+                return;
+            }
+
+            const risultati = carteReali
+                .filter(c => c.name.toLowerCase().includes(q) || (c.code || '').toLowerCase().includes(q))
+                .slice(0, 40);
+
+            if (risultati.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:1rem 0;">Nessuna carta trovata.</p>';
+                return;
+            }
+
+            container.innerHTML = risultati.map(c => {
+                const et = _etichettaSezione(c);
+                const idAttr = String(c.id).replace(/'/g, "\\'");
+                return `
+                    <div class="risultato-ricerca-globale" onclick="vaiARisultatoRicerca('${idAttr}', '${c.tabella}')">
+                        <span class="risultato-ricerca-globale-nome">${c.name}${c.code ? ` <span style="color:var(--text-muted); font-weight:600;">(${c.code})</span>` : ''}</span>
+                        <span class="risultato-ricerca-globale-pill" style="background-color:${et.bg}; color:${et.colore};">${et.testo}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Chiude il modale, salta nella tab giusta, e evidenzia la riga.
+        function vaiARisultatoRicerca(id, tabella) {
+            chiudiRicercaGlobale();
+            const card = carteReali.find(c => String(c.id) === String(id));
+            if (!card) return;
+
+            const et = _etichettaSezione(card);
+            const tabDiDestinazione = tabella === 'wishlist' ? 'wishlist' : (et.testo === 'Sealed' ? 'sealed' : 'visualizzazione');
+            // Assicura che i toggle Carte/Sealed/Wishlist in Visualizzazione
+            // non nascondano il risultato appena trovato.
+            if (tabDiDestinazione === 'visualizzazione') {
+                _filtriTipo.carte = true; _filtriTipo.sealed = true;
+                document.getElementById('toggleTipoCarte')?.classList.add('active');
+                document.getElementById('toggleTipoSealed')?.classList.add('active');
+            }
+
+            const navBtn = document.querySelector(`nav .nav-item[onclick*="'${tabDiDestinazione}'"]`);
+            switchTab(tabDiDestinazione, navBtn);
+
+            setTimeout(() => {
+                toggleRowHighlight(card.id);
+                const riga = document.querySelector(`[data-id="${id}"]`)?.closest('tr, .riga-compatta');
+                if (riga) riga.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 150);
+        }
 
         async function apriFotoDettaglio(id, tabella, nome) {
             _fotoDettaglioCartaId = id;
