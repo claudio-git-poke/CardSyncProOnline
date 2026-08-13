@@ -205,17 +205,32 @@
             color: var(--primary);
         }
 
-        .user-badge {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            background-color: var(--primary-light);
-            color: var(--primary);
-            padding: 0.4rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            white-space: nowrap;
+        .profilo-container { position: relative; flex-shrink: 0; }
+
+        .profilo-avatar {
+            width: 38px; height: 38px; border-radius: 50%;
+            background-color: var(--primary); color: white;
+            border: none; cursor: pointer;
+            font-weight: 800; font-size: 0.95rem;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .profilo-menu {
+            position: absolute; top: calc(100% + 0.5rem); right: 0; z-index: 200;
+            background-color: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 12px; box-shadow: var(--shadow-soft);
+            padding: 0.8rem; min-width: 200px;
+        }
+        .profilo-menu-nome { font-weight: 800; font-size: 0.95rem; color: var(--text-dark); }
+        .profilo-menu-email {
+            font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.7rem;
+            padding-bottom: 0.7rem; border-bottom: 1px solid var(--border-color);
+            word-break: break-all;
+        }
+        .profilo-menu-logout {
+            width: 100%; background: none; border: none; color: var(--danger);
+            font-weight: 700; font-size: 0.82rem; cursor: pointer;
+            display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0;
         }
 
         /* MENU MOBILE — drawer laterale da sinistra (sostituisce la vecchia
@@ -903,7 +918,6 @@
         .auth-field { text-align: left; margin-bottom: 0.8rem; }
         .auth-field label { display: block; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.3rem; color: var(--text-muted); }
         #authError { display: none; color: var(--danger); font-size: 0.78rem; margin-bottom: 0.8rem; font-weight: 600; }
-        #userBadgeLogout { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 0.85rem; margin-left: 0.3rem; }
     </style>
 </head>
 <body>
@@ -948,8 +962,13 @@
                 <a class="nav-item" onclick="switchTab('sealed', this)"><i class="fa-solid fa-box-archive"></i> Sealed</a>
                 <a class="nav-item" onclick="switchTab('impostazioni', this)"><i class="fa-solid fa-gear"></i> Impostazioni</a>
             </nav>
-            <div class="user-badge" id="userBadge">
-                <i class="fa-solid fa-user"></i> <span id="userBadgeLabel">Non connesso</span>
+            <div class="profilo-container" id="profiloContainer">
+                <button class="profilo-avatar" id="profiloAvatar" onclick="toggleMenuProfilo()" aria-label="Profilo">?</button>
+                <div class="profilo-menu" id="profiloMenu" style="display:none;">
+                    <div class="profilo-menu-nome" id="profiloMenuNome">—</div>
+                    <div class="profilo-menu-email" id="profiloMenuEmail">—</div>
+                    <button class="profilo-menu-logout" id="profiloMenuLogout"><i class="fa-solid fa-right-from-bracket"></i> Esci</button>
+                </div>
             </div>
         </div>
     </header>
@@ -1480,25 +1499,40 @@
         const authPassword = document.getElementById('authPassword');
         const authError    = document.getElementById('authError');
         const authSubmit   = document.getElementById('authSubmit');
-        const userBadgeLabel = document.getElementById('userBadgeLabel');
+        // Ricava il nome dall'email (irene@cardsyncpro.local → "Irene") —
+        // stessa convenzione già usata per gli account del gruppo.
+        function _nomeDaEmail(email) {
+            const utente = (email || '').split('@')[0] || '?';
+            return utente.charAt(0).toUpperCase() + utente.slice(1);
+        }
 
         function mostraUtenteLoggato(email) {
-            userBadgeLabel.innerHTML = '';
-            const span = document.createElement('span');
-            span.textContent = email;
-            userBadgeLabel.appendChild(span);
-            const btnLogout = document.createElement('button');
-            btnLogout.id = 'userBadgeLogout';
-            btnLogout.title = 'Esci';
-            btnLogout.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i>';
+            const nome = _nomeDaEmail(email);
+            document.getElementById('profiloAvatar').textContent = nome.charAt(0).toUpperCase();
+            document.getElementById('profiloAvatar').title = nome;
+            document.getElementById('profiloMenuNome').textContent = nome;
+            document.getElementById('profiloMenuEmail').textContent = email;
+
+            const btnLogout = document.getElementById('profiloMenuLogout');
             btnLogout.onclick = async (e) => {
                 e.stopPropagation();
                 if (!confirm('Uscire da CardSync Pro (' + email + ')?')) return;
                 await supabaseClient.auth.signOut();
                 location.reload();
             };
-            userBadgeLabel.appendChild(btnLogout);
         }
+
+        function toggleMenuProfilo() {
+            const menu = document.getElementById('profiloMenu');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.profilo-container')) {
+                const menu = document.getElementById('profiloMenu');
+                if (menu) menu.style.display = 'none';
+            }
+        });
 
         async function tentaLogin() {
             const email = authEmail.value.trim();
