@@ -1231,6 +1231,22 @@
         </div>
     </div>
 
+    <!-- MODALE FOTO DETTAGLIO -->
+    <div id="fotoModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 420px;" onclick="event.stopPropagation()">
+            <button class="close-modal-btn" onclick="chiudiFotoDettaglio()"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="font-weight: 800; margin-bottom: 0.2rem;"><i class="fa-solid fa-camera" style="color: var(--primary);"></i> Foto dettaglio</h3>
+            <p id="fotoModalNome" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;"></p>
+
+            <input type="file" id="fotoInput" accept="image/*" capture="environment" multiple style="display:none" onchange="caricaFotoDettaglio(event)">
+            <button class="btn-main" style="width:100%; justify-content:center; margin-bottom: 1rem;" onclick="document.getElementById('fotoInput').click()">
+                <i class="fa-solid fa-camera"></i> Scatta o carica foto
+            </button>
+
+            <div id="fotoGalleria" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem;"></div>
+        </div>
+    </div>
+
     <!-- MODALE IMMAGINE INGRANDITA -->
     <div id="immagineModal" class="modal-overlay" onclick="chiudiImmagineIngrandita()">
         <div class="modal-content" style="max-width: 320px; padding: 1rem;" onclick="event.stopPropagation()">
@@ -2423,6 +2439,7 @@
                     <td>
                         ${card.tabella === 'wishlist' ? `<button class="btn-danger" style="color:var(--success)" onclick="segnaOttenuta('${card.id}')" title="Ottenuta — sposta in collezione"><i class="fa-solid fa-check"></i></button>` : ''}
                         <button class="btn-danger" style="color:var(--primary)" onclick="apriGraficoPrezzo('${idAttr}', '${card.tabella}', '${card.name.replace(/'/g, "\\'")}')" title="Andamento prezzo"><i class="fa-solid fa-chart-line"></i></button>
+                        <button class="btn-danger" style="color:var(--primary)" onclick="apriFotoDettaglio('${idAttr}', '${card.tabella}', '${card.name.replace(/'/g, "\\'")}')" title="Foto dettaglio (angoli, pieghe...)"><i class="fa-solid fa-camera"></i></button>
                         <button class="btn-danger" onclick="eliminaCarta('${card.id}')"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 `;
@@ -2639,6 +2656,92 @@
 
         function chiudiImmagineIngrandita() {
             document.getElementById('immagineModal').style.display = 'none';
+        }
+
+        // Stesso modale di apriImmagineIngrandita, ma per un URL diretto
+        // (usato dalla galleria foto dettaglio, che non ha bisogno di
+        // cercare la carta in carteReali dato che ha già l'URL pronto).
+        function apriUrlIngrandito(url) {
+            document.getElementById('immagineErroreMsg').style.display = 'none';
+            const img = document.getElementById('immagineIngranditaImg');
+            img.style.display = '';
+            img.src = url;
+            document.getElementById('immagineModal').style.display = 'flex';
+        }
+
+        // ── FOTO DETTAGLIO (angoli, pieghe...) — caricate dall'utente ─────────────
+        let _fotoDettaglioCartaId = null;
+        let _fotoDettaglioTabella = null;
+
+        async function apriFotoDettaglio(id, tabella, nome) {
+            _fotoDettaglioCartaId = id;
+            _fotoDettaglioTabella = tabella;
+            document.getElementById('fotoModalNome').textContent = nome;
+            document.getElementById('fotoModal').style.display = 'flex';
+            await _ricaricaGalleriaFoto();
+        }
+
+        function chiudiFotoDettaglio() {
+            document.getElementById('fotoModal').style.display = 'none';
+        }
+
+        async function _ricaricaGalleriaFoto() {
+            const galleria = document.getElementById('fotoGalleria');
+            galleria.innerHTML = '<p style="grid-column:1/-1; color:var(--text-muted); font-size:0.8rem;">Caricamento...</p>';
+
+            const { data, error } = await supabaseClient
+                .from('foto_carte')
+                .select('*')
+                .eq('carta_id', _fotoDettaglioCartaId)
+                .eq('tabella', _fotoDettaglioTabella)
+                .order('creato_il');
+
+            if (error) { galleria.innerHTML = `<p style="grid-column:1/-1; color:var(--danger);">❌ ${error.message}</p>`; return; }
+            if (!data || data.length === 0) { galleria.innerHTML = '<p style="grid-column:1/-1; color:var(--text-muted); font-size:0.8rem;">Nessuna foto ancora — scattane una con il pulsante sopra.</p>'; return; }
+
+            galleria.innerHTML = data.map(f => {
+                const { data: pub } = supabaseClient.storage.from('foto-carte').getPublicUrl(f.storage_path);
+                const url = pub.publicUrl;
+                return `
+                    <div style="position:relative;">
+                        <img src="${url}" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:8px; cursor:pointer;" onclick="apriUrlIngrandito('${url}')">
+                        <button onclick="eliminaFotoDettaglio('${f.id}', '${f.storage_path}')" title="Elimina" style="position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.65); color:white; border:none; border-radius:50%; width:22px; height:22px; cursor:pointer; font-size:0.7rem;">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>`;
+            }).join('');
+        }
+
+        async function caricaFotoDettaglio(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) return;
+
+            for (const file of files) {
+                // Percorso con l'id utente come prima cartella: le policy di
+                // storage.objects lo richiedono per verificare il proprietario.
+                const path = `${userId}/${_fotoDettaglioCartaId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+                const { error: errUpload } = await supabaseClient.storage.from('foto-carte').upload(path, file);
+                if (errUpload) { alert('❌ Errore nel caricare la foto: ' + errUpload.message); continue; }
+
+                const { error: errInsert } = await supabaseClient.from('foto_carte').insert({
+                    carta_id: _fotoDettaglioCartaId, tabella: _fotoDettaglioTabella, owner_id: userId, storage_path: path,
+                });
+                if (errInsert) console.error('Foto caricata ma non registrata:', errInsert.message);
+            }
+            event.target.value = ''; // permette di ricaricare la stessa foto due volte se serve
+            await _ricaricaGalleriaFoto();
+        }
+
+        async function eliminaFotoDettaglio(id, storagePath) {
+            if (!confirm('Eliminare questa foto?')) return;
+            await supabaseClient.storage.from('foto-carte').remove([storagePath]);
+            const { error } = await supabaseClient.from('foto_carte').delete().eq('id', id);
+            if (error) { alert('❌ Errore nell\'eliminazione: ' + error.message); return; }
+            await _ricaricaGalleriaFoto();
         }
 
         async function segnaOttenuta(id) {
