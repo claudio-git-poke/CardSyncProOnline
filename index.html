@@ -3046,15 +3046,23 @@
             lista.innerHTML = data.map(r => {
                 const opzioni = Array.isArray(r.opzioni_disambiguazione) ? r.opzioni_disambiguazione : [];
                 const nomeAttr = r.nome.replace(/'/g, "\\'");
+                const idOpzioni = 'opz-' + r.id;
+                const filtroHtml = opzioni.length > 8 ? `
+                    <input type="text" placeholder="Filtra tra le ${opzioni.length} opzioni..." oninput="_filtraOpzioniDisambiguazione('${idOpzioni}', this.value)" style="margin-bottom:0.3rem; font-size:0.75rem; padding:0.4rem 0.6rem;">
+                ` : '';
                 const opzioniHtml = opzioni.length > 0 ? `
                     <div style="width:100%; margin-top:0.4rem; display:flex; flex-direction:column; gap:0.3rem;">
                         <span style="font-size:0.7rem; color:var(--text-muted); font-weight:700;">${opzioni.length} corrispondenz${opzioni.length === 1 ? 'a possibile' : 'e possibili'} trovate — scegli quella giusta:</span>
-                        ${opzioni.map(o => `
-                            <div style="display:flex; align-items:stretch; gap:0.3rem;">
-                                <button class="btn-secondary" style="flex:1; text-align:left; font-size:0.75rem; padding:0.4rem 0.6rem;" onclick="sceglieOpzioneDisambiguazione('${r.id}', '${(o.label || '').replace(/'/g, "\\'")}', '${(o.urlSingles || '').replace(/'/g, "\\'")}')">▸ ${o.label || o.urlSingles || 'opzione senza nome'}</button>
-                                ${o.urlSingles ? `<a href="${o.urlSingles}" target="_blank" onclick="event.stopPropagation()" class="btn-secondary" style="flex-shrink:0; padding:0.4rem 0.6rem;" title="Apri su Cardmarket per vederla prima di scegliere"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>` : ''}
-                            </div>
-                        `).join('')}
+                        ${opzioni.length > 25 ? `<span style="font-size:0.68rem; color:var(--danger);">⚠️ Cardmarket mostra i risultati su più pagine — se non vedi la carta giusta qui sotto, usa "Correggi e riprova" con un nome più specifico (non solo il codice del set).</span>` : ''}
+                        ${filtroHtml}
+                        <div id="${idOpzioni}" style="display:flex; flex-direction:column; gap:0.3rem; max-height:280px; overflow-y:auto;">
+                            ${opzioni.map(o => `
+                                <div data-filtro-testo="${(o.label || '').toLowerCase()}" style="display:flex; align-items:stretch; gap:0.3rem;">
+                                    <button class="btn-secondary" style="flex:1; text-align:left; font-size:0.75rem; padding:0.4rem 0.6rem;" onclick="sceglieOpzioneDisambiguazione('${r.id}', '${(o.label || '').replace(/'/g, "\\'")}', '${(o.urlSingles || '').replace(/'/g, "\\'")}')">▸ ${o.label || o.urlSingles || 'opzione senza nome'}</button>
+                                    ${o.urlSingles ? `<a href="${o.urlSingles}" target="_blank" onclick="event.stopPropagation()" class="btn-secondary" style="flex-shrink:0; padding:0.4rem 0.6rem;" title="Apri su Cardmarket per vederla prima di scegliere"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
                 ` : '';
                 return `
@@ -3077,6 +3085,16 @@
         // la leggerà direttamente da lì, saltando del tutto una nuova
         // ricerca per nome (che può risultare ancora ambigua se il nome
         // scelto non è abbastanza specifico da solo — è successo).
+        // Filtra le opzioni di disambiguazione mentre scrivi — utile quando
+        // ce ne sono tante (es. set con carte che condividono lo stesso
+        // codice, tipo "My First Battle").
+        function _filtraOpzioniDisambiguazione(idContenitore, query) {
+            const q = query.trim().toLowerCase();
+            document.querySelectorAll('#' + idContenitore + ' [data-filtro-testo]').forEach(el => {
+                el.style.display = el.getAttribute('data-filtro-testo').includes(q) ? '' : 'none';
+            });
+        }
+
         async function sceglieOpzioneDisambiguazione(id, etichetta, urlDiretto) {
             const { error } = await supabaseClient.from('coda_carte').update({
                 nome: etichetta, url_diretto: urlDiretto || null,
