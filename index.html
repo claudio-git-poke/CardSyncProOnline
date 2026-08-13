@@ -568,6 +568,63 @@
                affiancate in alto, non impilate come le altre righe di dati. */
             td:first-child, td:last-child { padding-left: 0; }
             td:first-child::before, td:last-child::before { content: none; }
+
+            /* INSERIMENTO — versione più compatta della trasformazione
+               generica qui sopra: qui i campi sono un MODULO da compilare
+               (non dati già inseriti da leggere), quindi restano input/
+               select/checkbox veri, ma raggruppati in coppie sulla stessa
+               riga (Lingua+Cond., Rev+1st, Q.tà+Location) invece che uno
+               sotto l'altro — decisamente meno lungo da scorrere. */
+            #tabellaInserimento tr {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem 0.6rem;
+                padding: 0.7rem 0.6rem;
+            }
+            #tabellaInserimento td {
+                display: block;
+                padding: 0;
+                min-height: 0;
+                flex: 1 1 100%;
+            }
+            #tabellaInserimento td::before {
+                content: attr(data-label);
+                position: static;
+                display: block;
+                width: auto;
+                font-weight: 800;
+                font-size: 0.62rem;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+                color: var(--text-muted);
+                margin-bottom: 0.15rem;
+            }
+            /* Coppie/gruppi affiancati sulla stessa riga: Lingua+Cond.+Rev+1st
+               tutti insieme (4 campi piccoli, stessa riga), poi Q.tà+Location
+               — invece di uno sotto l'altro. */
+            #tabellaInserimento td:nth-child(2), #tabellaInserimento td:nth-child(3) {
+                flex: 1 1 calc(28% - 0.45rem);
+            }
+            #tabellaInserimento td:nth-child(4), #tabellaInserimento td:nth-child(5) {
+                flex: 1 1 calc(22% - 0.45rem);
+            }
+            #tabellaInserimento td:nth-child(6), #tabellaInserimento td:nth-child(7) {
+                flex: 1 1 calc(50% - 0.3rem);
+            }
+            /* Nome/Codice e Note restano su tutta la larghezza — sono gli
+               unici campi di testo libero, meritano più spazio. */
+            #tabellaInserimento td:nth-child(1), #tabellaInserimento td:nth-child(8) {
+                flex: 1 1 100%;
+            }
+            #tabellaInserimento td:nth-child(4), #tabellaInserimento td:nth-child(5) {
+                text-align: center;
+            }
+            /* Bottone elimina: piccolo, in alto a destra della card invece
+               di occupare una riga intera in fondo. */
+            #tabellaInserimento td:last-child {
+                position: absolute; top: 0.5rem; right: 0.5rem; flex: 0 0 auto;
+            }
+            #tabellaInserimento tr { position: relative; padding-right: 2.5rem; }
             td:first-child { position: absolute; top: 0.5rem; right: 0.6rem; width: auto; }
             td:last-child { justify-content: flex-end; gap: 0.3rem; padding-top: 0.6rem; margin-top: 0.3rem; border-top: 1px dashed var(--border-color); }
         }
@@ -2447,8 +2504,8 @@
             const notesVal = data ? (data.notes || '') : '';
 
             tr.innerHTML = `
-                <td><input type="text" placeholder="Nome/Codice" value="${escapeHtml(nameVal)}" oninput="handleEntryInput(this)" onkeydown="handleEntryCodiceKeydown(event, this)"></td>
-                <td>
+                <td data-label="Nome/Codice"><input type="text" placeholder="Nome/Codice" value="${escapeHtml(nameVal)}" oninput="handleEntryInput(this)" onkeydown="handleEntryCodiceKeydown(event, this)"></td>
+                <td data-label="Lingua">
                     <select onchange="handleEntryInput(this)">
                         <option value="IT" ${langVal === 'IT' ? 'selected' : ''}>IT</option>
                         <option value="EN" ${langVal === 'EN' ? 'selected' : ''}>EN</option>
@@ -2456,23 +2513,23 @@
                         <option value="JP" ${langVal === 'JP' ? 'selected' : ''}>JP</option>
                     </select>
                 </td>
-                <td>
+                <td data-label="Cond.">
                     <select onchange="handleEntryInput(this)">
                         <option value="NM" ${condVal === 'NM' ? 'selected' : ''}>NM</option>
                         <option value="EX" ${condVal === 'EX' ? 'selected' : ''}>EX</option>
                         <option value="GD" ${condVal === 'GD' ? 'selected' : ''}>GD</option>
                     </select>
                 </td>
-                <td style="text-align: center;"><input type="checkbox" ${revVal} onchange="handleEntryInput(this)"></td>
-                <td style="text-align: center;"><input type="checkbox" ${firstVal} onchange="handleEntryInput(this)"></td>
-                <td>
+                <td data-label="REV" style="text-align: center;"><input type="checkbox" ${revVal} onchange="handleEntryInput(this)"></td>
+                <td data-label="1st" style="text-align: center;"><input type="checkbox" ${firstVal} onchange="handleEntryInput(this)"></td>
+                <td data-label="Quantità">
                     <div class="qty-control">
                         <button type="button" class="qty-btn" onclick="stepEntryQty(this, -1)">-</button>
                         <input type="number" value="${qtyVal}" min="1" class="qty-input" oninput="handleEntryInput(this)">
                         <button type="button" class="qty-btn" onclick="stepEntryQty(this, 1)">+</button>
                     </div>
                 </td>
-                <td>
+                <td data-label="Location">
                     <select onchange="handleEntryInput(this)">
                         <option value="?" ${locVal === '?' ? 'selected' : ''}>?</option>
                         <option value="BULK" ${locVal === 'BULK' ? 'selected' : ''}>BULK</option>
@@ -2483,7 +2540,7 @@
                         <option value="WISHLIST" ${locVal === 'WISHLIST' ? 'selected' : ''}>WISHLIST</option>
                     </select>
                 </td>
-                <td><input type="text" placeholder="Note" value="${escapeHtml(notesVal)}" oninput="handleEntryInput(this)"></td>
+                <td data-label="Note"><input type="text" placeholder="Note" value="${escapeHtml(notesVal)}" oninput="handleEntryInput(this)"></td>
                 <td style="text-align: center;">
                     <button type="button" class="btn-danger" onclick="removeEntryRow(this)"><i class="fa-solid fa-trash"></i></button>
                 </td>
@@ -2576,7 +2633,14 @@
             // (sotto i 640px) — non su finestre desktop ridotte, dove invece
             // vogliamo che la tabella classica entri semplicemente tutta
             // senza scorrimento (vedi CSS più stretto qui sotto).
-            const modalitaCompatta = currentMode === 'visualizzazione' && window.innerWidth <= 640;
+            // FIX: Scambio/Wishlist/Sealed usavano ancora la conversione
+            // generica "tabella → schedine con etichette" — che non gestisce
+            // bene la combinazione miniatura+nome (si sovrapponevano,
+            // mostrando frammenti tipo "Ra"/"V9" invece del nome intero). La
+            // vista compatta "vera", già pensata apposta per questo, ora si
+            // applica a tutte le tab con la tabella condivisa, non solo a
+            // Visualizzazione.
+            const modalitaCompatta = ['visualizzazione', 'scambio', 'wishlist', 'sealed'].includes(currentMode) && window.innerWidth <= 640;
             pannelloTabella.style.display = modalitaCompatta ? 'none' : '';
             contenitoreCompatto.style.display = modalitaCompatta ? '' : 'none';
 
