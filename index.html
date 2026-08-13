@@ -1311,6 +1311,15 @@
                     <p style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.4rem;">Nessuna spuntata = controlla tutte le location (comportamento di default).</p>
                 </div>
 
+                <div style="text-align:left; margin-bottom: 1.2rem;">
+                    <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-bottom: 0.5rem;">CARTE DI CHI CONTROLLARE</div>
+                    <div style="display:flex; gap:0.6rem;">
+                        <button type="button" class="theme-btn active" id="btnAmbitoSoloMie" style="flex:1;" onclick="_impostaAmbitoControlloPrezzi('soloMie')">Solo le mie</button>
+                        <button type="button" class="theme-btn" id="btnAmbitoGruppo" style="flex:1;" onclick="_impostaAmbitoControlloPrezzi('gruppo')">Tutto il gruppo</button>
+                    </div>
+                    <p style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.4rem;">"Tutto il gruppo" aiuta a controllare anche le carte degli altri (utile se qualcuno ha l'estensione sempre aperta e vuole dare una mano).</p>
+                </div>
+
                 <button class="btn-main" id="btnControllaPrezzi" style="width: 100%; justify-content: center;" onclick="triggerExtensionPriceCheck()">
                     <i class="fa-solid fa-paper-plane"></i> Avvia Controllo Prezzi
                 </button>
@@ -1762,6 +1771,18 @@
             return [...document.querySelectorAll('.checkboxLocationPrezzi:checked')].map(cb => cb.value);
         }
 
+        // "Solo le mie" (default, più prevedibile per chi crea la
+        // richiesta) oppure "tutto il gruppo" — prima questo era deciso a
+        // caso dalla casella locale del dispositivo che eseguiva l'ordine,
+        // non da chi lo creava. Ora la scelta fatta qui viaggia CON
+        // l'ordine ed è quella che conta.
+        let _ambitoControlloPrezzi = 'soloMie';
+        function _impostaAmbitoControlloPrezzi(ambito) {
+            _ambitoControlloPrezzi = ambito;
+            document.getElementById('btnAmbitoSoloMie').classList.toggle('active', ambito === 'soloMie');
+            document.getElementById('btnAmbitoGruppo').classList.toggle('active', ambito === 'gruppo');
+        }
+
         // ── CONTROLLO PREZZI — collegato agli ordini reali ───────────────────────
         let _pollOrdineInterval = null;
 
@@ -1782,7 +1803,7 @@
 
             const { data: ordine, error } = await supabaseClient
                 .from('ordini')
-                .insert({ tipo: 'controlla_prezzi', creato_da: userId, parametri: { locations } })
+                .insert({ tipo: 'controlla_prezzi', creato_da: userId, parametri: { locations, aiutaGruppo: _ambitoControlloPrezzi === 'gruppo' } })
                 .select()
                 .single();
 
