@@ -468,6 +468,50 @@
             color: var(--text-dark);
         }
 
+        /* TABELLA → SCHEDINE SU MOBILE (niente più scorrimento orizzontale):
+           tecnica CSS pura, senza cambiare l'HTML generato da JS — ogni <td>
+           diventa una riga "etichetta: valore" dentro una card, usando
+           data-label per l'etichetta (aggiunta al markup via ::before). */
+        @media (max-width: 768px) {
+            .card-panel { overflow-x: visible; padding: 0.5rem; }
+            table { min-width: 0; }
+            thead { position: absolute; top: -9999px; left: -9999px; }
+            table, tbody, tr, td { display: block; width: 100%; }
+            tr {
+                margin-bottom: 0.7rem;
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                padding: 0.5rem 0.6rem;
+                background-color: var(--bg-color);
+                position: relative;
+            }
+            td {
+                border-bottom: none;
+                white-space: normal;
+                padding: 0.35rem 0 0.35rem 42%;
+                min-height: 1.6rem;
+                display: flex;
+                align-items: center;
+            }
+            td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 0.6rem;
+                width: 38%;
+                font-weight: 800;
+                font-size: 0.68rem;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+                color: var(--text-muted);
+            }
+            /* La checkbox di selezione multipla e le AZIONI stanno meglio
+               affiancate in alto, non impilate come le altre righe di dati. */
+            td:first-child, td:last-child { padding-left: 0; }
+            td:first-child::before, td:last-child::before { content: none; }
+            td:first-child { position: absolute; top: 0.5rem; right: 0.6rem; width: auto; }
+            td:last-child { justify-content: flex-end; gap: 0.3rem; padding-top: 0.6rem; margin-top: 0.3rem; border-top: 1px dashed var(--border-color); }
+        }
+
         tbody tr.interactive-row {
             cursor: pointer;
             transition: background-color 0.15s ease;
@@ -513,6 +557,53 @@
         .variation-up { color: var(--success); font-weight: 700; font-size: 0.75rem; }
         .variation-down { color: var(--danger); font-weight: 700; font-size: 0.75rem; }
         .variation-none { color: var(--text-muted); }
+
+        /* VISTA COMPATTA MOBILE — solo tab Visualizzazione, sotto 768px.
+           Alternativa alla tabella "a schedine" generica: qui il layout è
+           costruito su misura (nome+prezzo in cima, meta condensati sotto,
+           azioni in un menu a comparsa) invece di ripetere un'etichetta per
+           ogni campo — molto più compatto in verticale. */
+        .riga-compatta {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.5rem 0.6rem;
+            margin-bottom: 0.4rem;
+        }
+        .riga-compatta-top { display: flex; align-items: center; gap: 0.4rem; }
+        .riga-compatta-thumb {
+            width: 22px; height: 30px; object-fit: cover; border-radius: 3px;
+            flex-shrink: 0; cursor: pointer;
+        }
+        .riga-compatta-nome {
+            flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.3rem;
+            font-size: 0.82rem; font-weight: 700; cursor: pointer;
+        }
+        .riga-compatta-nome-testo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .riga-compatta-prezzo { font-size: 0.82rem; font-weight: 700; flex-shrink: 0; cursor: pointer; }
+        .riga-compatta-menu-btn {
+            background: none; border: none; color: var(--text-muted); font-size: 0.9rem;
+            cursor: pointer; padding: 0.2rem 0.3rem; flex-shrink: 0;
+        }
+        .riga-compatta-meta {
+            display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+            margin-top: 0.25rem; padding-left: 1.9rem;
+        }
+        .riga-compatta-meta-testo { font-size: 0.68rem; color: var(--text-muted); }
+        .pill-location {
+            background-color: var(--primary-light); color: var(--primary-dark);
+            font-size: 0.65rem; font-weight: 700; padding: 0.12rem 0.55rem;
+            border-radius: 20px; white-space: nowrap;
+        }
+        .riga-compatta-azioni {
+            display: flex; flex-wrap: wrap; gap: 0.4rem;
+            margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border-color);
+        }
+        .riga-compatta-azioni button {
+            background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px;
+            padding: 0.35rem 0.6rem; font-size: 0.72rem; font-weight: 700; color: var(--text-dark);
+            cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;
+        }
 
         .link-icon {
             color: var(--primary);
@@ -968,7 +1059,7 @@
             </div>
 
             <!-- TABELLA DATI CON RIGHE SELEZIONABILI -->
-            <div class="card-panel">
+            <div class="card-panel" id="pannelloTabella">
                 <table>
                     <thead>
                         <tr id="tableHeaderRow"></tr>
@@ -976,6 +1067,9 @@
                     <tbody id="viewTableBody"></tbody>
                 </table>
             </div>
+
+            <!-- VISTA COMPATTA — solo mobile, solo tab Visualizzazione -->
+            <div id="viewCardsCompact" style="display:none;"></div>
 
         </div>
 
@@ -2339,6 +2433,8 @@
         function renderViewTable(data) {
             const tbody = document.getElementById('viewTableBody');
             const theadRow = document.getElementById('tableHeaderRow');
+            const pannelloTabella = document.getElementById('pannelloTabella');
+            const contenitoreCompatto = document.getElementById('viewCardsCompact');
             tbody.innerHTML = '';
 
             if (_sortColonna) {
@@ -2350,6 +2446,14 @@
                     return 0;
                 });
             }
+
+            // Vista compatta: solo tab Visualizzazione, solo sotto i 640px —
+            // le altre tab (Scambio/Wishlist/Sealed) restano sulla tabella
+            // classica (che comunque su mobile si trasforma già in
+            // "schedine etichetta:valore", vedi @media più sopra).
+            const modalitaCompatta = currentMode === 'visualizzazione' && window.innerWidth <= 640;
+            pannelloTabella.style.display = modalitaCompatta ? 'none' : '';
+            contenitoreCompatto.style.display = modalitaCompatta ? '' : 'none';
 
             const th = (label, colonna) => colonna
                 ? `<th style="cursor:pointer; user-select:none;" onclick="ordinaTabella('${colonna}')">${label}${_freccettaOrdinamento(colonna)}</th>`
@@ -2372,6 +2476,7 @@
 
             let totalSum = 0;
             let totalQty = 0;
+            let htmlCompatto = '';
 
             data.forEach(card => {
                 const tr = document.createElement('tr');
@@ -2420,22 +2525,27 @@
                 const nomeAttr = card.name.replace(/'/g, "\\'");
                 const codeAttr = (card.code || '').replace(/'/g, "\\'");
 
+                if (modalitaCompatta) {
+                    htmlCompatto += _rigaCompattaHtml(card, idAttr, locAttr, nomeAttr, langClass, condClass, varClass, immagineSrc, obiettivoRaggiunto);
+                    return; // niente <tr>, questa carta esiste solo nella vista compatta
+                }
+
                 tr.innerHTML = `
                     <td><input type="checkbox" class="riga-checkbox" data-id="${idAttr}" data-tabella="${card.tabella}" onclick="event.stopPropagation(); aggiornaSelezioneMultipla();"></td>
-                    <td class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'qty', ${card.qty}, 'Quantità', 'intero')"><strong>${card.qty}</strong></td>
-                    <td class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'nome', '${nomeAttr}', 'Nome')">${thumb}<strong>${card.name}</strong>${obiettivoRaggiunto ? ` <span class="badge" style="background-color:var(--success-bg); color:var(--success);" title="Prezzo sceso al di sotto del tuo obiettivo (${card.prezzoObiettivo.toFixed(2)} €)">🎯 obiettivo!</span>` : ''}</td>
-                    <td class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'codice', '${codeAttr}', 'Codice')"><code>${card.code}</code></td>
-                    <td><span class="badge badge-location" title="Clicca per modificare" onclick="event.stopPropagation(); modificaLocationInline(event, '${idAttr}', '${card.tabella}', '${locAttr}')">${card.location || '—'}</span></td>
-                    <td><span class="badge ${langClass} cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaLinguaInline(event, '${idAttr}', '${card.tabella}', '${card.lang}')">${card.lang}</span></td>
-                    <td><span class="badge ${condClass} cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCondizioneInline(event, '${idAttr}', '${card.tabella}', '${card.cond}')">${card.cond}</span></td>
-                    <td class="price cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'prezzo', ${card.price}, 'Prezzo (€)', 'numero')">${card.price.toFixed(2)} €</td>
-                    <td class="${varClass}">${card.variation}</td>
-                    <td>
+                    <td data-label="Q.tà" class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'qty', ${card.qty}, 'Quantità', 'intero')"><strong>${card.qty}</strong></td>
+                    <td data-label="Nome" class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'nome', '${nomeAttr}', 'Nome')">${thumb}<strong>${card.name}</strong>${obiettivoRaggiunto ? ` <span class="badge" style="background-color:var(--success-bg); color:var(--success);" title="Prezzo sceso al di sotto del tuo obiettivo (${card.prezzoObiettivo.toFixed(2)} €)">🎯 obiettivo!</span>` : ''}</td>
+                    <td data-label="Codice" class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'codice', '${codeAttr}', 'Codice')"><code>${card.code}</code></td>
+                    <td data-label="Location"><span class="badge badge-location" title="Clicca per modificare" onclick="event.stopPropagation(); modificaLocationInline(event, '${idAttr}', '${card.tabella}', '${locAttr}')">${card.location || '—'}</span></td>
+                    <td data-label="Lingua"><span class="badge ${langClass} cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaLinguaInline(event, '${idAttr}', '${card.tabella}', '${card.lang}')">${card.lang}</span></td>
+                    <td data-label="Cond."><span class="badge ${condClass} cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCondizioneInline(event, '${idAttr}', '${card.tabella}', '${card.cond}')">${card.cond}</span></td>
+                    <td data-label="Prezzo" class="price cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'prezzo', ${card.price}, 'Prezzo (€)', 'numero')">${card.price.toFixed(2)} €</td>
+                    <td data-label="Var." class="${varClass}">${card.variation}</td>
+                    <td data-label="Link">
                         <a href="${card.link}" target="_blank" class="link-icon">
                             <i class="fa-solid fa-arrow-up-right-from-square"></i>
                         </a>
                     </td>
-                    <td>${card.notes ? `<span class="badge badge-rh">✨ ${card.notes}</span>` : '—'}</td>
+                    <td data-label="Note">${card.notes ? `<span class="badge badge-rh">✨ ${card.notes}</span>` : '—'}</td>
                     <td>
                         ${card.tabella === 'wishlist' ? `<button class="btn-danger" style="color:var(--success)" onclick="segnaOttenuta('${card.id}')" title="Ottenuta — sposta in collezione"><i class="fa-solid fa-check"></i></button>` : ''}
                         <button class="btn-danger" style="color:var(--primary)" onclick="apriGraficoPrezzo('${idAttr}', '${card.tabella}', '${card.name.replace(/'/g, "\\'")}')" title="Andamento prezzo"><i class="fa-solid fa-chart-line"></i></button>
@@ -2445,6 +2555,10 @@
                 `;
                 tbody.appendChild(tr);
             });
+
+            if (modalitaCompatta) {
+                contenitoreCompatto.innerHTML = htmlCompatto || '<p style="text-align:center; color:var(--text-muted); padding:2rem 0;">Nessuna carta trovata.</p>';
+            }
 
             document.getElementById('stat-count').innerText = totalQty;
             document.getElementById('stat-value').innerText = `€ ${totalSum.toFixed(2)}`;
@@ -2456,6 +2570,72 @@
             // di tenere "selezionate" righe che magari non sono più visibili.
             _aggiornaBarraSelezioneMultipla();
         }
+
+        // Costruisce l'HTML di una singola schedina per la vista compatta
+        // mobile — nome+link+prezzo+variazione in cima, meta condensati
+        // (quantità/codice/lingua/condizione) e pill Location sotto, azioni
+        // in un pannello a comparsa per non affollare la card.
+        function _rigaCompattaHtml(card, idAttr, locAttr, nomeAttr, langClass, condClass, varClass, immagineSrc, obiettivoRaggiunto) {
+            const thumbCompatta = immagineSrc
+                ? `<img src="${immagineSrc}" alt="" class="riga-compatta-thumb" loading="lazy" onclick="event.stopPropagation(); apriImmagineIngrandita('${idAttr}')" onerror="this.style.display='none';">`
+                : '';
+            const iconaVariazione = varClass === 'variation-up'
+                ? '<i class="fa-solid fa-arrow-up" style="color:var(--success); font-size:0.7rem;"></i>'
+                : (varClass === 'variation-down' ? '<i class="fa-solid fa-arrow-down" style="color:var(--danger); font-size:0.7rem;"></i>' : '');
+            const linkIcona = (card.link && card.link !== '#')
+                ? `<a href="${card.link}" target="_blank" onclick="event.stopPropagation()" style="color:var(--primary); flex-shrink:0;"><i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.68rem;"></i></a>`
+                : '';
+            const metaTesto = [
+                `x${card.qty}`,
+                card.code || null,
+                card.lang,
+                card.cond,
+            ].filter(Boolean).join(' · ');
+
+            return `
+                <div class="riga-compatta">
+                    <div class="riga-compatta-top">
+                        <input type="checkbox" class="riga-checkbox" data-id="${idAttr}" data-tabella="${card.tabella}" onclick="event.stopPropagation(); aggiornaSelezioneMultipla();">
+                        ${thumbCompatta}
+                        <span class="riga-compatta-nome" onclick="modificaCampoInline('${idAttr}', '${card.tabella}', 'nome', '${nomeAttr}', 'Nome')">
+                            <span class="riga-compatta-nome-testo">${card.name}</span>
+                            ${linkIcona}
+                        </span>
+                        ${iconaVariazione}
+                        <span class="riga-compatta-prezzo" onclick="modificaCampoInline('${idAttr}', '${card.tabella}', 'prezzo', ${card.price}, 'Prezzo (€)', 'numero')">${card.price.toFixed(2)}€</span>
+                        <button class="riga-compatta-menu-btn" onclick="event.stopPropagation(); toggleMenuCompatto('${idAttr}')"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                    </div>
+                    <div class="riga-compatta-meta">
+                        <span class="riga-compatta-meta-testo">${metaTesto}</span>
+                        <span class="pill-location" onclick="event.stopPropagation(); modificaLocationInline(event, '${idAttr}', '${card.tabella}', '${locAttr}')">${card.location || '—'}</span>
+                        ${obiettivoRaggiunto ? `<span class="pill-location" style="background-color:var(--success-bg); color:var(--success);">🎯 obiettivo</span>` : ''}
+                    </div>
+                    <div class="riga-compatta-azioni" id="menuCompatto-${idAttr}" style="display:none;">
+                        ${card.tabella === 'wishlist' ? `<button onclick="segnaOttenuta('${card.id}')"><i class="fa-solid fa-check"></i> Ottenuta</button>` : ''}
+                        <button onclick="apriGraficoPrezzo('${idAttr}', '${card.tabella}', '${nomeAttr}')"><i class="fa-solid fa-chart-line"></i> Andamento</button>
+                        <button onclick="apriFotoDettaglio('${idAttr}', '${card.tabella}', '${nomeAttr}')"><i class="fa-solid fa-camera"></i> Foto</button>
+                        <button onclick="eliminaCarta('${card.id}')" style="color:var(--danger);"><i class="fa-solid fa-trash"></i> Elimina</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleMenuCompatto(id) {
+            const menu = document.getElementById('menuCompatto-' + id);
+            if (menu) menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        // Ricalcola la vista compatta se lo schermo cambia larghezza
+        // attraversando la soglia (es. ruotando il telefono, o ridimensionando
+        // la finestra da desktop) — filterTable() richiama renderViewTable
+        // con i dati già filtrati, senza rileggere dal database.
+        let _resizeTimeout = null;
+        window.addEventListener('resize', () => {
+            clearTimeout(_resizeTimeout);
+            _resizeTimeout = setTimeout(() => {
+                if (currentMode === 'visualizzazione') filterTable();
+            }, 200);
+        });
 
         // ── MODIFICA / ELIMINAZIONE CARTA ────────────────────────────────────────
         let _cartaInModifica = null;
