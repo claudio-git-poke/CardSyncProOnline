@@ -24,6 +24,59 @@
             --shadow-soft: 0 4px 20px rgba(124, 77, 255, 0.08);
         }
 
+        /* TEMA VERDE PASTELLO */
+        body.theme-verde {
+            --bg-color: #eef7f2;
+            --primary: #2e7d32;
+            --primary-light: #e0f2e1;
+            --primary-dark: #1b5e20;
+            --text-dark: #1b2e22;
+            --text-muted: #647d6a;
+            --border-color: #cee2d4;
+            --shadow-soft: 0 4px 20px rgba(46, 125, 50, 0.08);
+        }
+
+        /* TEMA POKEMON */
+        body.theme-pokemon {
+            --bg-color: #edf4fc;
+            --primary: #2a75d3;
+            --primary-light: #dbeafe;
+            --primary-dark: #18529d;
+            --text-dark: #1a2738;
+            --text-muted: #5e728c;
+            --border-color: #cbdcf2;
+            --shadow-soft: 0 4px 20px rgba(42, 117, 211, 0.08);
+        }
+
+        /* DARK MODE */
+        body.dark-mode {
+            --bg-color: #121018;
+            --card-bg: #1c1826;
+            --text-dark: #f1edfa;
+            --text-muted: #9f95b5;
+            --border-color: #2f2840;
+            --primary-light: rgba(124, 77, 255, 0.2);
+            --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        body.dark-mode.theme-verde {
+            --bg-color: #0d1712;
+            --card-bg: #14241b;
+            --text-dark: #e8f5ed;
+            --text-muted: #83a38c;
+            --border-color: #1f382a;
+            --primary-light: rgba(46, 125, 50, 0.2);
+        }
+
+        body.dark-mode.theme-pokemon {
+            --bg-color: #0f1621;
+            --card-bg: #172130;
+            --text-dark: #eaf2fd;
+            --text-muted: #829ab8;
+            --border-color: #23344a;
+            --primary-light: rgba(42, 117, 211, 0.2);
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -123,6 +176,11 @@
             accent-color: var(--primary);
             cursor: pointer;
             flex-shrink: 0;
+        }
+
+        .card-thumb {
+            width: 32px; height: 44px; object-fit: cover; border-radius: 4px;
+            flex-shrink: 0; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.15);
         }
 
         .card-info { flex: 1; min-width: 0; }
@@ -257,6 +315,14 @@
         <p>Seleziona le carte che ti interessano — il totale si aggiorna da solo.</p>
     </header>
 
+    <!-- MODALE IMMAGINE INGRANDITA -->
+    <div id="immagineModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center;" onclick="chiudiImmagineIngrandita()">
+        <div style="max-width:320px; width:90%; background:var(--card-bg); border-radius:16px; padding:1rem; position:relative;" onclick="event.stopPropagation()">
+            <button onclick="chiudiImmagineIngrandita()" style="position:absolute; top:0.6rem; right:0.6rem; background:none; border:none; font-size:1.2rem; color:var(--text-muted); cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+            <img id="immagineIngranditaImg" src="" alt="" style="width:100%; border-radius:12px; margin-top:0.5rem;">
+        </div>
+    </div>
+
     <div class="container">
         <div class="search-box">
             <i class="fa-solid fa-magnifying-glass" style="color: var(--text-muted);"></i>
@@ -294,6 +360,15 @@
         let carte = [];
         const selezioni = {}; // { [id]: quantitaSelezionata }
 
+        function apriImmagineIngrandita(src) {
+            document.getElementById('immagineIngranditaImg').src = src;
+            document.getElementById('immagineModal').style.display = 'flex';
+        }
+
+        function chiudiImmagineIngrandita() {
+            document.getElementById('immagineModal').style.display = 'none';
+        }
+
         function formattaEuro(v) {
             return v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
         }
@@ -310,7 +385,7 @@
 
             const { data, error } = await supabaseClient
                 .from('carte')
-                .select('id, nome, codice, lingua, condizione, qty, prezzo, note, url')
+                .select('id, nome, codice, lingua, condizione, qty, prezzo, note, url, immagine')
                 .eq('owner_id', userId)
                 .eq('location', 'SCAMBIO')
                 .eq('stato', 'collezione')
@@ -330,6 +405,7 @@
                 qtyDisponibile: r.qty || 1,
                 price: r.prezzo != null ? Number(r.prezzo) : 0,
                 notes: r.note || '',
+                immagine: r.immagine || null,
             }));
 
             if (carte.length === 0) {
@@ -360,6 +436,7 @@
                     <div class="card-row ${selezionata ? 'selected' : ''}" id="row-${c.id}">
                         <input type="checkbox" class="card-checkbox" ${selezionata ? 'checked' : ''}
                                onchange="toggleSelezione('${c.id}', this.checked)">
+                        ${c.immagine ? `<img src="${c.immagine}" alt="" class="card-thumb" onclick="event.stopPropagation(); apriImmagineIngrandita('${c.immagine}')" onerror="this.style.display='none';">` : ''}
                         <div class="card-info">
                             <div class="card-name">${c.name}${c.code ? ` <span style="color:var(--text-muted); font-weight:600;">(${c.code})</span>` : ''}</div>
                             <div class="card-meta">
@@ -433,6 +510,17 @@
                 alert(testo); // fallback se il clipboard non è disponibile (es. http non sicuro)
             });
         }
+
+        // Applica lo stesso tema scelto dal proprietario sul proprio
+        // dispositivo — passato nell'URL (non c'è login qui, quindi niente
+        // localStorage da leggere), fatto subito prima di ogni altra cosa
+        // per evitare un lampo del tema sbagliato.
+        (function applicaTemaCondiviso() {
+            const params = new URLSearchParams(window.location.search);
+            const tema = params.get('tema');
+            if (tema === 'verde' || tema === 'pokemon') document.body.classList.add('theme-' + tema);
+            if (params.get('scuro') === '1') document.body.classList.add('dark-mode');
+        })();
 
         caricaCatalogo();
     </script>
