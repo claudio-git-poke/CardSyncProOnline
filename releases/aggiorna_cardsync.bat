@@ -65,13 +65,23 @@ if exist "%CONFIG_FILE%" (
 
 if not defined CARTELLA_ESTENSIONE goto :chiedi_cartella
 if not exist "!CARTELLA_ESTENSIONE!\manifest.json" goto :chiedi_cartella
-echo Uso la cartella salvata da un utilizzo precedente: !CARTELLA_ESTENSIONE!
-echo (Se non e' quella giusta, cancella questo file e riprova: "%CONFIG_FILE%")
+
+REM FIX: prima si procedeva alla cieca con qualunque percorso salvato
+REM (Ctrl+C per annullare, poi bisognava cancellare il file a mano e
+REM rilanciare tutto). Ora e' una vera scelta si'/no, fatta subito qui:
+REM rispondendo "no" chiede la cartella nuova immediatamente, senza uscire
+REM e senza dover cancellare nulla a mano - e quella nuova diventa il
+REM default da questo momento in poi.
+echo Cartella salvata da un utilizzo precedente:
+echo !CARTELLA_ESTENSIONE!
+echo.
+choice /c SN /m "E' quella giusta (quella con Carica estensione non pacchettizzata su Chrome)? S=si, N=no, scelgo un'altra"
+if errorlevel 2 goto :chiedi_cartella
 echo.
 goto :cartella_pronta
 
 :chiedi_cartella
-echo Seleziona a mano la cartella dove hai l'estensione CardSync Pro.
+echo Seleziona la cartella dove hai (o vuoi avere) l'estensione CardSync Pro.
 echo (Si aprira' una finestra per scegliere la cartella)
 echo.
 set "CARTELLA_ESTENSIONE="
@@ -115,8 +125,22 @@ REM --- Passo 3: chiude Chrome (con un breve avviso) --------------------------
 echo Chiudo Chrome tra 5 secondi per completare l'installazione...
 echo (salva subito eventuali lavori in corso in altre schede)
 timeout /t 5 >nul
+taskkill /IM chrome.exe /T >nul 2>&1
+timeout /t 3 >nul
 taskkill /F /IM chrome.exe /T >nul 2>&1
 timeout /t 2 >nul
+
+REM FIX (prompt "Ripristina le pagine?" al riavvio): una chiusura "gentile"
+REM da sola non e' bastata a evitarlo - Chrome decide se mostrarlo in base
+REM a un campo preciso ("exit_type"/"exited_cleanly") scritto nel file delle
+REM preferenze di ogni profilo, non solo da COME e' stato chiuso. Lo
+REM impostiamo esplicitamente noi su "uscita pulita" per ogni profilo,
+REM cosi' Chrome non ha motivo di sospettare un crash, qualunque sia stato
+REM il metodo di chiusura usato sopra.
+echo Sistemo le preferenze di Chrome per evitare il prompt di ripristino...
+powershell -NoProfile -Command ^
+    "$base = \"$env:LOCALAPPDATA\Google\Chrome\User Data\" ; if (Test-Path $base) { Get-ChildItem $base -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq 'Default' -or $_.Name -like 'Profile *' } | ForEach-Object { foreach ($nomeFile in @('Preferences','Secure Preferences')) { $p = Join-Path $_.FullName $nomeFile ; if (Test-Path $p) { try { $j = Get-Content $p -Raw -ErrorAction Stop | ConvertFrom-Json ; if ($j.profile) { $j.profile | Add-Member -NotePropertyName exit_type -NotePropertyValue 'Normal' -Force ; $j.profile | Add-Member -NotePropertyName exited_cleanly -NotePropertyValue $true -Force ; $j | ConvertTo-Json -Depth 100 -Compress | Set-Content -Path $p -Encoding UTF8 } } catch {} } } }"
+echo.
 
 REM --- Passo 4: estrae (crea la cartella se non esiste ancora) ---------------
 echo Installo...
