@@ -250,14 +250,19 @@
            scorrimento indesiderato visto a schermo. */
         .cardsync-cornice-tema {
             box-sizing: border-box;
-            border: 2px solid var(--primary);
-            box-shadow: 0 0 0 5px var(--primary-light), 0 20px 60px rgba(0,0,0,0.35);
+            border: 4px solid var(--primary);
+            box-shadow: 0 0 0 8px var(--primary-light), 0 24px 70px rgba(0,0,0,0.45);
+            /* Margine automatico come ulteriore garanzia di centratura,
+               indipendente dal flex del contenitore attorno. */
+            margin: auto;
+            font-size: 1.08em;
         }
         .cardsync-motivo-tema {
             display: inline-flex; align-items: center; justify-content: center;
-            width: 56px; height: 56px; border-radius: 50%;
-            background: var(--primary-light); font-size: 1.8rem;
-            margin-bottom: 0.6rem;
+            width: 76px; height: 76px; border-radius: 50%;
+            background: var(--primary-light); font-size: 2.6rem;
+            margin-bottom: 0.8rem;
+            border: 2px solid var(--primary);
         }
 
         .badge-pallino {
@@ -1534,13 +1539,13 @@
 
     <!-- MODALE CONTROLLO VERSIONE ESTENSIONE — a tutta pagina, ad ogni apertura -->
     <div id="controlloVersioneOverlay" style="display:none; position:fixed; inset:0; z-index:9999999; background:rgba(20,16,32,0.88); align-items:center; justify-content:center;">
-        <div class="cardsync-cornice-tema" style="background:var(--card-bg); color:var(--text-dark); width:min(460px, 92vw); border-radius:18px; padding:32px 28px 26px; text-align:center; max-height:88vh; overflow-y:auto;">
+        <div class="cardsync-cornice-tema" style="background:var(--card-bg); color:var(--text-dark); width:min(540px, 94vw); border-radius:18px; padding:38px 34px 32px; text-align:center; max-height:88vh; overflow-y:auto;">
 
             <!-- Variante: tutto ok -->
             <div id="versioneOk" style="display:none;">
                 <div class="cardsync-motivo-tema" id="motivoTemaOk">🎉</div>
                 <h3 style="font-weight:800; margin-bottom:0.6rem;">Complimenti, Allenatore!</h3>
-                <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:1.4rem;">Hai l'estensione installata e aggiornata all'ultima versione — pronto a catturarli tutti (i prezzi, intendo).</p>
+                <p style="font-size:1.02rem; color:var(--text-muted); margin-bottom:1.4rem;">Hai l'estensione installata e aggiornata all'ultima versione — pronto a catturarli tutti (i prezzi, intendo).</p>
                 <button class="btn-main" style="width:100%; justify-content:center;" onclick="chiudiControlloVersione()">Avanti così <i class="fa-solid fa-arrow-right"></i></button>
             </div>
 
@@ -1548,7 +1553,7 @@
             <div id="versioneKo" style="display:none; text-align:left;">
                 <div style="text-align:center;"><div class="cardsync-motivo-tema" id="motivoTemaKo">⚡</div></div>
                 <h3 style="font-weight:800; text-align:center; margin-bottom:0.6rem;" id="versioneKoTitolo">Serve un aggiornamento</h3>
-                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1.2rem;" id="versioneKoTesto">
+                <p style="font-size:1rem; color:var(--text-muted); margin-bottom:1.2rem;" id="versioneKoTesto">
                     L'estensione su questo PC non è alla versione giusta — non è possibile usare versioni vecchie, sorry not sorry (sì, di nuovo).
                 </p>
                 <div style="display:flex; flex-direction:column; gap:0.6rem;">
@@ -1562,7 +1567,7 @@
                         <i class="fa-solid fa-trash"></i> Voglio disinstallarla
                     </button>
                 </div>
-                <p style="font-size:0.72rem; color:var(--text-muted); margin-top:1rem; text-align:center;">
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-top:1rem; text-align:center;">
                     Non è obbligatorio avere l'estensione su <em>ogni</em> PC — basta che sia aggiornata su quelli dove la usi. E ricorda: chi tiene gentilmente un PC acceso 24/7 per aiutare tutto il gruppo... una Charizard ogni tanto come "grazie" non si rifiuta mai. 🔥🐉
                 </p>
             </div>
@@ -1570,20 +1575,39 @@
             <!-- Variante: istruzioni disinstallazione -->
             <div id="versioneDisinstalla" style="display:none; text-align:left;">
                 <h3 style="font-weight:800; margin-bottom:0.8rem;">Come disinstallarla</h3>
-                <ol style="font-size:0.85rem; padding-left:1.2rem; display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1.2rem;">
+                <ol style="font-size:1rem; padding-left:1.2rem; display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1.2rem;">
                     <li>Vai su <code>chrome://extensions</code></li>
                     <li>Trova "CardSync Pro"</li>
                     <li>Clicca "Rimuovi"</li>
                 </ol>
-                <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:1.2rem;">Nessun problema — potrai sempre reinstallarla in futuro se cambi idea. I tuoi dati restano al sicuro, vivono sul sito, non nell'estensione.</p>
+                <p style="font-size:0.92rem; color:var(--text-muted); margin-bottom:1.2rem;">Nessun problema — potrai sempre reinstallarla in futuro se cambi idea. I tuoi dati restano al sicuro, vivono sul sito, non nell'estensione.</p>
                 <button class="btn-secondary" style="width:100%; justify-content:center; display:flex;" onclick="chiudiControlloVersione()">Ho capito, chiudi</button>
+            </div>
+
+            <!-- Variante: "beccato" — chiusa la procedura di aggiornamento
+                 senza averla davvero completata (o l'estensione ancora non
+                 risponde) -->
+            <div id="versioneBeccato" style="display:none;">
+                <div class="cardsync-motivo-tema" style="background:var(--danger-bg); border-color:var(--danger); color:var(--danger);">🕴️</div>
+                <h3 style="font-weight:800; margin-bottom:0.6rem;">Ti ho beccato, furbacchione!</h3>
+                <p style="font-size:1rem; color:var(--text-muted); margin-bottom:1.4rem;">
+                    "Prepararsi per i guai" non significa richiudere la finestra sperando che nessuno controlli — l'estensione qui <strong>ancora non risulta aggiornata</strong>. Il boss del team non è per niente contento. 😤
+                </p>
+                <div style="display:flex; flex-direction:column; gap:0.6rem;">
+                    <button class="btn-main" style="width:100%; justify-content:center;" onclick="chiudiControlloVersione(); apriAggiornaEstensione();">
+                        <i class="fa-solid fa-bolt"></i> Va bene, la aggiorno per davvero
+                    </button>
+                    <button class="btn-secondary" style="width:100%; justify-content:center; display:flex;" onclick="_sceltaNonUsoEstensione()">
+                        <i class="fa-solid fa-couch"></i> Ok ok, non la uso su questo PC
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- MODALE AGGIORNA ESTENSIONE — wizard a passi -->
     <div id="aggiornaEstensioneModal" class="modal-overlay" onclick="chiudiAggiornaEstensione()">
-        <div class="modal-content cardsync-cornice-tema" style="max-width: 480px; text-align:left; max-height:88vh; overflow-y:auto;" onclick="event.stopPropagation()">
+        <div class="modal-content cardsync-cornice-tema" style="max-width: 540px; width: 94vw; text-align:left; max-height:88vh; overflow-y:auto;" onclick="event.stopPropagation()">
             <button class="close-modal-btn" onclick="chiudiAggiornaEstensione()"><i class="fa-solid fa-xmark"></i></button>
 
             <!-- Puntini di avanzamento -->
@@ -1598,7 +1622,7 @@
             <div class="wizard-slide" id="wizardSlide-0">
                 <div style="text-align:center;"><div class="cardsync-motivo-tema" id="motivoTemaWizard">🔄</div></div>
                 <h3 style="font-weight: 800; text-align:center; margin-bottom: 0.6rem;">Aggiorna l'estensione</h3>
-                <p style="font-size: 0.85rem; color: var(--text-muted); text-align:center;">
+                <p style="font-size: 1rem; color: var(--text-muted); text-align:center;">
                     3 passi veloci, solo la prima volta con qualche domanda in più — le volte dopo bastano 2 minuti.
                     Funziona solo su Windows. È obbligatorio — sorry not sorry.
                 </p>
@@ -1606,7 +1630,7 @@
 
             <!-- SLIDE 1: aprire PowerShell -->
             <div class="wizard-slide" id="wizardSlide-1" style="display:none;">
-                <div style="text-align:center; font-size:0.72rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 1 di 3</div>
+                <div style="text-align:center; font-size:0.85rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 1 di 3</div>
                 <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Apri PowerShell</h3>
                 <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; padding:1rem; margin-bottom:0.8rem; flex-wrap:wrap;">
                     <kbd class="wizard-tasto">⊞ Win</kbd>
@@ -1615,40 +1639,44 @@
                     <span style="font-weight:800; color:var(--text-muted); margin: 0 0.2rem;">poi</span>
                     <kbd class="wizard-tasto">I</kbd>
                 </div>
-                <p style="font-size: 0.85rem; color: var(--text-muted);">
+                <p style="font-size: 1rem; color: var(--text-muted);">
                     Tieni premuto il tasto <strong>Windows</strong> (di solito in basso a sinistra sulla tastiera) e premi <strong>X</strong> — si apre un menu. Premi subito dopo <strong>I</strong> sulla tastiera (più veloce che cliccarci sopra) per aprire il Terminale.
                 </p>
-                <p style="font-size: 0.78rem; color: var(--text-muted); margin-top:0.6rem;">
+                <p style="font-size: 0.92rem; color: var(--text-muted); margin-top:0.6rem;">
                     In alternativa: tasto destro sul menu Start, stessa voce nel menu che compare.
                 </p>
             </div>
 
             <!-- SLIDE 2: copiare/incollare il comando -->
             <div class="wizard-slide" id="wizardSlide-2" style="display:none;">
-                <div style="text-align:center; font-size:0.72rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 2 di 3</div>
+                <div style="text-align:center; font-size:0.85rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 2 di 3</div>
                 <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Copia e incolla questo comando</h3>
                 <div style="display:flex; align-items:center; gap:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; padding:0.6rem 0.8rem; margin-bottom:0.6rem;">
-                    <code id="comandoAggiornaEstensione" style="flex:1; font-size:0.72rem; word-break:break-all; user-select:all;">irm https://claudio-git-poke.github.io/CardSyncProOnline/releases/aggiorna_cardsync.bat -OutFile "$env:TEMP\aggiorna_cardsync.bat"; & "$env:TEMP\aggiorna_cardsync.bat"
+                    <code id="comandoAggiornaEstensione" style="flex:1; font-size:0.85rem; word-break:break-all; user-select:all;">irm https://claudio-git-poke.github.io/CardSyncProOnline/releases/aggiorna_cardsync.bat -OutFile "$env:TEMP\aggiorna_cardsync.bat"; & "$env:TEMP\aggiorna_cardsync.bat"
                     <button class="btn-secondary" style="flex-shrink:0; padding:0.4rem 0.6rem;" onclick="copiaComandoAggiorna()" title="Copia" id="btnCopiaComando"><i class="fa-solid fa-copy"></i></button>
                 </div>
-                <p style="font-size: 0.85rem; color: var(--text-muted);">
+                <p style="font-size: 1rem; color: var(--text-muted);">
                     Clicca l'icona <i class="fa-solid fa-copy"></i> per copiarlo, poi nella finestra nera di PowerShell: tasto destro del mouse per incollarlo, e premi <strong>Invio</strong>.
                 </p>
-                <p style="font-size: 0.7rem; color: var(--text-muted); margin-top:0.8rem;">
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top:0.8rem;">
                     Perché un comando e non un file da scaricare? Windows blocca senza appello i file da internet non firmati digitalmente — un comando incollato a mano da te no.
                 </p>
             </div>
 
             <!-- SLIDE 3: cosa succede dopo -->
             <div class="wizard-slide" id="wizardSlide-3" style="display:none;">
-                <div style="text-align:center; font-size:0.72rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 3 di 3</div>
+                <div style="text-align:center; font-size:0.85rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 3 di 3</div>
                 <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Fatto — pensa a tutto lui</h3>
-                <ul style="font-size: 0.85rem; color: var(--text-muted); padding-left:1.2rem; display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;">
+                <ul style="font-size: 1rem; color: var(--text-muted); padding-left:1.2rem; display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;">
                     <li><strong>Solo la prima volta</strong>: si apre una finestra per scegliere la cartella dell'estensione — selezionala una volta sola, se la ricorda per sempre.</li>
                     <li>Scarica e installa l'ultima versione da solo.</li>
                     <li>Chiude Chrome (con 5 secondi di preavviso — salva prima eventuali lavori in corso) e lo riapre da solo.</li>
                 </ul>
-                <p style="font-size: 0.78rem; color: var(--text-muted);">Le prossime volte, ripeti solo i passi 1 e 2 — niente più da scegliere.</p>
+                <div style="background:var(--danger-bg); border:1px solid var(--danger); border-radius:10px; padding:0.8rem 1rem; margin-bottom:1rem;">
+                    <p style="font-size:0.95rem; color:var(--danger); font-weight:700; margin:0 0 0.3rem;">⚠️ Un passo che lo script NON può fare da solo</p>
+                    <p style="font-size:0.9rem; color:var(--text-dark); margin:0;">Se è la primissima volta su questo PC, alla fine dovrai comunque andare tu su <code>chrome://extensions</code>, attivare "Modalità sviluppatore", e cliccare <strong>"Carica estensione non pacchettizzata"</strong> selezionando la cartella indicata — lo script te lo scriverà chiaro alla fine. È l'unico passo che Chrome richiede sia fatto a mano, per sicurezza — non è automatizzabile.</p>
+                </div>
+                <p style="font-size: 0.92rem; color: var(--text-muted);">Le prossime volte, ripeti solo i passi 1 e 2 — niente più da scegliere.</p>
             </div>
 
             <!-- Navigazione -->
@@ -3606,8 +3634,28 @@
             _applicaMotiviTema();
             document.getElementById('aggiornaEstensioneModal').style.display = 'flex';
         }
-        function chiudiAggiornaEstensione() {
+        async function chiudiAggiornaEstensione() {
             document.getElementById('aggiornaEstensioneModal').style.display = 'none';
+
+            // FIX: prima chiudere il wizard bastava per "farla franca" senza
+            // aver davvero aggiornato — un utente poteva chiuderlo subito e
+            // continuare come se avesse fatto l'aggiornamento. Ora, chiudendo,
+            // si ricontrolla davvero — se ancora non risulta aggiornata,
+            // ributta fuori l'avviso (in tono scherzoso) invece di lasciar
+            // proseguire in silenzio.
+            const versioneInstallata = await _chiediVersioneEstensione();
+            const ultimaVersioneTesto = await fetch('releases/latest-version.txt?t=' + Date.now(), { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+            const ultimaVersione = (ultimaVersioneTesto || '').trim();
+            if (!ultimaVersione) return; // controllo non valido — non disturba
+
+            if (versioneInstallata && !versioneMaggioreSito(ultimaVersione, versioneInstallata)) return; // davvero aggiornata, tutto ok
+
+            _applicaMotiviTema();
+            document.getElementById('versioneOk').style.display = 'none';
+            document.getElementById('versioneKo').style.display = 'none';
+            document.getElementById('versioneDisinstalla').style.display = 'none';
+            document.getElementById('versioneBeccato').style.display = 'block';
+            document.getElementById('controlloVersioneOverlay').style.display = 'flex';
         }
         function wizardVai(direzione) {
             wizardSlideAttuale = Math.max(0, Math.min(WIZARD_TOTALE_SLIDE - 1, wizardSlideAttuale + direzione));
