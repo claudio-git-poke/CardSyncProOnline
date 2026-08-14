@@ -32,7 +32,6 @@ set "CONFIG_FILE=%CONFIG_DIR%\cartella_estensione.txt"
 set "TEMP_ZIP=%TEMP%\cardsync-extension-update.zip"
 set "PS_RILEVA=%TEMP%\cardsync_rileva_cartella.ps1"
 set "PS_SCEGLI=%TEMP%\cardsync_scegli_cartella.ps1"
-set "PS_PREFS=%TEMP%\cardsync_fix_preferences.ps1"
 set "RILEVATA_DA_CHROME=0"
 
 echo.
@@ -156,33 +155,14 @@ timeout /t 3 >nul
 taskkill /F /IM chrome.exe /T >nul 2>&1
 timeout /t 2 >nul
 
-REM FIX (prompt "Ripristina le pagine?" al riavvio): Chrome decide se
-REM mostrarlo in base a un campo preciso ("exit_type"/"exited_cleanly")
-REM scritto nel file delle preferenze di ogni profilo. Lo impostiamo
-REM esplicitamente su "uscita pulita" per ogni profilo trovato.
-echo Sistemo le preferenze di Chrome per evitare il prompt di ripristino...
-
-> "%PS_PREFS%" echo $base = "$env:LOCALAPPDATA\Google\Chrome\User Data"
->> "%PS_PREFS%" echo if (Test-Path $base) {
->> "%PS_PREFS%" echo     Get-ChildItem $base -Directory -ErrorAction SilentlyContinue ^| Where-Object { $_.Name -eq 'Default' -or $_.Name -like 'Profile *' } ^| ForEach-Object {
->> "%PS_PREFS%" echo         foreach ($nomeFile in @('Preferences','Secure Preferences')) {
->> "%PS_PREFS%" echo             $p = Join-Path $_.FullName $nomeFile
->> "%PS_PREFS%" echo             if (Test-Path $p) {
->> "%PS_PREFS%" echo                 try {
->> "%PS_PREFS%" echo                     $j = Get-Content $p -Raw -ErrorAction Stop ^| ConvertFrom-Json
->> "%PS_PREFS%" echo                     if ($j.profile) {
->> "%PS_PREFS%" echo                         $j.profile ^| Add-Member -NotePropertyName exit_type -NotePropertyValue 'Normal' -Force
->> "%PS_PREFS%" echo                         $j.profile ^| Add-Member -NotePropertyName exited_cleanly -NotePropertyValue $true -Force
->> "%PS_PREFS%" echo                         $j ^| ConvertTo-Json -Depth 100 -Compress ^| Set-Content -Path $p -Encoding UTF8
->> "%PS_PREFS%" echo                     }
->> "%PS_PREFS%" echo                 } catch {}
->> "%PS_PREFS%" echo             }
->> "%PS_PREFS%" echo         }
->> "%PS_PREFS%" echo     }
->> "%PS_PREFS%" echo }
-powershell -NoProfile -ExecutionPolicy Bypass -File "%PS_PREFS%" >nul 2>&1
-del "%PS_PREFS%" >nul 2>&1
-echo.
+REM RIMOSSO (era qui un tentativo di evitare il prompt "Ripristina le
+REM pagine?" riscrivendo il file di preferenze di Chrome) - causava un
+REM problema molto peggiore: Chrome rileva quando le sue preferenze sono
+REM state modificate da un programma esterno (protezione anti-manomissione)
+REM e puo' resettare varie impostazioni per sicurezza, incluse le estensioni
+REM caricate manualmente - "disinstallandole" di fatto al riavvio
+REM successivo. Meglio un prompt di ripristino occasionale che perdere
+REM l'estensione ogni volta.
 
 REM --- Passo 4: estrae (crea la cartella se non esiste ancora) ---------------
 echo Installo...
