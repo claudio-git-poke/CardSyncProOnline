@@ -65,6 +65,9 @@ if exist "%CONFIG_FILE%" (
 
 if not defined CARTELLA_ESTENSIONE goto :chiedi_cartella
 if not exist "!CARTELLA_ESTENSIONE!\manifest.json" goto :chiedi_cartella
+echo Uso la cartella salvata da un utilizzo precedente: !CARTELLA_ESTENSIONE!
+echo (Se non e' quella giusta, cancella questo file e riprova: "%CONFIG_FILE%")
+echo.
 goto :cartella_pronta
 
 :chiedi_cartella
@@ -89,14 +92,12 @@ echo.
 
 :cartella_pronta
 
-if not exist "!CARTELLA_ESTENSIONE!\manifest.json" (
-    echo ATTENZIONE: non trovo manifest.json in "!CARTELLA_ESTENSIONE!"
-    echo Se e' sbagliata, cancella questo file e riprova:
-    echo "%CONFIG_FILE%"
-    echo.
-    pause
-    exit /b 1
-)
+REM Non blocca piu' se manifest.json non c'e' ancora - per la primissima
+REM installazione e' normale che la cartella sia vuota o nuova: la si
+REM installa li', semplicemente. Ricordiamo solo se e' un'installazione
+REM nuova o un aggiornamento, per il messaggio finale.
+set "PRIMA_INSTALLAZIONE=0"
+if not exist "!CARTELLA_ESTENSIONE!\manifest.json" set "PRIMA_INSTALLAZIONE=1"
 
 REM --- Passo 2: scarica l'ultima versione ------------------------------------
 echo Scarico l'ultima versione...
@@ -111,14 +112,15 @@ echo Fatto.
 echo.
 
 REM --- Passo 3: chiude Chrome (con un breve avviso) --------------------------
-echo Chiudo Chrome tra 5 secondi per completare l'aggiornamento...
+echo Chiudo Chrome tra 5 secondi per completare l'installazione...
 echo (salva subito eventuali lavori in corso in altre schede)
 timeout /t 5 >nul
 taskkill /F /IM chrome.exe /T >nul 2>&1
 timeout /t 2 >nul
 
-REM --- Passo 4: estrae, sovrascrivendo la cartella esistente -----------------
-echo Installo l'aggiornamento...
+REM --- Passo 4: estrae (crea la cartella se non esiste ancora) ---------------
+echo Installo...
+if not exist "!CARTELLA_ESTENSIONE!" mkdir "!CARTELLA_ESTENSIONE!" >nul 2>&1
 powershell -NoProfile -Command "Expand-Archive -Path '%TEMP_ZIP%' -DestinationPath '!CARTELLA_ESTENSIONE!' -Force"
 del "%TEMP_ZIP%" >nul 2>&1
 echo Fatto.
@@ -129,8 +131,21 @@ echo Riavvio Chrome...
 start "" "chrome"
 echo.
 echo ================================================
-echo Aggiornamento completato!
+echo Installazione completata!
 echo ================================================
 echo.
+
+if "%PRIMA_INSTALLAZIONE%"=="1" (
+    echo ATTENZIONE - ultimo passo, SOLO la prima volta:
+    echo Chrome non sa ancora che questa cartella e' un'estensione - vai su
+    echo chrome://extensions, attiva "Modalita' sviluppatore" in alto a destra
+    echo se non e' gia' attiva, poi "Carica estensione non pacchettizzata" e
+    echo seleziona questa cartella:
+    echo !CARTELLA_ESTENSIONE!
+    echo.
+    echo Le prossime volte non servira' piu' - questo script bastera' da solo.
+    echo.
+)
+
 timeout /t 3 >nul
 exit /b 0
