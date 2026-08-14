@@ -1531,7 +1531,7 @@
                 <h3 style="font-weight: 800; text-align:center; margin-bottom: 0.6rem;">Aggiorna l'estensione</h3>
                 <p style="font-size: 0.85rem; color: var(--text-muted); text-align:center;">
                     3 passi veloci, solo la prima volta con qualche domanda in più — le volte dopo bastano 2 minuti.
-                    Funziona solo su Windows.
+                    Funziona solo su Windows. È obbligatorio — sorry not sorry.
                 </p>
             </div>
 
@@ -1557,7 +1557,7 @@
                 <div style="text-align:center; font-size:0.72rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 2 di 3</div>
                 <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Copia e incolla questo comando</h3>
                 <div style="display:flex; align-items:center; gap:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; padding:0.6rem 0.8rem; margin-bottom:0.6rem;">
-                    <code id="comandoAggiornaEstensione" style="flex:1; font-size:0.72rem; word-break:break-all; user-select:all;">irm https://claudio-git-poke.github.io/CardSyncProOnline/releases/aggiorna-cardsync.ps1 | iex</code>
+                    <code id="comandoAggiornaEstensione" style="flex:1; font-size:0.72rem; word-break:break-all; user-select:all;">irm https://claudio-git-poke.github.io/CardSyncProOnline/releases/aggiorna_cardsync.bat -OutFile "$env:TEMP\aggiorna_cardsync.bat"; & "$env:TEMP\aggiorna_cardsync.bat"
                     <button class="btn-secondary" style="flex-shrink:0; padding:0.4rem 0.6rem;" onclick="copiaComandoAggiorna()" title="Copia" id="btnCopiaComando"><i class="fa-solid fa-copy"></i></button>
                 </div>
                 <p style="font-size: 0.85rem; color: var(--text-muted);">
@@ -1585,19 +1585,6 @@
                 <button class="btn-secondary" id="wizardBtnIndietro" style="flex:1; justify-content:center; display:flex; visibility:hidden;" onclick="wizardVai(-1)"><i class="fa-solid fa-arrow-left"></i> Indietro</button>
                 <button class="btn-main" id="wizardBtnAvanti" style="flex:1; justify-content:center;" onclick="wizardVai(1)">Avanti <i class="fa-solid fa-arrow-right"></i></button>
             </div>
-
-            <details style="margin-top:1rem;">
-                <summary style="font-size: 0.8rem; color: var(--text-muted); cursor: pointer;">Preferisci farlo a mano, senza comandi?</summary>
-                <ol style="font-size: 0.82rem; padding-left: 1.2rem; margin: 0.8rem 0; display: flex; flex-direction: column; gap: 0.5rem;">
-                    <li>Scarica lo zip qui sotto</li>
-                    <li>Estrailo, <strong>sovrascrivendo</strong> la cartella dell'estensione che hai già</li>
-                    <li>Vai su <code>chrome://extensions</code></li>
-                    <li>Trova CardSync Pro e premi l'icona <i class="fa-solid fa-rotate-right"></i> "Ricarica"</li>
-                </ol>
-                <a href="releases/cardsync-extension.zip" download class="btn-secondary" style="width:100%; justify-content:center; display:flex;">
-                    <i class="fa-solid fa-file-zipper"></i> Scarica solo lo zip
-                </a>
-            </details>
         </div>
     </div>
 
