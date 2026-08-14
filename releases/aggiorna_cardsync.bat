@@ -5,17 +5,19 @@ REM ===========================================================================
 REM CardSync Pro - Aggiornamento automatico estensione
 REM
 REM Cosa fa:
-REM 1. La prima volta, chiede dove si trova la cartella dell'estensione
-REM    (e se la ricorda per le volte dopo)
-REM 2. Scarica l'ultima versione
-REM 3. La estrae nella cartella giusta, sovrascrivendo i file vecchi
-REM 4. Chiude e riavvia Chrome da solo, cosi' la nuova versione si carica
+REM 1. Cerca da solo la cartella dell'estensione leggendo le impostazioni di
+REM    Chrome (dove sono elencate tutte le estensioni caricate "non
+REM    pacchettizzate", con il loro percorso reale sul disco)
+REM 2. Se non la trova da solo, chiede all'utente UNA volta sola e se la
+REM    ricorda per le volte dopo (per PC - ogni computer ha la sua copia)
+REM 3. Scarica l'ultima versione
+REM 4. La estrae nella cartella giusta, sovrascrivendo i file vecchi
+REM 5. Chiude e riavvia Chrome da solo, cosi' la nuova versione si carica
 REM
 REM IMPORTANTE: chiude TUTTE le finestre di Chrome aperte per completare
 REM l'aggiornamento - salva il tuo lavoro prima di avviarlo.
 REM ===========================================================================
 
-REM --- DA MODIFICARE: metti qui il link reale allo zip sul tuo sito ---------
 set "URL_ZIP=https://claudio-git-poke.github.io/CardSyncProOnline/releases/cardsync-extension.zip"
 set "CONFIG_DIR=%APPDATA%\CardSyncPro"
 set "CONFIG_FILE=%CONFIG_DIR%\cartella_estensione.txt"
@@ -29,16 +31,37 @@ echo.
 
 if not exist "%CONFIG_DIR%" mkdir "%CONFIG_DIR%" >nul 2>&1
 
-REM --- Passo 1: trova (o chiedi) la cartella dell'estensione ----------------
+REM --- Passo 1: prova a rilevarla da solo dalle impostazioni di Chrome ------
+echo Cerco la cartella dell'estensione nelle impostazioni di Chrome...
 set "CARTELLA_ESTENSIONE="
-if exist "%CONFIG_FILE%" (
-    set /p CARTELLA_ESTENSIONE=<"%CONFIG_FILE%"
+for /f "usebackq delims=" %%F in (`powershell -NoProfile -Command ^
+    "$basi = @(\"$env:LOCALAPPDATA\Google\Chrome\User Data\") ; foreach ($base in $basi) { if (-not (Test-Path $base)) { continue } ; Get-ChildItem $base -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq 'Default' -or $_.Name -like 'Profile *' } | ForEach-Object { $pref = Join-Path $_.FullName 'Preferences' ; if (-not (Test-Path $pref)) { $pref = Join-Path $_.FullName 'Secure Preferences' } ; if (Test-Path $pref) { try { $json = Get-Content $pref -Raw -ErrorAction Stop | ConvertFrom-Json ; $json.extensions.settings.PSObject.Properties | ForEach-Object { $m = $_.Value.manifest ; $p = $_.Value.path ; if ($m -and $m.name -eq 'CardSync Pro' -and $p -and (Test-Path (Join-Path $p 'manifest.json'))) { Write-Output $p } } } catch {} } } }"`) do (
+    set "CARTELLA_ESTENSIONE=%%F"
 )
 
-if not defined CARTELLA_ESTENSIONE (
-    echo Prima volta: seleziona la cartella dove hai l'estensione CardSync Pro.
-    echo (Si aprira' una finestra per scegliere la cartella)
+if defined CARTELLA_ESTENSIONE (
+    echo Trovata automaticamente: !CARTELLA_ESTENSIONE!
+    echo !CARTELLA_ESTENSIONE!>"%CONFIG_FILE%"
     echo.
+) else (
+    echo Non trovata automaticamente.
+    echo.
+
+    REM --- Passo 1b: prova a leggere quella salvata da una volta precedente -
+    if exist "%CONFIG_FILE%" (
+        for /f "usebackq delims=" %%L in ("%CONFIG_FILE%") do set "CARTELLA_ESTENSIONE=%%L"
+    )
+
+    REM --- Passo 1c: se ancora non ce l'abbiamo (o non e' piu' valida), chiedila
+    if not defined CARTELLA_ESTENSIONE goto :chiedi_cartella
+    if not exist "!CARTELLA_ESTENSIONE!\manifest.json" goto :chiedi_cartella
+    goto :cartella_pronta
+
+    :chiedi_cartella
+    echo Seleziona a mano la cartella dove hai l'estensione CardSync Pro.
+    echo ^(Si aprira' una finestra per scegliere la cartella^)
+    echo.
+    set "CARTELLA_ESTENSIONE="
     for /f "usebackq delims=" %%F in (`powershell -NoProfile -Command ^
         "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.FolderBrowserDialog; $f.Description = 'Seleziona la cartella dell''estensione CardSync Pro (quella con manifest.json dentro)'; if ($f.ShowDialog() -eq 'OK') { Write-Output $f.SelectedPath }"`) do (
         set "CARTELLA_ESTENSIONE=%%F"
@@ -50,14 +73,15 @@ if not defined CARTELLA_ESTENSIONE (
         exit /b 1
     )
 
-    echo !CARTELLA_ESTENSIONE!> "%CONFIG_FILE%"
+    echo !CARTELLA_ESTENSIONE!>"%CONFIG_FILE%"
     echo Cartella salvata per le prossime volte: !CARTELLA_ESTENSIONE!
     echo.
+
+    :cartella_pronta
 )
 
 if not exist "!CARTELLA_ESTENSIONE!\manifest.json" (
-    echo ATTENZIONE: non trovo manifest.json in quella cartella.
-    echo Cartella attuale: !CARTELLA_ESTENSIONE!
+    echo ATTENZIONE: non trovo manifest.json in "!CARTELLA_ESTENSIONE!"
     echo Se e' sbagliata, cancella questo file e riprova:
     echo "%CONFIG_FILE%"
     echo.
