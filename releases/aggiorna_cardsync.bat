@@ -33,6 +33,7 @@ set "TEMP_ZIP=%TEMP%\cardsync-extension-update.zip"
 set "PS_RILEVA=%TEMP%\cardsync_rileva_cartella.ps1"
 set "PS_SCEGLI=%TEMP%\cardsync_scegli_cartella.ps1"
 set "PS_PREFS=%TEMP%\cardsync_fix_preferences.ps1"
+set "RILEVATA_DA_CHROME=0"
 
 echo.
 echo ================================================
@@ -76,6 +77,7 @@ goto :non_trovata_automaticamente
 :trovata_automaticamente
 echo Trovata automaticamente: !CARTELLA_ESTENSIONE!
 echo !CARTELLA_ESTENSIONE!>"%CONFIG_FILE%"
+set "RILEVATA_DA_CHROME=1"
 echo.
 goto :cartella_pronta
 
@@ -131,10 +133,7 @@ echo.
 
 REM Non blocca piu' se manifest.json non c'e' ancora - per la primissima
 REM installazione e' normale che la cartella sia vuota o nuova: la si
-REM installa li', semplicemente. Ricordiamo solo se e' un'installazione
-REM nuova o un aggiornamento, per il messaggio finale.
-set "PRIMA_INSTALLAZIONE=0"
-if not exist "!CARTELLA_ESTENSIONE!\manifest.json" set "PRIMA_INSTALLAZIONE=1"
+REM installa li', semplicemente.
 
 REM --- Passo 2: scarica l'ultima versione ------------------------------------
 echo Scarico l'ultima versione...
@@ -202,15 +201,19 @@ echo Installazione completata!
 echo ================================================
 echo.
 
-if "%PRIMA_INSTALLAZIONE%"=="1" (
-    echo ATTENZIONE - ultimo passo, SOLO la prima volta:
-    echo Chrome non sa ancora che questa cartella e' un'estensione - vai su
-    echo chrome://extensions, attiva "Modalita' sviluppatore" in alto a destra
-    echo se non e' gia' attiva, poi "Carica estensione non pacchettizzata" e
-    echo seleziona questa cartella:
+if "%RILEVATA_DA_CHROME%"=="1" (
+    echo Chrome sapeva gia' di questa cartella - nessun altro passo necessario.
+    echo.
+) else (
+    echo ULTIMO PASSO IMPORTANTE - se non l'hai gia' fatto per questa cartella:
+    echo Chrome deve "conoscere" questa cartella almeno una volta prima di
+    echo poterla usare come estensione. Vai su chrome://extensions, attiva
+    echo "Modalita' sviluppatore" in alto a destra se non e' gia' attiva, poi
+    echo "Carica estensione non pacchettizzata" e seleziona questa cartella:
     echo !CARTELLA_ESTENSIONE!
     echo.
-    echo Le prossime volte non servira' piu' - questo script bastera' da solo.
+    echo Se l'avevi gia' fatto in precedenza per questa stessa cartella, puoi
+    echo ignorare questo avviso - non serve rifarlo due volte.
     echo.
 )
 
