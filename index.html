@@ -228,6 +228,18 @@
             flex-shrink: 0;
         }
 
+        .wizard-puntino {
+            width: 7px; height: 7px; border-radius: 50%;
+            background-color: var(--border-color); transition: background-color 0.2s;
+        }
+        .wizard-puntino.attivo { background-color: var(--primary); }
+        .wizard-tasto {
+            font-family: inherit; font-weight: 800; font-size: 0.95rem;
+            background-color: var(--card-bg); border: 1px solid var(--border-color);
+            border-bottom-width: 3px; border-radius: 8px; padding: 0.5rem 0.9rem;
+            color: var(--text-dark); box-shadow: 0 1px 0 rgba(0,0,0,0.05);
+        }
+
         .badge-pallino {
             position: absolute; top: 0.15rem; right: 0.15rem;
             min-width: 16px; height: 16px; border-radius: 8px;
@@ -1500,22 +1512,82 @@
         </div>
     </div>
 
-    <!-- MODALE AGGIORNA ESTENSIONE -->
+    <!-- MODALE AGGIORNA ESTENSIONE — wizard a passi -->
     <div id="aggiornaEstensioneModal" class="modal-overlay" onclick="chiudiAggiornaEstensione()">
-        <div class="modal-content" style="max-width: 440px; text-align:left;" onclick="event.stopPropagation()">
+        <div class="modal-content" style="max-width: 480px; text-align:left;" onclick="event.stopPropagation()">
             <button class="close-modal-btn" onclick="chiudiAggiornaEstensione()"><i class="fa-solid fa-xmark"></i></button>
-            <h3 style="font-weight: 800; margin-bottom: 0.8rem;"><i class="fa-solid fa-download" style="color: var(--primary);"></i> Aggiorna l'estensione</h3>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-                Scarica ed esegui — pensa a tutto da solo (scarica l'ultima versione, la installa, riavvia Chrome). Ti chiederà solo la prima volta dove hai l'estensione.
-            </p>
-            <a href="releases/aggiorna_cardsync.bat" download class="btn-main" style="width:100%; justify-content:center; margin-bottom: 0.4rem;">
-                <i class="fa-solid fa-bolt"></i> Scarica ed esegui (consigliato)
-            </a>
-            <p style="font-size: 0.7rem; color: var(--text-muted); text-align:center; margin-bottom: 1.2rem;">
-                Solo per Windows. Al primo avvio, Windows potrebbe avvisare "editore sconosciuto" — clicca "Ulteriori informazioni" → "Esegui comunque" (è normale per uno script personale, non pubblicato).
-            </p>
-            <details style="margin-bottom: 0.6rem;">
-                <summary style="font-size: 0.8rem; color: var(--text-muted); cursor: pointer;">Preferisci farlo a mano?</summary>
+
+            <!-- Puntini di avanzamento -->
+            <div style="display:flex; gap:0.4rem; justify-content:center; margin-bottom:1.2rem;">
+                <span class="wizard-puntino" id="puntino-0"></span>
+                <span class="wizard-puntino" id="puntino-1"></span>
+                <span class="wizard-puntino" id="puntino-2"></span>
+                <span class="wizard-puntino" id="puntino-3"></span>
+            </div>
+
+            <!-- SLIDE 0: introduzione -->
+            <div class="wizard-slide" id="wizardSlide-0">
+                <div style="text-align:center; font-size:2.5rem; margin-bottom:0.8rem;">🔄</div>
+                <h3 style="font-weight: 800; text-align:center; margin-bottom: 0.6rem;">Aggiorna l'estensione</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); text-align:center;">
+                    3 passi veloci, solo la prima volta con qualche domanda in più — le volte dopo bastano 2 minuti.
+                    Funziona solo su Windows.
+                </p>
+            </div>
+
+            <!-- SLIDE 1: aprire PowerShell -->
+            <div class="wizard-slide" id="wizardSlide-1" style="display:none;">
+                <div style="text-align:center; font-size:0.72rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 1 di 3</div>
+                <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Apri PowerShell</h3>
+                <div style="display:flex; align-items:center; justify-content:center; gap:0.6rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; padding:1rem; margin-bottom:0.8rem;">
+                    <kbd class="wizard-tasto">⊞ Win</kbd>
+                    <span style="font-weight:800; color:var(--text-muted);">+</span>
+                    <kbd class="wizard-tasto">X</kbd>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">
+                    Tieni premuto il tasto <strong>Windows</strong> (di solito in basso a sinistra sulla tastiera) e premi <strong>X</strong>. Si apre un menu — clicca su <strong>"Terminale"</strong> o <strong>"Windows PowerShell"</strong>.
+                </p>
+                <p style="font-size: 0.78rem; color: var(--text-muted); margin-top:0.6rem;">
+                    In alternativa: tasto destro sul menu Start, stessa voce nel menu che compare.
+                </p>
+            </div>
+
+            <!-- SLIDE 2: copiare/incollare il comando -->
+            <div class="wizard-slide" id="wizardSlide-2" style="display:none;">
+                <div style="text-align:center; font-size:0.72rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 2 di 3</div>
+                <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Copia e incolla questo comando</h3>
+                <div style="display:flex; align-items:center; gap:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; padding:0.6rem 0.8rem; margin-bottom:0.6rem;">
+                    <code id="comandoAggiornaEstensione" style="flex:1; font-size:0.72rem; word-break:break-all; user-select:all;">irm https://claudio-git-poke.github.io/CardSyncProOnline/releases/aggiorna-cardsync.ps1 | iex</code>
+                    <button class="btn-secondary" style="flex-shrink:0; padding:0.4rem 0.6rem;" onclick="copiaComandoAggiorna()" title="Copia" id="btnCopiaComando"><i class="fa-solid fa-copy"></i></button>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">
+                    Clicca l'icona <i class="fa-solid fa-copy"></i> per copiarlo, poi nella finestra nera di PowerShell: tasto destro del mouse per incollarlo, e premi <strong>Invio</strong>.
+                </p>
+                <p style="font-size: 0.7rem; color: var(--text-muted); margin-top:0.8rem;">
+                    Perché un comando e non un file da scaricare? Windows blocca senza appello i file da internet non firmati digitalmente — un comando incollato a mano da te no.
+                </p>
+            </div>
+
+            <!-- SLIDE 3: cosa succede dopo -->
+            <div class="wizard-slide" id="wizardSlide-3" style="display:none;">
+                <div style="text-align:center; font-size:0.72rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 3 di 3</div>
+                <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Fatto — pensa a tutto lui</h3>
+                <ul style="font-size: 0.85rem; color: var(--text-muted); padding-left:1.2rem; display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;">
+                    <li><strong>Solo la prima volta</strong>: si apre una finestra per scegliere la cartella dell'estensione — selezionala una volta sola, se la ricorda per sempre.</li>
+                    <li>Scarica e installa l'ultima versione da solo.</li>
+                    <li>Chiude Chrome (con 5 secondi di preavviso — salva prima eventuali lavori in corso) e lo riapre da solo.</li>
+                </ul>
+                <p style="font-size: 0.78rem; color: var(--text-muted);">Le prossime volte, ripeti solo i passi 1 e 2 — niente più da scegliere.</p>
+            </div>
+
+            <!-- Navigazione -->
+            <div style="display:flex; gap:0.6rem; margin-top:1.4rem;">
+                <button class="btn-secondary" id="wizardBtnIndietro" style="flex:1; justify-content:center; display:flex; visibility:hidden;" onclick="wizardVai(-1)"><i class="fa-solid fa-arrow-left"></i> Indietro</button>
+                <button class="btn-main" id="wizardBtnAvanti" style="flex:1; justify-content:center;" onclick="wizardVai(1)">Avanti <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+
+            <details style="margin-top:1rem;">
+                <summary style="font-size: 0.8rem; color: var(--text-muted); cursor: pointer;">Preferisci farlo a mano, senza comandi?</summary>
                 <ol style="font-size: 0.82rem; padding-left: 1.2rem; margin: 0.8rem 0; display: flex; flex-direction: column; gap: 0.5rem;">
                     <li>Scarica lo zip qui sotto</li>
                     <li>Estrailo, <strong>sovrascrivendo</strong> la cartella dell'estensione che hai già</li>
@@ -1526,7 +1598,6 @@
                     <i class="fa-solid fa-file-zipper"></i> Scarica solo lo zip
                 </a>
             </details>
-            <p style="font-size: 0.72rem; color: var(--text-muted); text-align:center;">Non serve accedere né toccare i tuoi dati — è solo il codice dell'estensione.</p>
         </div>
     </div>
 
@@ -3365,11 +3436,40 @@
         // la tab/filtri attivi al momento — a differenza della barra di
         // ricerca dentro Visualizzazione, che filtra solo quello che è già
         // visibile lì.
+        const WIZARD_TOTALE_SLIDE = 4;
+        let wizardSlideAttuale = 0;
+
         function apriAggiornaEstensione() {
+            wizardSlideAttuale = 0;
+            _wizardMostraSlide();
             document.getElementById('aggiornaEstensioneModal').style.display = 'flex';
         }
         function chiudiAggiornaEstensione() {
             document.getElementById('aggiornaEstensioneModal').style.display = 'none';
+        }
+        function wizardVai(direzione) {
+            wizardSlideAttuale = Math.max(0, Math.min(WIZARD_TOTALE_SLIDE - 1, wizardSlideAttuale + direzione));
+            _wizardMostraSlide();
+        }
+        function _wizardMostraSlide() {
+            for (let i = 0; i < WIZARD_TOTALE_SLIDE; i++) {
+                document.getElementById('wizardSlide-' + i).style.display = i === wizardSlideAttuale ? 'block' : 'none';
+                document.getElementById('puntino-' + i).classList.toggle('attivo', i === wizardSlideAttuale);
+            }
+            document.getElementById('wizardBtnIndietro').style.visibility = wizardSlideAttuale === 0 ? 'hidden' : 'visible';
+            const btnAvanti = document.getElementById('wizardBtnAvanti');
+            const ultimaSlide = wizardSlideAttuale === WIZARD_TOTALE_SLIDE - 1;
+            btnAvanti.innerHTML = ultimaSlide ? 'Fatto <i class="fa-solid fa-check"></i>' : 'Avanti <i class="fa-solid fa-arrow-right"></i>';
+            btnAvanti.onclick = ultimaSlide ? chiudiAggiornaEstensione : () => wizardVai(1);
+        }
+        function copiaComandoAggiorna() {
+            const testo = document.getElementById('comandoAggiornaEstensione').textContent;
+            navigator.clipboard.writeText(testo).then(() => {
+                const btn = document.getElementById('btnCopiaComando');
+                const originale = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+                setTimeout(() => { btn.innerHTML = originale; }, 1500);
+            });
         }
 
         function apriRicercaGlobale() {
