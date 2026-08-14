@@ -244,18 +244,15 @@
            Stessa cornice, colore diverso in base al tema attivo del sito
            (var(--primary) già cambia da sola con la classe theme-verde /
            theme-pokemon sul <body> — qui aggiungiamo solo il "vestito"
-           extra: doppio bordo sfumato + angoli decorati). */
+           extra: doppio bordo sfumato). box-sizing:border-box è importante
+           qui — altrimenti bordo+ombra si sommano alla larghezza dichiarata
+           invece di starci dentro, ed è proprio quello che causava lo
+           scorrimento indesiderato visto a schermo. */
         .cardsync-cornice-tema {
-            position: relative;
+            box-sizing: border-box;
             border: 2px solid var(--primary);
             box-shadow: 0 0 0 5px var(--primary-light), 0 20px 60px rgba(0,0,0,0.35);
         }
-        .cardsync-cornice-tema::before, .cardsync-cornice-tema::after {
-            content: ''; position: absolute; width: 18px; height: 18px;
-            border: 3px solid var(--primary); opacity: 0.55;
-        }
-        .cardsync-cornice-tema::before { top: -9px; left: -9px; border-right: none; border-bottom: none; border-radius: 6px 0 0 0; }
-        .cardsync-cornice-tema::after { bottom: -9px; right: -9px; border-left: none; border-top: none; border-radius: 0 0 6px 0; }
         .cardsync-motivo-tema {
             display: inline-flex; align-items: center; justify-content: center;
             width: 56px; height: 56px; border-radius: 50%;
