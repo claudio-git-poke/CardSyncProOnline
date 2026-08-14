@@ -32,6 +32,12 @@ echo.
 if not exist "%CONFIG_DIR%" mkdir "%CONFIG_DIR%" >nul 2>&1
 
 REM --- Passo 1: prova a rilevarla da solo dalle impostazioni di Chrome ------
+REM NOTA TECNICA: questo blocco usa "goto" invece di if(...)else(...) di
+REM proposito - il comando PowerShell incorporato qui sotto contiene molte
+REM parentesi al suo interno, che dentro un blocco if/else confondono
+REM l'interprete di Windows (non riesce a distinguere le SUE parentesi da
+REM quelle del comando). Con goto il problema non si presenta mai.
+
 echo Cerco la cartella dell'estensione nelle impostazioni di Chrome...
 set "CARTELLA_ESTENSIONE="
 for /f "usebackq delims=" %%F in (`powershell -NoProfile -Command ^
@@ -39,46 +45,49 @@ for /f "usebackq delims=" %%F in (`powershell -NoProfile -Command ^
     set "CARTELLA_ESTENSIONE=%%F"
 )
 
-if defined CARTELLA_ESTENSIONE (
-    echo Trovata automaticamente: !CARTELLA_ESTENSIONE!
-    echo !CARTELLA_ESTENSIONE!>"%CONFIG_FILE%"
-    echo.
-) else (
-    echo Non trovata automaticamente.
-    echo.
+if defined CARTELLA_ESTENSIONE goto :trovata_automaticamente
+goto :non_trovata_automaticamente
 
-    REM --- Passo 1b: prova a leggere quella salvata da una volta precedente -
-    if exist "%CONFIG_FILE%" (
-        for /f "usebackq delims=" %%L in ("%CONFIG_FILE%") do set "CARTELLA_ESTENSIONE=%%L"
-    )
+:trovata_automaticamente
+echo Trovata automaticamente: !CARTELLA_ESTENSIONE!
+echo !CARTELLA_ESTENSIONE!>"%CONFIG_FILE%"
+echo.
+goto :cartella_pronta
 
-    REM --- Passo 1c: se ancora non ce l'abbiamo (o non e' piu' valida), chiedila
-    if not defined CARTELLA_ESTENSIONE goto :chiedi_cartella
-    if not exist "!CARTELLA_ESTENSIONE!\manifest.json" goto :chiedi_cartella
-    goto :cartella_pronta
+:non_trovata_automaticamente
+echo Non trovata automaticamente.
+echo.
 
-    :chiedi_cartella
-    echo Seleziona a mano la cartella dove hai l'estensione CardSync Pro.
-    echo ^(Si aprira' una finestra per scegliere la cartella^)
-    echo.
-    set "CARTELLA_ESTENSIONE="
-    for /f "usebackq delims=" %%F in (`powershell -NoProfile -Command ^
-        "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.FolderBrowserDialog; $f.Description = 'Seleziona la cartella dell''estensione CardSync Pro (quella con manifest.json dentro)'; if ($f.ShowDialog() -eq 'OK') { Write-Output $f.SelectedPath }"`) do (
-        set "CARTELLA_ESTENSIONE=%%F"
-    )
-
-    if not defined CARTELLA_ESTENSIONE (
-        echo Nessuna cartella selezionata - annullato.
-        pause
-        exit /b 1
-    )
-
-    echo !CARTELLA_ESTENSIONE!>"%CONFIG_FILE%"
-    echo Cartella salvata per le prossime volte: !CARTELLA_ESTENSIONE!
-    echo.
-
-    :cartella_pronta
+REM --- Passo 1b: prova a leggere quella salvata da una volta precedente -----
+if exist "%CONFIG_FILE%" (
+    for /f "usebackq delims=" %%L in ("%CONFIG_FILE%") do set "CARTELLA_ESTENSIONE=%%L"
 )
+
+if not defined CARTELLA_ESTENSIONE goto :chiedi_cartella
+if not exist "!CARTELLA_ESTENSIONE!\manifest.json" goto :chiedi_cartella
+goto :cartella_pronta
+
+:chiedi_cartella
+echo Seleziona a mano la cartella dove hai l'estensione CardSync Pro.
+echo (Si aprira' una finestra per scegliere la cartella)
+echo.
+set "CARTELLA_ESTENSIONE="
+for /f "usebackq delims=" %%F in (`powershell -NoProfile -Command ^
+    "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.FolderBrowserDialog; $f.Description = 'Seleziona la cartella dell''estensione CardSync Pro (quella con manifest.json dentro)'; if ($f.ShowDialog() -eq 'OK') { Write-Output $f.SelectedPath }"`) do (
+    set "CARTELLA_ESTENSIONE=%%F"
+)
+
+if not defined CARTELLA_ESTENSIONE (
+    echo Nessuna cartella selezionata - annullato.
+    pause
+    exit /b 1
+)
+
+echo !CARTELLA_ESTENSIONE!>"%CONFIG_FILE%"
+echo Cartella salvata per le prossime volte: !CARTELLA_ESTENSIONE!
+echo.
+
+:cartella_pronta
 
 if not exist "!CARTELLA_ESTENSIONE!\manifest.json" (
     echo ATTENZIONE: non trovo manifest.json in "!CARTELLA_ESTENSIONE!"
