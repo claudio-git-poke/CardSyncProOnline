@@ -1606,8 +1606,8 @@
     </div>
 
     <!-- MODALE AGGIORNA ESTENSIONE — wizard a passi -->
-    <div id="aggiornaEstensioneModal" class="modal-overlay" onclick="chiudiAggiornaEstensione()">
-        <div class="modal-content cardsync-cornice-tema" style="max-width: 540px; width: 94vw; text-align:left; max-height:88vh; overflow-y:auto;" onclick="event.stopPropagation()">
+    <div id="aggiornaEstensioneModal" style="display:none; position:fixed; inset:0; z-index:9999999; background:rgba(20,16,32,0.88); align-items:center; justify-content:center;" onclick="chiudiAggiornaEstensione()">
+        <div class="cardsync-cornice-tema" style="background:var(--card-bg); color:var(--text-dark); border-radius:20px; padding:1.5rem; max-width: 540px; width: 94vw; text-align:left; max-height:88vh; overflow-y:auto; position:relative;" onclick="event.stopPropagation()">
             <button class="close-modal-btn" onclick="chiudiAggiornaEstensione()"><i class="fa-solid fa-xmark"></i></button>
 
             <!-- Puntini di avanzamento -->
@@ -1651,6 +1651,10 @@
             <div class="wizard-slide" id="wizardSlide-2" style="display:none;">
                 <div style="text-align:center; font-size:0.85rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 2 di 3</div>
                 <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Copia e incolla questo comando</h3>
+                <div style="background:var(--danger-bg); border:1px solid var(--danger); border-radius:10px; padding:0.8rem 1rem; margin-bottom:0.8rem;">
+                    <p style="font-size:0.95rem; color:var(--danger); font-weight:700; margin:0 0 0.3rem;">⚠️ Prima di premere Invio</p>
+                    <p style="font-size:0.9rem; color:var(--text-dark); margin:0;">Questo comando <strong>chiude e riavvia Chrome</strong> (con 5 secondi di preavviso) — salva ora qualunque cosa stavi facendo in altre schede, o rischi di perderla.</p>
+                </div>
                 <div style="display:flex; align-items:center; gap:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; padding:0.6rem 0.8rem; margin-bottom:0.6rem;">
                     <code id="comandoAggiornaEstensione" style="flex:1; font-size:0.85rem; word-break:break-all; user-select:all;">irm https://claudio-git-poke.github.io/CardSyncProOnline/releases/aggiorna_cardsync.bat -OutFile "$env:TEMP\aggiorna_cardsync.bat"; & "$env:TEMP\aggiorna_cardsync.bat"
                     <button class="btn-secondary" style="flex-shrink:0; padding:0.4rem 0.6rem;" onclick="copiaComandoAggiorna()" title="Copia" id="btnCopiaComando"><i class="fa-solid fa-copy"></i></button>
