@@ -240,6 +240,29 @@
             color: var(--text-dark); box-shadow: 0 1px 0 rgba(0,0,0,0.05);
         }
 
+        /* ── CORNICE A TEMA per i popup di controllo/aggiornamento estensione ──
+           Stessa cornice, colore diverso in base al tema attivo del sito
+           (var(--primary) già cambia da sola con la classe theme-verde /
+           theme-pokemon sul <body> — qui aggiungiamo solo il "vestito"
+           extra: doppio bordo sfumato + angoli decorati). */
+        .cardsync-cornice-tema {
+            position: relative;
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 0 5px var(--primary-light), 0 20px 60px rgba(0,0,0,0.35);
+        }
+        .cardsync-cornice-tema::before, .cardsync-cornice-tema::after {
+            content: ''; position: absolute; width: 18px; height: 18px;
+            border: 3px solid var(--primary); opacity: 0.55;
+        }
+        .cardsync-cornice-tema::before { top: -9px; left: -9px; border-right: none; border-bottom: none; border-radius: 6px 0 0 0; }
+        .cardsync-cornice-tema::after { bottom: -9px; right: -9px; border-left: none; border-top: none; border-radius: 0 0 6px 0; }
+        .cardsync-motivo-tema {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 56px; height: 56px; border-radius: 50%;
+            background: var(--primary-light); font-size: 1.8rem;
+            margin-bottom: 0.6rem;
+        }
+
         .badge-pallino {
             position: absolute; top: 0.15rem; right: 0.15rem;
             min-width: 16px; height: 16px; border-radius: 8px;
@@ -1514,11 +1537,11 @@
 
     <!-- MODALE CONTROLLO VERSIONE ESTENSIONE — a tutta pagina, ad ogni apertura -->
     <div id="controlloVersioneOverlay" style="display:none; position:fixed; inset:0; z-index:9999999; background:rgba(20,16,32,0.88); align-items:center; justify-content:center;">
-        <div style="background:var(--card-bg); color:var(--text-dark); width:min(460px, 92vw); border-radius:18px; padding:32px 28px 26px; box-shadow:0 20px 60px rgba(0,0,0,0.4); text-align:center;">
+        <div class="cardsync-cornice-tema" style="background:var(--card-bg); color:var(--text-dark); width:min(460px, 92vw); border-radius:18px; padding:32px 28px 26px; text-align:center; max-height:88vh; overflow-y:auto;">
 
             <!-- Variante: tutto ok -->
             <div id="versioneOk" style="display:none;">
-                <div style="font-size:3rem; margin-bottom:0.6rem;">🎉</div>
+                <div class="cardsync-motivo-tema" id="motivoTemaOk">🎉</div>
                 <h3 style="font-weight:800; margin-bottom:0.6rem;">Complimenti, Allenatore!</h3>
                 <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:1.4rem;">Hai l'estensione installata e aggiornata all'ultima versione — pronto a catturarli tutti (i prezzi, intendo).</p>
                 <button class="btn-main" style="width:100%; justify-content:center;" onclick="chiudiControlloVersione()">Avanti così <i class="fa-solid fa-arrow-right"></i></button>
@@ -1526,7 +1549,7 @@
 
             <!-- Variante: serve aggiornare/installare -->
             <div id="versioneKo" style="display:none; text-align:left;">
-                <div style="text-align:center; font-size:2.8rem; margin-bottom:0.6rem;">⚡</div>
+                <div style="text-align:center;"><div class="cardsync-motivo-tema" id="motivoTemaKo">⚡</div></div>
                 <h3 style="font-weight:800; text-align:center; margin-bottom:0.6rem;" id="versioneKoTitolo">Serve un aggiornamento</h3>
                 <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1.2rem;" id="versioneKoTesto">
                     L'estensione su questo PC non è alla versione giusta — non è possibile usare versioni vecchie, sorry not sorry (sì, di nuovo).
@@ -1563,7 +1586,7 @@
 
     <!-- MODALE AGGIORNA ESTENSIONE — wizard a passi -->
     <div id="aggiornaEstensioneModal" class="modal-overlay" onclick="chiudiAggiornaEstensione()">
-        <div class="modal-content" style="max-width: 480px; text-align:left;" onclick="event.stopPropagation()">
+        <div class="modal-content cardsync-cornice-tema" style="max-width: 480px; text-align:left; max-height:88vh; overflow-y:auto;" onclick="event.stopPropagation()">
             <button class="close-modal-btn" onclick="chiudiAggiornaEstensione()"><i class="fa-solid fa-xmark"></i></button>
 
             <!-- Puntini di avanzamento -->
@@ -1576,7 +1599,7 @@
 
             <!-- SLIDE 0: introduzione -->
             <div class="wizard-slide" id="wizardSlide-0">
-                <div style="text-align:center; font-size:2.5rem; margin-bottom:0.8rem;">🔄</div>
+                <div style="text-align:center;"><div class="cardsync-motivo-tema" id="motivoTemaWizard">🔄</div></div>
                 <h3 style="font-weight: 800; text-align:center; margin-bottom: 0.6rem;">Aggiorna l'estensione</h3>
                 <p style="font-size: 0.85rem; color: var(--text-muted); text-align:center;">
                     3 passi veloci, solo la prima volta con qualche domanda in più — le volte dopo bastano 2 minuti.
@@ -3533,6 +3556,7 @@
                 const elOk = document.getElementById('versioneOk');
                 const elKo = document.getElementById('versioneKo');
                 document.getElementById('versioneDisinstalla').style.display = 'none';
+                _applicaMotiviTema();
 
                 if (versioneInstallata && !versioneMaggioreSito(ultimaVersione, versioneInstallata)) {
                     elOk.style.display = 'block';
@@ -3551,6 +3575,23 @@
             } catch (_) { /* silenzioso: un controllo fallito non deve mai bloccare il sito */ }
         }
 
+        // Emoji diversa in base al tema attivo del sito — solo "atmosfera"
+        // (fantasma per il viola, natura per il verde, acqua per l'azzurro),
+        // MAI personaggi Pokémon veri e propri: sarebbe materiale protetto
+        // da copyright, non qualcosa che generiamo qui.
+        function _motivoEmojiTema() {
+            if (document.body.classList.contains('theme-verde')) return '🌿';
+            if (document.body.classList.contains('theme-pokemon')) return '💧';
+            return '👻'; // tema viola, di base
+        }
+        function _applicaMotiviTema() {
+            const emoji = _motivoEmojiTema();
+            ['motivoTemaOk', 'motivoTemaKo', 'motivoTemaWizard'].forEach((id) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = emoji;
+            });
+        }
+
         function chiudiControlloVersione() {
             document.getElementById('controlloVersioneOverlay').style.display = 'none';
         }
@@ -3565,6 +3606,7 @@
         function apriAggiornaEstensione() {
             wizardSlideAttuale = 0;
             _wizardMostraSlide();
+            _applicaMotiviTema();
             document.getElementById('aggiornaEstensioneModal').style.display = 'flex';
         }
         function chiudiAggiornaEstensione() {
