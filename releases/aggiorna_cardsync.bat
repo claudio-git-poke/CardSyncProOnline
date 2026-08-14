@@ -8,11 +8,19 @@ REM Cosa fa:
 REM 1. Cerca da solo la cartella dell'estensione leggendo le impostazioni di
 REM    Chrome (dove sono elencate tutte le estensioni caricate "non
 REM    pacchettizzate", con il loro percorso reale sul disco)
-REM 2. Se non la trova da solo, chiede all'utente UNA volta sola e se la
-REM    ricorda per le volte dopo (per PC - ogni computer ha la sua copia)
+REM 2. Se non la trova da solo, apre un selettore di cartelle - PRE-COMPILATO
+REM    con quella usata l'ultima volta, se c'e' - cosi' basta un click se e'
+REM    ancora giusta, o si puo' scegliere al volo quella corretta se no
 REM 3. Scarica l'ultima versione
-REM 4. La estrae nella cartella giusta, sovrascrivendo i file vecchi
+REM 4. La estrae nella cartella scelta, sovrascrivendo i file vecchi
 REM 5. Chiude e riavvia Chrome da solo, cosi' la nuova versione si carica
+REM
+REM NOTA TECNICA: ogni comando PowerShell un po' complesso viene scritto
+REM prima in un file .ps1 temporaneo ed eseguito da li' (invece di essere
+REM incorporato direttamente come testo in una riga sola) - molto piu'
+REM affidabile: le tante virgolette e parentesi che questi comandi
+REM contengono mandavano facilmente in crash l'interprete di Windows se
+REM scritte tutte su una riga dentro il .bat.
 REM
 REM IMPORTANTE: chiude TUTTE le finestre di Chrome aperte per completare
 REM l'aggiornamento - salva il tuo lavoro prima di avviarlo.
@@ -22,6 +30,9 @@ set "URL_ZIP=https://claudio-git-poke.github.io/CardSyncProOnline/releases/cards
 set "CONFIG_DIR=%APPDATA%\CardSyncPro"
 set "CONFIG_FILE=%CONFIG_DIR%\cartella_estensione.txt"
 set "TEMP_ZIP=%TEMP%\cardsync-extension-update.zip"
+set "PS_RILEVA=%TEMP%\cardsync_rileva_cartella.ps1"
+set "PS_SCEGLI=%TEMP%\cardsync_scegli_cartella.ps1"
+set "PS_PREFS=%TEMP%\cardsync_fix_preferences.ps1"
 
 echo.
 echo ================================================
@@ -32,18 +43,32 @@ echo.
 if not exist "%CONFIG_DIR%" mkdir "%CONFIG_DIR%" >nul 2>&1
 
 REM --- Passo 1: prova a rilevarla da solo dalle impostazioni di Chrome ------
-REM NOTA TECNICA: questo blocco usa "goto" invece di if(...)else(...) di
-REM proposito - il comando PowerShell incorporato qui sotto contiene molte
-REM parentesi al suo interno, che dentro un blocco if/else confondono
-REM l'interprete di Windows (non riesce a distinguere le SUE parentesi da
-REM quelle del comando). Con goto il problema non si presenta mai.
-
 echo Cerco la cartella dell'estensione nelle impostazioni di Chrome...
+
+> "%PS_RILEVA%" echo $basi = @("$env:LOCALAPPDATA\Google\Chrome\User Data")
+>> "%PS_RILEVA%" echo foreach ($base in $basi) {
+>> "%PS_RILEVA%" echo     if (-not (Test-Path $base)) { continue }
+>> "%PS_RILEVA%" echo     Get-ChildItem $base -Directory -ErrorAction SilentlyContinue ^| Where-Object { $_.Name -eq 'Default' -or $_.Name -like 'Profile *' } ^| ForEach-Object {
+>> "%PS_RILEVA%" echo         $pref = Join-Path $_.FullName 'Preferences'
+>> "%PS_RILEVA%" echo         if (-not (Test-Path $pref)) { $pref = Join-Path $_.FullName 'Secure Preferences' }
+>> "%PS_RILEVA%" echo         if (Test-Path $pref) {
+>> "%PS_RILEVA%" echo             try {
+>> "%PS_RILEVA%" echo                 $json = Get-Content $pref -Raw -ErrorAction Stop ^| ConvertFrom-Json
+>> "%PS_RILEVA%" echo                 $json.extensions.settings.PSObject.Properties ^| ForEach-Object {
+>> "%PS_RILEVA%" echo                     $m = $_.Value.manifest
+>> "%PS_RILEVA%" echo                     $p = $_.Value.path
+>> "%PS_RILEVA%" echo                     if ($m -and $m.name -eq 'CardSync Pro' -and $p -and (Test-Path (Join-Path $p 'manifest.json'))) { Write-Output $p }
+>> "%PS_RILEVA%" echo                 }
+>> "%PS_RILEVA%" echo             } catch {}
+>> "%PS_RILEVA%" echo         }
+>> "%PS_RILEVA%" echo     }
+>> "%PS_RILEVA%" echo }
+
 set "CARTELLA_ESTENSIONE="
-for /f "usebackq delims=" %%F in (`powershell -NoProfile -Command ^
-    "$basi = @(\"$env:LOCALAPPDATA\Google\Chrome\User Data\") ; foreach ($base in $basi) { if (-not (Test-Path $base)) { continue } ; Get-ChildItem $base -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq 'Default' -or $_.Name -like 'Profile *' } | ForEach-Object { $pref = Join-Path $_.FullName 'Preferences' ; if (-not (Test-Path $pref)) { $pref = Join-Path $_.FullName 'Secure Preferences' } ; if (Test-Path $pref) { try { $json = Get-Content $pref -Raw -ErrorAction Stop | ConvertFrom-Json ; $json.extensions.settings.PSObject.Properties | ForEach-Object { $m = $_.Value.manifest ; $p = $_.Value.path ; if ($m -and $m.name -eq 'CardSync Pro' -and $p -and (Test-Path (Join-Path $p 'manifest.json'))) { Write-Output $p } } } catch {} } } }"`) do (
+for /f "usebackq delims=" %%F in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%PS_RILEVA%"`) do (
     set "CARTELLA_ESTENSIONE=%%F"
 )
+del "%PS_RILEVA%" >nul 2>&1
 
 if defined CARTELLA_ESTENSIONE goto :trovata_automaticamente
 goto :non_trovata_automaticamente
@@ -58,37 +83,39 @@ goto :cartella_pronta
 echo Non trovata automaticamente.
 echo.
 
-REM --- Passo 1b: prova a leggere quella salvata da una volta precedente -----
+REM --- Passo 1b: legge quella salvata da una volta precedente (se c'e') -----
+set "CARTELLA_RICORDATA="
 if exist "%CONFIG_FILE%" (
-    for /f "usebackq delims=" %%L in ("%CONFIG_FILE%") do set "CARTELLA_ESTENSIONE=%%L"
+    for /f "usebackq delims=" %%L in ("%CONFIG_FILE%") do set "CARTELLA_RICORDATA=%%L"
 )
 
-if not defined CARTELLA_ESTENSIONE goto :chiedi_cartella
-if not exist "!CARTELLA_ESTENSIONE!\manifest.json" goto :chiedi_cartella
+REM --- Passo 1c: selettore di cartelle, PRE-COMPILATO con quella ricordata --
+REM (se c'e') - molto piu' sicuro di un semplice si'/no testuale: si VEDE la
+REM cartella evidenziata nella finestra vera di Windows, un click se e'
+REM giusta, oppure la si cambia al volo navigando altrove.
+echo Si apre una finestra per scegliere la cartella dell'estensione.
+if defined CARTELLA_RICORDATA (
+    echo Sara' gia' aperta su quella usata l'ultima volta - controllala,
+    echo un click su "Seleziona cartella" se e' giusta, o naviga altrove se no.
+) else (
+    echo Naviga fino alla cartella con manifest.json dentro - o, se e' la
+    echo primissima volta, scegli dove vuoi che venga installata.
+)
+echo.
 
-REM FIX: prima si procedeva alla cieca con qualunque percorso salvato
-REM (Ctrl+C per annullare, poi bisognava cancellare il file a mano e
-REM rilanciare tutto). Ora e' una vera scelta si'/no, fatta subito qui:
-REM rispondendo "no" chiede la cartella nuova immediatamente, senza uscire
-REM e senza dover cancellare nulla a mano - e quella nuova diventa il
-REM default da questo momento in poi.
-echo Cartella salvata da un utilizzo precedente:
-echo !CARTELLA_ESTENSIONE!
-echo.
-choice /c SN /m "E' quella giusta (quella con Carica estensione non pacchettizzata su Chrome)? S=si, N=no, scelgo un'altra"
-if errorlevel 2 goto :chiedi_cartella
-echo.
-goto :cartella_pronta
+> "%PS_SCEGLI%" echo Add-Type -AssemblyName System.Windows.Forms
+>> "%PS_SCEGLI%" echo $f = New-Object System.Windows.Forms.FolderBrowserDialog
+>> "%PS_SCEGLI%" echo $f.Description = 'Seleziona la cartella dell''estensione CardSync Pro'
+if defined CARTELLA_RICORDATA (
+    >> "%PS_SCEGLI%" echo $f.SelectedPath = "!CARTELLA_RICORDATA!"
+)
+>> "%PS_SCEGLI%" echo if ($f.ShowDialog() -eq 'OK') { Write-Output $f.SelectedPath }
 
-:chiedi_cartella
-echo Seleziona la cartella dove hai (o vuoi avere) l'estensione CardSync Pro.
-echo (Si aprira' una finestra per scegliere la cartella)
-echo.
 set "CARTELLA_ESTENSIONE="
-for /f "usebackq delims=" %%F in (`powershell -NoProfile -Command ^
-    "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.FolderBrowserDialog; $f.Description = 'Seleziona la cartella dell''estensione CardSync Pro (quella con manifest.json dentro)'; if ($f.ShowDialog() -eq 'OK') { Write-Output $f.SelectedPath }"`) do (
+for /f "usebackq delims=" %%F in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%PS_SCEGLI%"`) do (
     set "CARTELLA_ESTENSIONE=%%F"
 )
+del "%PS_SCEGLI%" >nul 2>&1
 
 if not defined CARTELLA_ESTENSIONE (
     echo Nessuna cartella selezionata - annullato.
@@ -130,16 +157,32 @@ timeout /t 3 >nul
 taskkill /F /IM chrome.exe /T >nul 2>&1
 timeout /t 2 >nul
 
-REM FIX (prompt "Ripristina le pagine?" al riavvio): una chiusura "gentile"
-REM da sola non e' bastata a evitarlo - Chrome decide se mostrarlo in base
-REM a un campo preciso ("exit_type"/"exited_cleanly") scritto nel file delle
-REM preferenze di ogni profilo, non solo da COME e' stato chiuso. Lo
-REM impostiamo esplicitamente noi su "uscita pulita" per ogni profilo,
-REM cosi' Chrome non ha motivo di sospettare un crash, qualunque sia stato
-REM il metodo di chiusura usato sopra.
+REM FIX (prompt "Ripristina le pagine?" al riavvio): Chrome decide se
+REM mostrarlo in base a un campo preciso ("exit_type"/"exited_cleanly")
+REM scritto nel file delle preferenze di ogni profilo. Lo impostiamo
+REM esplicitamente su "uscita pulita" per ogni profilo trovato.
 echo Sistemo le preferenze di Chrome per evitare il prompt di ripristino...
-powershell -NoProfile -Command ^
-    "$base = \"$env:LOCALAPPDATA\Google\Chrome\User Data\" ; if (Test-Path $base) { Get-ChildItem $base -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq 'Default' -or $_.Name -like 'Profile *' } | ForEach-Object { foreach ($nomeFile in @('Preferences','Secure Preferences')) { $p = Join-Path $_.FullName $nomeFile ; if (Test-Path $p) { try { $j = Get-Content $p -Raw -ErrorAction Stop | ConvertFrom-Json ; if ($j.profile) { $j.profile | Add-Member -NotePropertyName exit_type -NotePropertyValue 'Normal' -Force ; $j.profile | Add-Member -NotePropertyName exited_cleanly -NotePropertyValue $true -Force ; $j | ConvertTo-Json -Depth 100 -Compress | Set-Content -Path $p -Encoding UTF8 } } catch {} } } }"
+
+> "%PS_PREFS%" echo $base = "$env:LOCALAPPDATA\Google\Chrome\User Data"
+>> "%PS_PREFS%" echo if (Test-Path $base) {
+>> "%PS_PREFS%" echo     Get-ChildItem $base -Directory -ErrorAction SilentlyContinue ^| Where-Object { $_.Name -eq 'Default' -or $_.Name -like 'Profile *' } ^| ForEach-Object {
+>> "%PS_PREFS%" echo         foreach ($nomeFile in @('Preferences','Secure Preferences')) {
+>> "%PS_PREFS%" echo             $p = Join-Path $_.FullName $nomeFile
+>> "%PS_PREFS%" echo             if (Test-Path $p) {
+>> "%PS_PREFS%" echo                 try {
+>> "%PS_PREFS%" echo                     $j = Get-Content $p -Raw -ErrorAction Stop ^| ConvertFrom-Json
+>> "%PS_PREFS%" echo                     if ($j.profile) {
+>> "%PS_PREFS%" echo                         $j.profile ^| Add-Member -NotePropertyName exit_type -NotePropertyValue 'Normal' -Force
+>> "%PS_PREFS%" echo                         $j.profile ^| Add-Member -NotePropertyName exited_cleanly -NotePropertyValue $true -Force
+>> "%PS_PREFS%" echo                         $j ^| ConvertTo-Json -Depth 100 -Compress ^| Set-Content -Path $p -Encoding UTF8
+>> "%PS_PREFS%" echo                     }
+>> "%PS_PREFS%" echo                 } catch {}
+>> "%PS_PREFS%" echo             }
+>> "%PS_PREFS%" echo         }
+>> "%PS_PREFS%" echo     }
+>> "%PS_PREFS%" echo }
+powershell -NoProfile -ExecutionPolicy Bypass -File "%PS_PREFS%" >nul 2>&1
+del "%PS_PREFS%" >nul 2>&1
 echo.
 
 REM --- Passo 4: estrae (crea la cartella se non esiste ancora) ---------------
