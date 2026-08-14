@@ -1057,6 +1057,7 @@
             </div>
             <div class="header-actions-group">
                 <button class="header-search-btn" onclick="apriRicercaGlobale()" aria-label="Cerca ovunque"><i class="fa-solid fa-magnifying-glass"></i></button>
+                <button class="header-search-btn" onclick="apriAggiornaEstensione()" aria-label="Aggiorna estensione" title="Aggiorna estensione"><i class="fa-solid fa-download"></i></button>
                 <button class="header-search-btn" onclick="switchTab('impostazioni', document.getElementById('mNav-impostazioni'))" aria-label="Impostazioni" title="Impostazioni"><i class="fa-solid fa-gear"></i></button>
                 <div class="profilo-container" id="profiloContainer">
                     <button class="profilo-avatar" id="profiloAvatar" onclick="toggleMenuProfilo()" aria-label="Profilo">?</button>
@@ -1496,6 +1497,36 @@
             <button class="btn-secondary" style="width: 100%;" onclick="copyShareLink()">
                 <i class="fa-solid fa-link"></i> Copia Link
             </button>
+        </div>
+    </div>
+
+    <!-- MODALE AGGIORNA ESTENSIONE -->
+    <div id="aggiornaEstensioneModal" class="modal-overlay" onclick="chiudiAggiornaEstensione()">
+        <div class="modal-content" style="max-width: 440px; text-align:left;" onclick="event.stopPropagation()">
+            <button class="close-modal-btn" onclick="chiudiAggiornaEstensione()"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="font-weight: 800; margin-bottom: 0.8rem;"><i class="fa-solid fa-download" style="color: var(--primary);"></i> Aggiorna l'estensione</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+                Scarica ed esegui — pensa a tutto da solo (scarica l'ultima versione, la installa, riavvia Chrome). Ti chiederà solo la prima volta dove hai l'estensione.
+            </p>
+            <a href="releases/aggiorna_cardsync.bat" download class="btn-main" style="width:100%; justify-content:center; margin-bottom: 0.4rem;">
+                <i class="fa-solid fa-bolt"></i> Scarica ed esegui (consigliato)
+            </a>
+            <p style="font-size: 0.7rem; color: var(--text-muted); text-align:center; margin-bottom: 1.2rem;">
+                Solo per Windows. Al primo avvio, Windows potrebbe avvisare "editore sconosciuto" — clicca "Ulteriori informazioni" → "Esegui comunque" (è normale per uno script personale, non pubblicato).
+            </p>
+            <details style="margin-bottom: 0.6rem;">
+                <summary style="font-size: 0.8rem; color: var(--text-muted); cursor: pointer;">Preferisci farlo a mano?</summary>
+                <ol style="font-size: 0.82rem; padding-left: 1.2rem; margin: 0.8rem 0; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <li>Scarica lo zip qui sotto</li>
+                    <li>Estrailo, <strong>sovrascrivendo</strong> la cartella dell'estensione che hai già</li>
+                    <li>Vai su <code>chrome://extensions</code></li>
+                    <li>Trova CardSync Pro e premi l'icona <i class="fa-solid fa-rotate-right"></i> "Ricarica"</li>
+                </ol>
+                <a href="releases/cardsync-extension.zip" download class="btn-secondary" style="width:100%; justify-content:center; display:flex;">
+                    <i class="fa-solid fa-file-zipper"></i> Scarica solo lo zip
+                </a>
+            </details>
+            <p style="font-size: 0.72rem; color: var(--text-muted); text-align:center;">Non serve accedere né toccare i tuoi dati — è solo il codice dell'estensione.</p>
         </div>
     </div>
 
@@ -3334,6 +3365,13 @@
         // la tab/filtri attivi al momento — a differenza della barra di
         // ricerca dentro Visualizzazione, che filtra solo quello che è già
         // visibile lì.
+        function apriAggiornaEstensione() {
+            document.getElementById('aggiornaEstensioneModal').style.display = 'flex';
+        }
+        function chiudiAggiornaEstensione() {
+            document.getElementById('aggiornaEstensioneModal').style.display = 'none';
+        }
+
         function apriRicercaGlobale() {
             document.getElementById('ricercaGlobaleModal').style.display = 'flex';
             document.getElementById('ricercaGlobaleInput').value = '';
