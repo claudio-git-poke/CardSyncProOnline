@@ -83,6 +83,10 @@
             --table-header-bg: #15121e;
             --badge-loc-bg: #292338;
             --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.3);
+            /* FIX: mancava del tutto — restava sempre lo sfondo rosa chiaro
+               anche di notte, con testo quasi bianco sopra praticamente
+               illeggibile (es. il disclaimer "Chrome si riavvierà"). */
+            --danger-bg: rgba(211, 47, 47, 0.18);
         }
 
         body.dark-mode.theme-verde {
@@ -259,10 +263,18 @@
         }
         .cardsync-motivo-tema {
             display: inline-flex; align-items: center; justify-content: center;
-            width: 76px; height: 76px; border-radius: 50%;
-            background: var(--primary-light); font-size: 2.6rem;
+            width: 84px; height: 84px; border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, var(--primary-light), var(--card-bg) 75%);
+            font-size: 2.8rem;
             margin-bottom: 0.8rem;
-            border: 2px solid var(--primary);
+            border: 3px solid var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-light), 0 4px 14px rgba(0,0,0,0.15);
+        }
+        /* Puntini/motivi decorativi in stile "carta collezionabile" attorno
+           all'icona — solo forme generiche (non loghi/personaggi). */
+        .cardsync-motivo-tema::after {
+            content: '✦'; position: relative; top: -34px; left: 30px;
+            font-size: 0.9rem; color: var(--primary); opacity: 0.6;
         }
 
         .badge-pallino {
@@ -1538,7 +1550,7 @@
     </div>
 
     <!-- MODALE CONTROLLO VERSIONE ESTENSIONE — a tutta pagina, ad ogni apertura -->
-    <div id="controlloVersioneOverlay" style="display:none; position:fixed; inset:0; z-index:9999999; background:rgba(20,16,32,0.88); align-items:center; justify-content:center;">
+    <div id="controlloVersioneOverlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100%; height:100%; z-index:9999999; background:rgba(20,16,32,0.88); align-items:center; justify-content:center; margin:0; padding:0;">
         <div class="cardsync-cornice-tema" style="background:var(--card-bg); color:var(--text-dark); width:min(540px, 94vw); border-radius:18px; padding:38px 34px 32px; text-align:center; max-height:88vh; overflow-y:auto;">
 
             <!-- Variante: tutto ok -->
@@ -3574,6 +3586,12 @@
                 if (!ultimaVersione) return; // controllo non valido (es. offline) — non disturba nessuno
 
                 const overlay = document.getElementById('controlloVersioneOverlay');
+                // Garanzia definitiva: sposta sempre l'elemento direttamente
+                // sotto <body> prima di mostrarlo, indipendentemente da dove
+                // si trova nel resto della pagina — elimina alla radice
+                // qualunque possibile problema di annidamento o contesto che
+                // potrebbe interferire con la centratura.
+                if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
                 const elOk = document.getElementById('versioneOk');
                 const elKo = document.getElementById('versioneKo');
                 document.getElementById('versioneDisinstalla').style.display = 'none';
@@ -3628,12 +3646,14 @@
             wizardSlideAttuale = 0;
             _wizardMostraSlide();
             _applicaMotiviTema();
+            const overlay = document.getElementById('controlloVersioneOverlay');
+            if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
             document.getElementById('versioneOk').style.display = 'none';
             document.getElementById('versioneKo').style.display = 'none';
             document.getElementById('versioneDisinstalla').style.display = 'none';
             document.getElementById('versioneBeccato').style.display = 'none';
             document.getElementById('versioneAggiorna').style.display = 'block';
-            document.getElementById('controlloVersioneOverlay').style.display = 'flex';
+            overlay.style.display = 'flex';
         }
         async function chiudiAggiornaEstensione() {
             // FIX: prima chiudere il wizard bastava per "farla franca" senza
