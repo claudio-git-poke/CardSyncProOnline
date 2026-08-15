@@ -154,6 +154,16 @@
             gap: 1.5rem;
             width: 100%;
             justify-content: space-between;
+            /* FIX (header tagliato/sovrapposto — vedi screenshot bug):
+               con nav + ricerca + "Apri l'app" + "Aiuta il gruppo" + profilo
+               tutti sulla stessa riga, su schermi normali (non ultra-wide)
+               non ci stava tutto: prima veniva tagliato/sovrapposto con uno
+               scroll orizzontale a comparire. Ora, se non c'entra, il gruppo
+               di destra scende su una seconda riga invece di rompere il
+               layout — l'header (già position:sticky) si allunga in
+               verticale, niente più overflow. */
+            flex-wrap: wrap;
+            row-gap: 6px;
         }
 
         /* FIX (spazio vuoto enorme a destra su schermi larghi): prima
@@ -171,7 +181,7 @@
             align-items: center;
             gap: 1.5rem;
         }
-        .header-actions-group { gap: 0.8rem; flex-shrink: 0; }
+        .header-actions-group { gap: 0.8rem; flex-shrink: 0; flex-wrap: wrap; row-gap: 6px; justify-content: flex-end; }
 
         .logo {
             display: flex;
@@ -1138,6 +1148,21 @@
                             <span class="slider"></span>
                         </span>
                         <span class="app-launch-auto-text">Apri sempre l'app all'apertura del sito da questo dispositivo</span>
+                    </label>
+                </div>
+                <!-- Preferenza per DISPOSITIVO (non per account): letta/scritta
+                     via externally_connectable direttamente in
+                     chrome.storage.local dell'estensione, niente Supabase.
+                     Sempre visibile in header (non dentro un pannello), come
+                     richiesto — nascosta di default finché non sappiamo se
+                     l'estensione è installata (vedi _aggiornaControlliApriApp). -->
+                <div class="app-launch-group" id="aiutaGruppoHeaderGroup" style="display:none;">
+                    <label class="app-launch-auto" title="Questo dispositivo controlla anche i prezzi delle carte degli altri, quando l'app è aperta">
+                        <span class="switch-mini">
+                            <input type="checkbox" id="chkAiutaGruppoSito" onchange="cambiaAiutaGruppoSito(this.checked)">
+                            <span class="slider"></span>
+                        </span>
+                        <span class="app-launch-auto-text">🤝 Questo device aiuta il gruppo con i calcoli</span>
                     </label>
                 </div>
                 <div class="profilo-container" id="profiloContainer">
@@ -2538,6 +2563,7 @@
             switchTab(savedTab, navBtn);
 
             _aggiornaControlliApriApp();
+            _aggiornaControlloAiutaGruppo();
         }
 
         // ── AGGIORNAMENTO IN TEMPO REALE ──────────────────────────────────────────
@@ -3692,6 +3718,66 @@
             if (apriSempre) _mandaAperturaAppAEstensione();
         }
 
+        // ── TOGGLE "AIUTA IL GRUPPO" NELL'HEADER DEL SITO ────────────────────────
+        // Stessa preferenza già presente nel pannello 🎛️ Comportamento
+        // dell'estensione (chrome.storage.local.aiutaGruppo) — qui è solo
+        // un'altra "maniglia" per cambiarla, comoda perché sempre visibile
+        // senza dover aprire l'app. NON passa da Supabase: è per dispositivo,
+        // non per account (due dispositivi con lo stesso login possono avere
+        // valori diversi). Se l'estensione non risponde entro 1.2s (non
+        // installata, o non è Chrome/Chromium), il toggle resta nascosto.
+        function _chiediAiutaGruppoEstensione() {
+            return new Promise((resolve) => {
+                if (!window.chrome || !chrome.runtime || !chrome.runtime.sendMessage) { resolve(null); return; }
+                let risolto = false;
+                const timeoutId = setTimeout(() => { if (!risolto) { risolto = true; resolve(null); } }, 1200);
+                try {
+                    chrome.runtime.sendMessage(ID_ESTENSIONE_CARDSYNC, { type: 'CARDSYNC_GET_AIUTA_GRUPPO' }, (risposta) => {
+                        if (risolto) return;
+                        risolto = true;
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError || !risposta || !risposta.ok) { resolve(null); return; }
+                        resolve(!!risposta.aiutaGruppo);
+                    });
+                } catch (_) {
+                    if (!risolto) { risolto = true; clearTimeout(timeoutId); resolve(null); }
+                }
+            });
+        }
+
+        // Mostra il toggle SOLO se l'estensione è stata rilevata (stessa
+        // condizione del gruppo "Apri l'app"), e lo pre-imposta sul valore
+        // che l'estensione ha davvero in questo momento.
+        async function _aggiornaControlloAiutaGruppo() {
+            const gruppo = document.getElementById('aiutaGruppoHeaderGroup');
+            if (!_versioneVecchiaRilevata) { gruppo.style.display = 'none'; return; }
+            const valoreAttuale = await _chiediAiutaGruppoEstensione();
+            if (valoreAttuale === null) { gruppo.style.display = 'none'; return; } // non ha risposto nel frattempo
+            gruppo.style.display = 'flex';
+            document.getElementById('chkAiutaGruppoSito').checked = valoreAttuale;
+        }
+
+        // Chiamata dal toggle in header — scrive subito su
+        // chrome.storage.local dell'estensione. In caso di errore (es.
+        // l'estensione si è disinstallata proprio ora) riporta il checkbox
+        // indietro invece di far credere che sia stato salvato.
+        async function cambiaAiutaGruppoSito(attivo) {
+            const chk = document.getElementById('chkAiutaGruppoSito');
+            chk.disabled = true;
+            const ok = await new Promise((resolve) => {
+                try {
+                    chrome.runtime.sendMessage(ID_ESTENSIONE_CARDSYNC, { type: 'CARDSYNC_SET_AIUTA_GRUPPO', valore: attivo }, (risposta) => {
+                        resolve(!chrome.runtime.lastError && !!risposta && risposta.ok === true);
+                    });
+                } catch (_) { resolve(false); }
+            });
+            chk.disabled = false;
+            if (!ok) {
+                chk.checked = !attivo; // rollback visivo
+                alert('Non sono riuscito ad aggiornare l\'estensione. Riprova.');
+            }
+        }
+
         // Emoji diversa in base al tema attivo del sito — solo "atmosfera"
         // (fantasma per il viola, natura per il verde, acqua per l'azzurro),
         // MAI personaggi Pokémon veri e propri: sarebbe materiale protetto
@@ -4367,6 +4453,28 @@
             renderViewTable(filtered);
         }
 
+        // Spinge il tema corrente del sito all'estensione SENZA aprire
+        // nessuna tab (vedi CARDSYNC_SET_TEMA in background.js) — a
+        // differenza di _mandaAperturaAppAEstensione, che apre/focalizza
+        // anche l'app. Chiamata da setSiteTheme/toggleDarkMode ad ogni
+        // cambio, non solo alla prima apertura: prima il tema arrivava
+        // all'estensione SOLO nel momento in cui la si apriva, quindi un
+        // cambio tema successivo (app già aperta) non si vedeva mai.
+        // Fallisce in silenzio se l'estensione non è installata — non è
+        // un'azione che l'utente ha chiesto esplicitamente, non serve
+        // disturbarlo con un errore.
+        function _spingiTemaEstensione() {
+            if (!_versioneVecchiaRilevata) return;
+            if (!window.chrome || !chrome.runtime || !chrome.runtime.sendMessage) return;
+            try {
+                chrome.runtime.sendMessage(ID_ESTENSIONE_CARDSYNC, {
+                    type: 'CARDSYNC_SET_TEMA',
+                    tema: _temaEstensioneDaSito(),
+                    temaScuro: localStorage.getItem('darkMode') === 'true',
+                }, () => { void chrome.runtime.lastError; });
+            } catch (_) { /* estensione assente o non raggiungibile: ignora */ }
+        }
+
         function toggleDarkMode(isDark) {
             localStorage.setItem('darkMode', isDark);
             if (isDark) {
@@ -4374,6 +4482,7 @@
             } else {
                 document.body.classList.remove('dark-mode');
             }
+            _spingiTemaEstensione();
         }
 
         function setSiteTheme(themeName) {
@@ -4398,6 +4507,7 @@
             } else {
                 document.getElementById('themeBtn-viola').classList.add('active');
             }
+            _spingiTemaEstensione();
         }
 
         // Costruisce il link pubblico alla pagina condivisa giusta per la tab
