@@ -1064,26 +1064,6 @@
 <body>
 
     <!-- OVERLAY DI LOGIN -->
-    <div id="authOverlay" class="modal-overlay">
-        <div class="modal-content" style="max-width: 360px;">
-            <div class="logo" style="justify-content: center; margin-bottom: 0.3rem;">
-                <img src="favicon.ico" alt="Favicon">
-                <span>CardSync Pro</span>
-            </div>
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.2rem;">Accedi con le tue credenziali per continuare.</p>
-            <div class="auth-field">
-                <label>Nome utente</label>
-                <input type="text" id="authEmail" placeholder="es. irene" autocomplete="username">
-            </div>
-            <div class="auth-field">
-                <label>Password</label>
-                <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password">
-            </div>
-            <div id="authError"></div>
-            <button class="btn-main" id="authSubmit" style="width: 100%;">Accedi</button>
-        </div>
-    </div>
-
     <!-- HEADER DESKTOP / LOGO MOBILE -->
     <header id="mainHeader">
         <div class="header-left">
@@ -1106,7 +1086,7 @@
             </div>
             <div class="header-actions-group">
                 <button class="header-search-btn" onclick="apriRicercaGlobale()" aria-label="Cerca ovunque"><i class="fa-solid fa-magnifying-glass"></i></button>
-                <button class="header-search-btn" onclick="apriAggiornaEstensione()" aria-label="Aggiorna estensione" title="Aggiorna estensione"><i class="fa-solid fa-download"></i></button>
+                <button class="header-search-btn" onclick="_apriPannelloCardsync(); mostraIstruzioniInstallazione();" aria-label="Aggiorna estensione" title="Aggiorna estensione"><i class="fa-solid fa-download"></i></button>
                 <button class="header-search-btn" onclick="switchTab('impostazioni', document.getElementById('mNav-impostazioni'))" aria-label="Impostazioni" title="Impostazioni"><i class="fa-solid fa-gear"></i></button>
                 <div class="profilo-container" id="profiloContainer">
                     <button class="profilo-avatar" id="profiloAvatar" onclick="toggleMenuProfilo()" aria-label="Profilo">?</button>
@@ -1549,149 +1529,136 @@
         </div>
     </div>
 
-    <!-- MODALE CONTROLLO VERSIONE ESTENSIONE — a tutta pagina, ad ogni apertura -->
-    <div id="controlloVersioneOverlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100%; height:100%; z-index:9999999; background:rgba(20,16,32,0.88); align-items:center; justify-content:center; margin:0; padding:0;">
-        <div class="cardsync-cornice-tema" style="background:var(--card-bg); color:var(--text-dark); width:min(540px, 94vw); border-radius:18px; padding:38px 34px 32px; text-align:center; max-height:88vh; overflow-y:auto;">
+    <!-- ═══════════════════════════════════════════════════════════════════
+         PANNELLO A SCHERMO INTERO — controllo estensione + accesso
+         Sostituisce il vecchio popup centrato: essendo grande quanto tutta
+         la finestra, non ha bisogno di essere "centrato" — elimina il
+         problema alla radice invece di continuare a inseguirlo.
+    ═══════════════════════════════════════════════════════════════════ -->
+    <div id="cardsyncPanel" style="display:none; position:fixed; inset:0; width:100%; height:100%; z-index:9999999; background:var(--bg-color); overflow-y:auto;">
+        <div style="min-height:100%; display:flex; align-items:center; justify-content:center; padding:2rem 1.2rem;">
+        <div style="width:100%; max-width:520px;">
 
-            <!-- Variante: tutto ok -->
-            <div id="versioneOk" style="display:none;">
-                <div class="cardsync-motivo-tema" id="motivoTemaOk">🎉</div>
-                <h3 style="font-weight:800; margin-bottom:0.6rem;">Complimenti, Allenatore!</h3>
-                <p style="font-size:1.02rem; color:var(--text-muted); margin-bottom:1.4rem;">Hai l'estensione installata e aggiornata all'ultima versione — pronto a catturarli tutti (i prezzi, intendo).</p>
-                <button class="btn-main" style="width:100%; justify-content:center;" onclick="chiudiControlloVersione()">Avanti così <i class="fa-solid fa-arrow-right"></i></button>
-            </div>
-
-            <!-- Variante: serve aggiornare/installare -->
-            <div id="versioneKo" style="display:none; text-align:left;">
-                <div style="text-align:center;"><div class="cardsync-motivo-tema" id="motivoTemaKo">⚡</div></div>
-                <h3 style="font-weight:800; text-align:center; margin-bottom:0.6rem;" id="versioneKoTitolo">Serve un aggiornamento</h3>
-                <p style="font-size:1rem; color:var(--text-muted); margin-bottom:1.2rem;" id="versioneKoTesto">
-                    L'estensione su questo PC non è alla versione giusta — non è possibile usare versioni vecchie, sorry not sorry (sì, di nuovo).
+            <!-- STATO: estensione assente o non aggiornata — prima pagina -->
+            <div id="statoNonInstallata" style="display:none; text-align:center;">
+                <div class="cardsync-motivo-tema" id="motivoNonInstallata">⚡</div>
+                <h2 style="font-weight:800; margin-bottom:0.6rem; font-size:1.5rem;" id="statoNonInstallataTitolo">Non hai l'estensione installata</h2>
+                <p style="font-size:1.02rem; color:var(--text-muted); margin-bottom:2rem;" id="statoNonInstallataTesto">
+                    Per usare CardSync Pro su questo PC serve l'estensione — non è possibile usare versioni vecchie, sorry not sorry.
                 </p>
-                <div style="display:flex; flex-direction:column; gap:0.6rem;">
-                    <button class="btn-main" style="width:100%; justify-content:center;" onclick="apriAggiornaEstensione();">
-                        <i class="fa-solid fa-bolt"></i> Aggiorna ora su questo PC
+                <div style="display:flex; flex-direction:column; gap:0.8rem; text-align:left;">
+                    <button class="btn-main" style="width:100%; justify-content:center; padding:0.9rem;" onclick="mostraIstruzioniInstallazione()">
+                        <i class="fa-solid fa-bolt"></i> Voglio aggiornarla — così il mio PC può aiutare a fare i calcoli (per me, e magari anche per il gruppo)
                     </button>
-                    <button class="btn-secondary" style="width:100%; justify-content:center; display:flex;" onclick="_sceltaNonUsoEstensione()">
-                        <i class="fa-solid fa-couch"></i> Non mi serve qui — lascio lavorare gli altri PC
+                    <button class="btn-secondary" id="btnNonInstallare" style="width:100%; justify-content:center; display:none; padding:0.9rem;" onclick="_sceltaNonUsoEstensione()">
+                        <i class="fa-solid fa-couch"></i> Non installarla — uso solo il sito, lascio lavorare gli altri PC
                     </button>
-                    <button class="btn-secondary" style="width:100%; justify-content:center; display:flex; color:var(--danger);" onclick="_mostraIstruzioniDisinstalla()">
-                        <i class="fa-solid fa-trash"></i> Voglio disinstallarla
+                    <button class="btn-secondary" id="btnDisinstallare" style="width:100%; justify-content:center; display:none; padding:0.9rem; color:var(--danger);" onclick="mostraIstruzioniDisinstallazione()">
+                        <i class="fa-solid fa-trash"></i> Disinstallala — è una versione vecchia, non si può usare
                     </button>
                 </div>
-                <p style="font-size:0.85rem; color:var(--text-muted); margin-top:1rem; text-align:center;">
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-top:1.6rem;">
                     Non è obbligatorio avere l'estensione su <em>ogni</em> PC — basta che sia aggiornata su quelli dove la usi. E ricorda: chi tiene gentilmente un PC acceso 24/7 per aiutare tutto il gruppo... una Charizard ogni tanto come "grazie" non si rifiuta mai. 🔥🐉
                 </p>
             </div>
 
-            <!-- Variante: istruzioni disinstallazione -->
-            <div id="versioneDisinstalla" style="display:none; text-align:left;">
-                <h3 style="font-weight:800; margin-bottom:0.8rem;">Come disinstallarla</h3>
-                <ol style="font-size:1rem; padding-left:1.2rem; display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1.2rem;">
-                    <li>Vai su <code>chrome://extensions</code></li>
-                    <li>Trova "CardSync Pro"</li>
-                    <li>Clicca "Rimuovi"</li>
-                </ol>
-                <p style="font-size:0.92rem; color:var(--text-muted); margin-bottom:1.2rem;">Nessun problema — potrai sempre reinstallarla in futuro se cambi idea. I tuoi dati restano al sicuro, vivono sul sito, non nell'estensione.</p>
-                <button class="btn-secondary" style="width:100%; justify-content:center; display:flex;" onclick="chiudiControlloVersione()">Ho capito, chiudi</button>
+            <!-- STATO: istruzioni di installazione/aggiornamento — pagina unica -->
+            <div id="statoIstruzioni" style="display:none; text-align:left;">
+                <div style="text-align:center;"><div class="cardsync-motivo-tema" id="motivoIstruzioni">🔄</div></div>
+                <h2 style="font-weight:800; text-align:center; margin-bottom:1.6rem; font-size:1.5rem;">Aggiorna l'estensione</h2>
+
+                <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:14px; padding:1.2rem 1.4rem; margin-bottom:1rem;">
+                    <p style="font-weight:800; margin:0 0 0.6rem; color:var(--primary);">1. Apri PowerShell</p>
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.6rem; flex-wrap:wrap;">
+                        <kbd class="wizard-tasto">⊞ Win</kbd><span style="font-weight:800; color:var(--text-muted);">+</span><kbd class="wizard-tasto">X</kbd>
+                        <span style="font-weight:800; color:var(--text-muted); margin:0 0.2rem;">poi</span><kbd class="wizard-tasto">I</kbd>
+                    </div>
+                    <p style="font-size:0.9rem; color:var(--text-muted); margin:0;">Tieni premuto <strong>Windows</strong> e premi <strong>X</strong>, poi subito <strong>I</strong> per aprire il Terminale. In alternativa: tasto destro sul menu Start.</p>
+                </div>
+
+                <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:14px; padding:1.2rem 1.4rem; margin-bottom:1rem;">
+                    <p style="font-weight:800; margin:0 0 0.6rem; color:var(--primary);">2. Copia e incolla questo comando</p>
+                    <div style="display:flex; align-items:center; gap:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; padding:0.6rem 0.8rem; margin-bottom:0.6rem;">
+                        <code id="comandoAggiornaEstensione" style="flex:1; font-size:0.85rem; word-break:break-all; user-select:all;">irm https://claudio-git-poke.github.io/CardSyncProOnline/releases/aggiorna_cardsync.bat -OutFile "$env:TEMP\aggiorna_cardsync.bat"; & "$env:TEMP\aggiorna_cardsync.bat"</code>
+                        <button class="btn-secondary" style="flex-shrink:0; padding:0.4rem 0.6rem;" onclick="copiaComandoAggiorna()" title="Copia" id="btnCopiaComando"><i class="fa-solid fa-copy"></i></button>
+                    </div>
+                    <p style="font-size:0.9rem; color:var(--text-muted); margin:0;">Clicca <i class="fa-solid fa-copy"></i> per copiarlo, poi in PowerShell: tasto destro per incollare, e premi <strong>Invio</strong>.</p>
+                </div>
+
+                <div style="background:var(--danger-bg); border:1px solid var(--danger); border-radius:14px; padding:1.2rem 1.4rem; margin-bottom:1rem;">
+                    <p style="font-weight:800; margin:0 0 0.4rem; color:var(--danger);">⚠️ 3. Cosa succede dopo</p>
+                    <p style="font-size:0.9rem; color:var(--text-dark); margin:0 0 0.5rem;"><strong>Il comando chiude e riavvia Chrome</strong> (con 5 secondi di preavviso) — salva ora qualunque lavoro in altre schede.</p>
+                    <p style="font-size:0.9rem; color:var(--text-dark); margin:0;">Poi scarica, installa da solo e riapre Chrome. <strong>Solo la primissima volta</strong> su un PC, alla fine ti chiederà di andare su <code>chrome://extensions</code>, attivare "Modalità sviluppatore" e cliccare <strong>"Carica estensione non pacchettizzata"</strong> — l'unico passo che Chrome richiede a mano, non automatizzabile.</p>
+                </div>
+
+                <button class="btn-main" style="width:100%; justify-content:center; padding:0.9rem; margin-top:0.6rem;" onclick="_ricontrollaEChiudiIstruzioni()">Fatto — ricontrolla <i class="fa-solid fa-arrow-right"></i></button>
             </div>
 
-            <!-- Variante: "beccato" — chiusa la procedura di aggiornamento
-                 senza averla davvero completata (o l'estensione ancora non
-                 risponde) -->
-            <div id="versioneBeccato" style="display:none;">
+            <!-- STATO: "beccato" — chiuso senza aver davvero aggiornato -->
+            <div id="statoBeccato" style="display:none; text-align:center;">
                 <div class="cardsync-motivo-tema" style="background:var(--danger-bg); border-color:var(--danger); color:var(--danger);">🕴️</div>
-                <h3 style="font-weight:800; margin-bottom:0.6rem;">Ti ho beccato, furbacchione!</h3>
-                <p style="font-size:1rem; color:var(--text-muted); margin-bottom:1.4rem;">
+                <h2 style="font-weight:800; margin-bottom:0.6rem; font-size:1.5rem;">Ti ho beccato, furbacchione!</h2>
+                <p style="font-size:1.02rem; color:var(--text-muted); margin-bottom:1.6rem;">
                     "Prepararsi per i guai" non significa richiudere la finestra sperando che nessuno controlli — l'estensione qui <strong>ancora non risulta aggiornata</strong>. Il boss del team non è per niente contento. 😤
                 </p>
-                <div style="display:flex; flex-direction:column; gap:0.6rem;">
-                    <button class="btn-main" style="width:100%; justify-content:center;" onclick="apriAggiornaEstensione();">
+                <div style="display:flex; flex-direction:column; gap:0.7rem;">
+                    <button class="btn-main" style="width:100%; justify-content:center; padding:0.9rem;" onclick="mostraIstruzioniInstallazione()">
                         <i class="fa-solid fa-bolt"></i> Va bene, la aggiorno per davvero
                     </button>
-                    <button class="btn-secondary" style="width:100%; justify-content:center; display:flex;" onclick="_sceltaNonUsoEstensione()">
+                    <button class="btn-secondary" style="width:100%; justify-content:center; display:flex; padding:0.9rem;" onclick="_sceltaNonUsoEstensione()">
                         <i class="fa-solid fa-couch"></i> Ok ok, non la uso su questo PC
                     </button>
                 </div>
             </div>
 
-            <!-- Variante: wizard di aggiornamento — stesso popup, niente
-                 secondo modale separato (evita del tutto il problema di
-                 centratura avuto col modale a parte). -->
-            <div id="versioneAggiorna" style="display:none; text-align:left;">
-                <div style="display:flex; gap:0.4rem; justify-content:center; margin-bottom:1.2rem;">
-                    <span class="wizard-puntino" id="puntino-0"></span>
-                    <span class="wizard-puntino" id="puntino-1"></span>
-                    <span class="wizard-puntino" id="puntino-2"></span>
-                    <span class="wizard-puntino" id="puntino-3"></span>
-                </div>
-
-                <div class="wizard-slide" id="wizardSlide-0">
-                    <div style="text-align:center;"><div class="cardsync-motivo-tema" id="motivoTemaWizard">🔄</div></div>
-                    <h3 style="font-weight: 800; text-align:center; margin-bottom: 0.6rem;">Aggiorna l'estensione</h3>
-                    <p style="font-size: 1rem; color: var(--text-muted); text-align:center;">
-                        3 passi veloci, solo la prima volta con qualche domanda in più — le volte dopo bastano 2 minuti.
-                        Funziona solo su Windows. È obbligatorio — sorry not sorry.
-                    </p>
-                </div>
-
-                <div class="wizard-slide" id="wizardSlide-1" style="display:none;">
-                    <div style="text-align:center; font-size:0.85rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 1 di 3</div>
-                    <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Apri PowerShell</h3>
-                    <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; padding:1rem; margin-bottom:0.8rem; flex-wrap:wrap;">
-                        <kbd class="wizard-tasto">⊞ Win</kbd>
-                        <span style="font-weight:800; color:var(--text-muted);">+</span>
-                        <kbd class="wizard-tasto">X</kbd>
-                        <span style="font-weight:800; color:var(--text-muted); margin: 0 0.2rem;">poi</span>
-                        <kbd class="wizard-tasto">I</kbd>
-                    </div>
-                    <p style="font-size: 1rem; color: var(--text-muted);">
-                        Tieni premuto il tasto <strong>Windows</strong> (di solito in basso a sinistra sulla tastiera) e premi <strong>X</strong> — si apre un menu. Premi subito dopo <strong>I</strong> sulla tastiera (più veloce che cliccarci sopra) per aprire il Terminale.
-                    </p>
-                    <p style="font-size: 0.92rem; color: var(--text-muted); margin-top:0.6rem;">
-                        In alternativa: tasto destro sul menu Start, stessa voce nel menu che compare.
-                    </p>
-                </div>
-
-                <div class="wizard-slide" id="wizardSlide-2" style="display:none;">
-                    <div style="text-align:center; font-size:0.85rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 2 di 3</div>
-                    <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Copia e incolla questo comando</h3>
-                    <div style="background:var(--danger-bg); border:1px solid var(--danger); border-radius:10px; padding:0.8rem 1rem; margin-bottom:0.8rem;">
-                        <p style="font-size:0.95rem; color:var(--danger); font-weight:700; margin:0 0 0.3rem;">⚠️ Prima di premere Invio</p>
-                        <p style="font-size:0.9rem; color:var(--text-dark); margin:0;">Questo comando <strong>chiude e riavvia Chrome</strong> (con 5 secondi di preavviso) — salva ora qualunque cosa stavi facendo in altre schede, o rischi di perderla.</p>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; padding:0.6rem 0.8rem; margin-bottom:0.6rem;">
-                        <code id="comandoAggiornaEstensione" style="flex:1; font-size:0.85rem; word-break:break-all; user-select:all;">irm https://claudio-git-poke.github.io/CardSyncProOnline/releases/aggiorna_cardsync.bat -OutFile "$env:TEMP\aggiorna_cardsync.bat"; & "$env:TEMP\aggiorna_cardsync.bat"
-                        <button class="btn-secondary" style="flex-shrink:0; padding:0.4rem 0.6rem;" onclick="copiaComandoAggiorna()" title="Copia" id="btnCopiaComando"><i class="fa-solid fa-copy"></i></button>
-                    </div>
-                    <p style="font-size: 1rem; color: var(--text-muted);">
-                        Clicca l'icona <i class="fa-solid fa-copy"></i> per copiarlo, poi nella finestra nera di PowerShell: tasto destro del mouse per incollarlo, e premi <strong>Invio</strong>.
-                    </p>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top:0.8rem;">
-                        Perché un comando e non un file da scaricare? Windows blocca senza appello i file da internet non firmati digitalmente — un comando incollato a mano da te no.
-                    </p>
-                </div>
-
-                <div class="wizard-slide" id="wizardSlide-3" style="display:none;">
-                    <div style="text-align:center; font-size:0.85rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 3 di 3</div>
-                    <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Fatto — pensa a tutto lui</h3>
-                    <ul style="font-size: 1rem; color: var(--text-muted); padding-left:1.2rem; display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;">
-                        <li><strong>Solo la prima volta</strong>: si apre una finestra per scegliere la cartella dell'estensione — selezionala una volta sola, se la ricorda per sempre.</li>
-                        <li>Scarica e installa l'ultima versione da solo.</li>
-                        <li>Chiude Chrome (con 5 secondi di preavviso — salva prima eventuali lavori in corso) e lo riapre da solo.</li>
-                    </ul>
-                    <div style="background:var(--danger-bg); border:1px solid var(--danger); border-radius:10px; padding:0.8rem 1rem; margin-bottom:1rem;">
-                        <p style="font-size:0.95rem; color:var(--danger); font-weight:700; margin:0 0 0.3rem;">⚠️ Un passo che lo script NON può fare da solo</p>
-                        <p style="font-size:0.9rem; color:var(--text-dark); margin:0;">Se è la primissima volta su questo PC, alla fine dovrai comunque andare tu su <code>chrome://extensions</code>, attivare "Modalità sviluppatore", e cliccare <strong>"Carica estensione non pacchettizzata"</strong> selezionando la cartella indicata — lo script te lo scriverà chiaro alla fine. È l'unico passo che Chrome richiede sia fatto a mano, per sicurezza — non è automatizzabile.</p>
-                    </div>
-                    <p style="font-size: 0.92rem; color: var(--text-muted);">Le prossime volte, ripeti solo i passi 1 e 2 — niente più da scegliere.</p>
-                </div>
-
-                <div style="display:flex; gap:0.6rem; margin-top:1.4rem;">
-                    <button class="btn-secondary" id="wizardBtnIndietro" style="flex:1; justify-content:center; display:flex; visibility:hidden;" onclick="wizardVai(-1)"><i class="fa-solid fa-arrow-left"></i> Indietro</button>
-                    <button class="btn-main" id="wizardBtnAvanti" style="flex:1; justify-content:center;" onclick="wizardVai(1)">Avanti <i class="fa-solid fa-arrow-right"></i></button>
-                </div>
+            <!-- STATO: istruzioni disinstallazione -->
+            <div id="statoDisinstalla" style="display:none; text-align:center;">
+                <div class="cardsync-motivo-tema">🗑️</div>
+                <h2 style="font-weight:800; margin-bottom:1rem; font-size:1.5rem;">Come disinstallarla</h2>
+                <ol style="font-size:1.02rem; text-align:left; display:inline-flex; flex-direction:column; gap:0.6rem; margin-bottom:1.6rem;">
+                    <li>Vai su <code>chrome://extensions</code></li>
+                    <li>Trova "CardSync Pro"</li>
+                    <li>Clicca "Rimuovi"</li>
+                </ol>
+                <p style="font-size:0.92rem; color:var(--text-muted); margin-bottom:1.6rem;">Nessun problema — potrai sempre reinstallarla in futuro. I tuoi dati restano al sicuro, vivono sul sito, non nell'estensione.</p>
+                <button class="btn-secondary" style="width:100%; justify-content:center; display:flex; padding:0.9rem;" onclick="_ricontrollaVersioneECambiaStato()">Fatto, torna indietro</button>
             </div>
+
+            <!-- STATO: estensione aggiornata — accesso -->
+            <div id="statoBossFiero" style="display:none; text-align:center;">
+                <div class="cardsync-motivo-tema" id="motivoBossFiero">🎉</div>
+                <h2 style="font-weight:800; margin-bottom:0.6rem; font-size:1.5rem;">Il boss è fiero di te!</h2>
+                <p style="font-size:1.02rem; color:var(--text-muted); margin-bottom:1.8rem;">Hai l'estensione installata e aggiornata all'ultima versione — pronto a catturarli tutti (i prezzi, intendo).</p>
+
+                <!-- Se già loggato -->
+                <div id="bossFieroGiaLoggato" style="display:none;">
+                    <button class="btn-main" style="width:100%; justify-content:center; padding:0.9rem;" id="btnContinuaComeUtente" onclick="_continuaAlSito()"></button>
+                </div>
+
+                <!-- Se non loggato: stesso form del sito, spostato qui -->
+                <div id="bossFieroLoginForm" style="display:none; text-align:left; max-width:340px; margin:0 auto;">
+                    <div class="auth-field">
+                        <label>Nome utente</label>
+                        <input type="text" id="authEmail" placeholder="es. irene" autocomplete="username">
+                    </div>
+                    <div class="auth-field">
+                        <label>Password</label>
+                        <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password">
+                    </div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin:0.8rem 0 1.2rem;">
+                        <span style="font-size:0.88rem; color:var(--text-muted);">Tienimi acceso, non voglio evolvermi in un logout 🥚</span>
+                        <label class="toggle"><input type="checkbox" id="mantieniAccesso" checked><span class="toggle-slider"></span></label>
+                    </div>
+                    <div id="authError"></div>
+                    <button class="btn-main" id="authSubmit" style="width: 100%; padding:0.9rem;">Accedi</button>
+                </div>
+
+                <button class="btn-secondary" style="width:100%; justify-content:center; display:flex; padding:0.8rem; margin-top:1rem; font-size:0.88rem;" onclick="mostraIstruzioniDisinstallazione()">
+                    <i class="fa-solid fa-trash"></i> Voglio disinstallarla comunque
+                </button>
+            </div>
+
+        </div>
         </div>
     </div>
 
@@ -1832,11 +1799,16 @@
         // normale, non un'estensione — nessun bisogno di chrome.storage.local.
 
         // ── LOGIN / LOGOUT ────────────────────────────────────────────────────────
-        const authOverlay  = document.getElementById('authOverlay');
+        // I campi authEmail/authPassword/authError/authSubmit ora vivono
+        // dentro il nuovo pannello a schermo intero (stato "Il boss è fiero
+        // di te"), non più in un overlay separato — stessa logica di prima,
+        // solo spostata.
         const authEmail    = document.getElementById('authEmail');
         const authPassword = document.getElementById('authPassword');
         const authError    = document.getElementById('authError');
         const authSubmit   = document.getElementById('authSubmit');
+        const mantieniAccessoToggle = document.getElementById('mantieniAccesso');
+
         // Ricava il nome dall'email (irene@cardsyncpro.local → "Irene") —
         // stessa convenzione già usata per gli account del gruppo.
         function _nomeDaEmail(email) {
@@ -1872,6 +1844,15 @@
             }
         });
 
+        // Se "mantieni acceso" è disattivato, la sessione viene chiusa alla
+        // chiusura della scheda/finestra — altrimenti (default) resta come
+        // sempre stata: persistente tra un utilizzo e l'altro.
+        window.addEventListener('beforeunload', () => {
+            if (localStorage.getItem('cardsyncMantieniAccesso') === 'no') {
+                supabaseClient.auth.signOut();
+            }
+        });
+
         async function tentaLogin() {
             const inputUtente = authEmail.value.trim();
             const password = authPassword.value;
@@ -1898,8 +1879,10 @@
                 authSubmit.textContent = 'Accedi';
                 return;
             }
-            authOverlay.style.display = 'none';
+            localStorage.setItem('cardsyncMantieniAccesso', mantieniAccessoToggle.checked ? 'si' : 'no');
             mostraUtenteLoggato(data.session.user.email);
+            nascondiPannelloCardsync();
+            await _avviaSitoDopoAccesso();
         }
 
         authSubmit.addEventListener('click', tentaLogin);
@@ -1907,16 +1890,12 @@
             el.addEventListener('keydown', (e) => { if (e.key === 'Enter') tentaLogin(); });
         });
 
+        // Ora ritorna solo lo stato della sessione — è compitoVersioneECardsyncPanel
+        // (vedi più sotto) decidere se e come mostrare il pannello.
         async function assicuraLoginSupabase() {
             const { data } = await supabaseClient.auth.getSession();
-            if (data.session) {
-                mostraUtenteLoggato(data.session.user.email);
-                authOverlay.style.display = 'none';
-                return data.session;
-            }
-            authOverlay.style.display = 'flex';
-            authEmail.focus();
-            return null;
+            if (data.session) mostraUtenteLoggato(data.session.user.email);
+            return data.session || null;
         }
 
         // ── ELENCO LOCATION (checkbox) — sezione Prezzi ──────────────────────────
@@ -2455,10 +2434,6 @@
         }
 
         window.onload = async () => {
-            // Controllo versione estensione — indipendente dal login, gira
-            // sempre ad ogni apertura del sito.
-            controllaVersioneEstensioneSuSito();
-
             // Ripristina Dark Mode e Temi salvati
             const savedTheme = localStorage.getItem('siteTheme');
             if (savedTheme) setSiteTheme(savedTheme);
@@ -2473,9 +2448,17 @@
                 initEntryTable();
             }
 
-            // Login: mostra l'overlay se non c'è già una sessione valida —
-            // PRIMA di caricare le carte, dato che serve l'utente per la query.
-            await assicuraLoginSupabase();
+            // Estensione + login: un unico punto d'ingresso — mostra il
+            // pannello a schermo intero se manca qualcosa, altrimenti
+            // prosegue direttamente (vedi funzione più sotto per i dettagli
+            // di ciascun caso).
+            await controlloIngressoCardsync();
+        };
+
+        // Tutto quello che serve DOPO che l'estensione è a posto E l'utente
+        // è loggato — richiamata sia al primo avvio (se già tutto ok), sia
+        // subito dopo un login riuscito, sia cliccando "Continua come...".
+        async function _avviaSitoDopoAccesso() {
             await caricaCarteReali();
             await _avviaRealtimeCarte();
 
@@ -2496,7 +2479,7 @@
             const savedTab = prefUtente?.tab_predefinita || localStorage.getItem('activeTab') || 'visualizzazione';
             const navBtn = document.querySelector(`nav .nav-item[onclick*="'${savedTab}'"]`);
             switchTab(savedTab, navBtn);
-        };
+        }
 
         // ── AGGIORNAMENTO IN TEMPO REALE ──────────────────────────────────────────
         // Prima questa pagina caricava 'carte'/'wishlist' una sola volta,
@@ -3534,11 +3517,11 @@
         // la tab/filtri attivi al momento — a differenza della barra di
         // ricerca dentro Visualizzazione, che filtra solo quello che è già
         // visibile lì.
-        const WIZARD_TOTALE_SLIDE = 4;
-        let wizardSlideAttuale = 0;
-
-        // ── CONTROLLO VERSIONE ESTENSIONE (ad ogni apertura del sito) ──────────────
+        // ═══════════════════════════════════════════════════════════════════
+        // PANNELLO CARDSYNC — controllo estensione + accesso, tutto insieme
+        // ═══════════════════════════════════════════════════════════════════
         const ID_ESTENSIONE_CARDSYNC = 'hoibifiiabdlndcdopfjjpahchhbmojo';
+        let _ultimaVersioneRichiesta = null; // memorizzata per i ricontrolli successivi
 
         function versioneMaggioreSito(a, b) {
             const pa = String(a).split('.').map(Number);
@@ -3557,7 +3540,7 @@
         function _chiediVersioneEstensione() {
             return new Promise((resolve) => {
                 if (!window.chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
-                    resolve(null); // non Chrome/Chromium, o API non disponibile
+                    resolve(null);
                     return;
                 }
                 let risolto = false;
@@ -3576,44 +3559,6 @@
             });
         }
 
-        async function controllaVersioneEstensioneSuSito() {
-            try {
-                const [versioneInstallata, ultimaVersioneTesto] = await Promise.all([
-                    _chiediVersioneEstensione(),
-                    fetch('releases/latest-version.txt?t=' + Date.now(), { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null),
-                ]);
-                const ultimaVersione = (ultimaVersioneTesto || '').trim();
-                if (!ultimaVersione) return; // controllo non valido (es. offline) — non disturba nessuno
-
-                const overlay = document.getElementById('controlloVersioneOverlay');
-                // Garanzia definitiva: sposta sempre l'elemento direttamente
-                // sotto <body> prima di mostrarlo, indipendentemente da dove
-                // si trova nel resto della pagina — elimina alla radice
-                // qualunque possibile problema di annidamento o contesto che
-                // potrebbe interferire con la centratura.
-                if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
-                const elOk = document.getElementById('versioneOk');
-                const elKo = document.getElementById('versioneKo');
-                document.getElementById('versioneDisinstalla').style.display = 'none';
-                _applicaMotiviTema();
-
-                if (versioneInstallata && !versioneMaggioreSito(ultimaVersione, versioneInstallata)) {
-                    elOk.style.display = 'block';
-                    elKo.style.display = 'none';
-                    overlay.style.display = 'flex';
-                    return;
-                }
-
-                document.getElementById('versioneKoTitolo').textContent = versioneInstallata ? 'Serve un aggiornamento' : "Non hai l'estensione (o non è aggiornata)";
-                document.getElementById('versioneKoTesto').textContent = versioneInstallata
-                    ? `Su questo PC hai la versione ${versioneInstallata}, l'ultima è la ${ultimaVersione} — non è possibile usare versioni vecchie, sorry not sorry (sì, di nuovo).`
-                    : `Non risulta installata su questo PC (o non risponde) — per usare l'estensione qui serve la versione ${ultimaVersione}.`;
-                elOk.style.display = 'none';
-                elKo.style.display = 'block';
-                overlay.style.display = 'flex';
-            } catch (_) { /* silenzioso: un controllo fallito non deve mai bloccare il sito */ }
-        }
-
         // Emoji diversa in base al tema attivo del sito — solo "atmosfera"
         // (fantasma per il viola, natura per il verde, acqua per l'azzurro),
         // MAI personaggi Pokémon veri e propri: sarebbe materiale protetto
@@ -3621,73 +3566,118 @@
         function _motivoEmojiTema() {
             if (document.body.classList.contains('theme-verde')) return '🌿';
             if (document.body.classList.contains('theme-pokemon')) return '💧';
-            return '👻'; // tema viola, di base
+            return '👻';
         }
         function _applicaMotiviTema() {
             const emoji = _motivoEmojiTema();
-            ['motivoTemaOk', 'motivoTemaKo', 'motivoTemaWizard'].forEach((id) => {
+            ['motivoNonInstallata', 'motivoIstruzioni', 'motivoBossFiero'].forEach((id) => {
                 const el = document.getElementById(id);
                 if (el) el.textContent = emoji;
             });
         }
 
-        function chiudiControlloVersione() {
-            document.getElementById('controlloVersioneOverlay').style.display = 'none';
-        }
-        function _sceltaNonUsoEstensione() {
-            chiudiControlloVersione();
-        }
-        function _mostraIstruzioniDisinstalla() {
-            document.getElementById('versioneKo').style.display = 'none';
-            document.getElementById('versioneDisinstalla').style.display = 'block';
+        function _mostraSoloStato(idStato) {
+            ['statoNonInstallata', 'statoIstruzioni', 'statoBeccato', 'statoDisinstalla', 'statoBossFiero']
+                .forEach((id) => { document.getElementById(id).style.display = id === idStato ? 'block' : 'none'; });
         }
 
-        function apriAggiornaEstensione() {
-            wizardSlideAttuale = 0;
-            _wizardMostraSlide();
+        function _apriPannelloCardsync() {
+            const panel = document.getElementById('cardsyncPanel');
+            // Garanzia definitiva anti-annidamento: sempre direttamente sotto body.
+            if (panel.parentElement !== document.body) document.body.appendChild(panel);
+            panel.style.display = 'block';
             _applicaMotiviTema();
-            const overlay = document.getElementById('controlloVersioneOverlay');
-            if (overlay.parentElement !== document.body) document.body.appendChild(overlay);
-            document.getElementById('versioneOk').style.display = 'none';
-            document.getElementById('versioneKo').style.display = 'none';
-            document.getElementById('versioneDisinstalla').style.display = 'none';
-            document.getElementById('versioneBeccato').style.display = 'none';
-            document.getElementById('versioneAggiorna').style.display = 'block';
-            overlay.style.display = 'flex';
         }
-        async function chiudiAggiornaEstensione() {
-            // FIX: prima chiudere il wizard bastava per "farla franca" senza
-            // aver davvero aggiornato — un utente poteva chiuderlo subito e
-            // continuare come se avesse fatto l'aggiornamento. Ora, chiudendo,
-            // si ricontrolla davvero — se ancora non risulta aggiornata,
-            // ributta fuori l'avviso (in tono scherzoso) invece di lasciar
-            // proseguire in silenzio.
+        function nascondiPannelloCardsync() {
+            document.getElementById('cardsyncPanel').style.display = 'none';
+        }
+
+        // Punto d'ingresso principale — chiamato all'avvio della pagina.
+        // Controlla PRIMA l'estensione, poi (solo se è a posto) il login.
+        async function controlloIngressoCardsync() {
+            try {
+                const [versioneInstallata, ultimaVersioneTesto] = await Promise.all([
+                    _chiediVersioneEstensione(),
+                    fetch('releases/latest-version.txt?t=' + Date.now(), { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null),
+                ]);
+                const ultimaVersione = (ultimaVersioneTesto || '').trim();
+                _ultimaVersioneRichiesta = ultimaVersione || null;
+
+                const estensioneOk = !ultimaVersione || (versioneInstallata && !versioneMaggioreSito(ultimaVersione, versioneInstallata));
+
+                if (!estensioneOk) {
+                    // Mostra pagina 1: scelta tra aggiornare / non installare / disinstallare.
+                    // "Non installare" solo se non è mai stata rilevata (nessuna
+                    // versione vecchia in giro); "disinstalla" solo se invece
+                    // una versione (vecchia) risponde davvero.
+                    document.getElementById('btnNonInstallare').style.display = versioneInstallata ? 'none' : 'flex';
+                    document.getElementById('btnDisinstallare').style.display = versioneInstallata ? 'flex' : 'none';
+                    document.getElementById('statoNonInstallataTitolo').textContent = versioneInstallata
+                        ? 'La tua estensione non è aggiornata'
+                        : "Non hai l'estensione installata";
+                    document.getElementById('statoNonInstallataTesto').textContent = versioneInstallata
+                        ? `Hai la versione ${versioneInstallata}, l'ultima è la ${ultimaVersione} — non è possibile usare versioni vecchie, sorry not sorry.`
+                        : `Per usare CardSync Pro su questo PC serve l'estensione, versione ${ultimaVersione} o successiva.`;
+                    _apriPannelloCardsync();
+                    _mostraSoloStato('statoNonInstallata');
+                    return;
+                }
+
+                // Estensione a posto — controlla il login. La conferma "il
+                // boss è fiero di te" compare sempre, anche se già loggato —
+                // cambia solo cosa c'è sotto: il form, o un solo bottone
+                // "Continua come..." per chi deve solo confermare.
+                const sessione = await assicuraLoginSupabase();
+                _apriPannelloCardsync();
+                _mostraSoloStato('statoBossFiero');
+
+                if (sessione) {
+                    document.getElementById('bossFieroLoginForm').style.display = 'none';
+                    document.getElementById('bossFieroGiaLoggato').style.display = 'block';
+                    document.getElementById('btnContinuaComeUtente').innerHTML =
+                        `Continua come ${_nomeDaEmail(sessione.user.email)} <i class="fa-solid fa-arrow-right"></i>`;
+                } else {
+                    document.getElementById('bossFieroGiaLoggato').style.display = 'none';
+                    document.getElementById('bossFieroLoginForm').style.display = 'block';
+                    authEmail.focus();
+                }
+            } catch (_) { /* silenzioso: un controllo fallito non deve mai bloccare il sito */ }
+        }
+
+        function mostraIstruzioniInstallazione() {
+            _mostraSoloStato('statoIstruzioni');
+            _applicaMotiviTema();
+        }
+
+        async function _ricontrollaEChiudiIstruzioni() {
+            // FIX (anti-furbetti): prima proseguire bastava chiudere il
+            // wizard senza aver davvero aggiornato — ora si ricontrolla per
+            // davvero, e se non è passato ributta fuori l'avviso scherzoso.
             const versioneInstallata = await _chiediVersioneEstensione();
-            const ultimaVersioneTesto = await fetch('releases/latest-version.txt?t=' + Date.now(), { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
-            const ultimaVersione = (ultimaVersioneTesto || '').trim();
-            document.getElementById('versioneAggiorna').style.display = 'none';
-            if (!ultimaVersione) { chiudiControlloVersione(); return; } // controllo non valido — non disturba
-
-            if (versioneInstallata && !versioneMaggioreSito(ultimaVersione, versioneInstallata)) { chiudiControlloVersione(); return; } // davvero aggiornata, tutto ok
-
-            _applicaMotiviTema();
-            document.getElementById('versioneBeccato').style.display = 'block';
-        }
-        function wizardVai(direzione) {
-            wizardSlideAttuale = Math.max(0, Math.min(WIZARD_TOTALE_SLIDE - 1, wizardSlideAttuale + direzione));
-            _wizardMostraSlide();
-        }
-        function _wizardMostraSlide() {
-            for (let i = 0; i < WIZARD_TOTALE_SLIDE; i++) {
-                document.getElementById('wizardSlide-' + i).style.display = i === wizardSlideAttuale ? 'block' : 'none';
-                document.getElementById('puntino-' + i).classList.toggle('attivo', i === wizardSlideAttuale);
+            if (!_ultimaVersioneRichiesta || (versioneInstallata && !versioneMaggioreSito(_ultimaVersioneRichiesta, versioneInstallata))) {
+                controlloIngressoCardsync(); // tutto ok (o controllo non valido) — ricomincia da capo, ora passerà al login
+                return;
             }
-            document.getElementById('wizardBtnIndietro').style.visibility = wizardSlideAttuale === 0 ? 'hidden' : 'visible';
-            const btnAvanti = document.getElementById('wizardBtnAvanti');
-            const ultimaSlide = wizardSlideAttuale === WIZARD_TOTALE_SLIDE - 1;
-            btnAvanti.innerHTML = ultimaSlide ? 'Fatto <i class="fa-solid fa-check"></i>' : 'Avanti <i class="fa-solid fa-arrow-right"></i>';
-            btnAvanti.onclick = ultimaSlide ? chiudiAggiornaEstensione : () => wizardVai(1);
+            _mostraSoloStato('statoBeccato');
         }
+
+        async function _ricontrollaVersioneECambiaStato() {
+            // Usato dopo le istruzioni di disinstallazione: ricontrolla tutto da capo.
+            controlloIngressoCardsync();
+        }
+
+        function _sceltaNonUsoEstensione() {
+            nascondiPannelloCardsync();
+        }
+        function mostraIstruzioniDisinstallazione() {
+            _mostraSoloStato('statoDisinstalla');
+        }
+
+        async function _continuaAlSito() {
+            nascondiPannelloCardsync();
+            await _avviaSitoDopoAccesso();
+        }
+
         function copiaComandoAggiorna() {
             const testo = document.getElementById('comandoAggiornaEstensione').textContent;
             navigator.clipboard.writeText(testo).then(() => {
