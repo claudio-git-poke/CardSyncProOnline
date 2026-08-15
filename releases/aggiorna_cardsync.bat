@@ -102,6 +102,17 @@ if exist "%CONFIG_FILE%" (
     for /f "usebackq delims=" %%L in ("%CONFIG_FILE%") do set "CARTELLA_RICORDATA=%%L"
 )
 
+REM Se il sito ci ha gia' detto che e' un aggiornamento (quindi l'estensione
+REM esiste di sicuro da qualche parte) e abbiamo una cartella ricordata da
+REM prima, usiamola direttamente - non serve aprire nessuna finestra ne'
+REM chiedere conferma, rende tutto piu' snello per l'uso di tutti i giorni.
+if "%RILEVATA_DA_CHROME%"=="1" if defined CARTELLA_RICORDATA (
+    set "CARTELLA_ESTENSIONE=!CARTELLA_RICORDATA!"
+    echo Uso la cartella salvata: !CARTELLA_ESTENSIONE!
+    echo.
+    goto :cartella_pronta
+)
+
 REM --- Passo 1c: selettore di cartelle, PRE-COMPILATO con quella ricordata --
 REM (se c'e') - molto piu' sicuro di un semplice si'/no testuale: si VEDE la
 REM cartella evidenziata nella finestra vera di Windows, un click se e'
