@@ -1557,7 +1557,7 @@
                     L'estensione su questo PC non è alla versione giusta — non è possibile usare versioni vecchie, sorry not sorry (sì, di nuovo).
                 </p>
                 <div style="display:flex; flex-direction:column; gap:0.6rem;">
-                    <button class="btn-main" style="width:100%; justify-content:center;" onclick="chiudiControlloVersione(); apriAggiornaEstensione();">
+                    <button class="btn-main" style="width:100%; justify-content:center;" onclick="apriAggiornaEstensione();">
                         <i class="fa-solid fa-bolt"></i> Aggiorna ora su questo PC
                     </button>
                     <button class="btn-secondary" style="width:100%; justify-content:center; display:flex;" onclick="_sceltaNonUsoEstensione()">
@@ -1594,7 +1594,7 @@
                     "Prepararsi per i guai" non significa richiudere la finestra sperando che nessuno controlli — l'estensione qui <strong>ancora non risulta aggiornata</strong>. Il boss del team non è per niente contento. 😤
                 </p>
                 <div style="display:flex; flex-direction:column; gap:0.6rem;">
-                    <button class="btn-main" style="width:100%; justify-content:center;" onclick="chiudiControlloVersione(); apriAggiornaEstensione();">
+                    <button class="btn-main" style="width:100%; justify-content:center;" onclick="apriAggiornaEstensione();">
                         <i class="fa-solid fa-bolt"></i> Va bene, la aggiorno per davvero
                     </button>
                     <button class="btn-secondary" style="width:100%; justify-content:center; display:flex;" onclick="_sceltaNonUsoEstensione()">
@@ -1602,91 +1602,83 @@
                     </button>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- MODALE AGGIORNA ESTENSIONE — wizard a passi -->
-    <div id="aggiornaEstensioneModal" style="display:none; position:fixed; inset:0; z-index:9999999; background:rgba(20,16,32,0.88); align-items:center; justify-content:center;" onclick="chiudiAggiornaEstensione()">
-        <div class="cardsync-cornice-tema" style="background:var(--card-bg); color:var(--text-dark); border-radius:20px; padding:1.5rem; max-width: 540px; width: 94vw; text-align:left; max-height:88vh; overflow-y:auto; position:relative;" onclick="event.stopPropagation()">
-            <button class="close-modal-btn" onclick="chiudiAggiornaEstensione()"><i class="fa-solid fa-xmark"></i></button>
-
-            <!-- Puntini di avanzamento -->
-            <div style="display:flex; gap:0.4rem; justify-content:center; margin-bottom:1.2rem;">
-                <span class="wizard-puntino" id="puntino-0"></span>
-                <span class="wizard-puntino" id="puntino-1"></span>
-                <span class="wizard-puntino" id="puntino-2"></span>
-                <span class="wizard-puntino" id="puntino-3"></span>
-            </div>
-
-            <!-- SLIDE 0: introduzione -->
-            <div class="wizard-slide" id="wizardSlide-0">
-                <div style="text-align:center;"><div class="cardsync-motivo-tema" id="motivoTemaWizard">🔄</div></div>
-                <h3 style="font-weight: 800; text-align:center; margin-bottom: 0.6rem;">Aggiorna l'estensione</h3>
-                <p style="font-size: 1rem; color: var(--text-muted); text-align:center;">
-                    3 passi veloci, solo la prima volta con qualche domanda in più — le volte dopo bastano 2 minuti.
-                    Funziona solo su Windows. È obbligatorio — sorry not sorry.
-                </p>
-            </div>
-
-            <!-- SLIDE 1: aprire PowerShell -->
-            <div class="wizard-slide" id="wizardSlide-1" style="display:none;">
-                <div style="text-align:center; font-size:0.85rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 1 di 3</div>
-                <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Apri PowerShell</h3>
-                <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; padding:1rem; margin-bottom:0.8rem; flex-wrap:wrap;">
-                    <kbd class="wizard-tasto">⊞ Win</kbd>
-                    <span style="font-weight:800; color:var(--text-muted);">+</span>
-                    <kbd class="wizard-tasto">X</kbd>
-                    <span style="font-weight:800; color:var(--text-muted); margin: 0 0.2rem;">poi</span>
-                    <kbd class="wizard-tasto">I</kbd>
+            <!-- Variante: wizard di aggiornamento — stesso popup, niente
+                 secondo modale separato (evita del tutto il problema di
+                 centratura avuto col modale a parte). -->
+            <div id="versioneAggiorna" style="display:none; text-align:left;">
+                <div style="display:flex; gap:0.4rem; justify-content:center; margin-bottom:1.2rem;">
+                    <span class="wizard-puntino" id="puntino-0"></span>
+                    <span class="wizard-puntino" id="puntino-1"></span>
+                    <span class="wizard-puntino" id="puntino-2"></span>
+                    <span class="wizard-puntino" id="puntino-3"></span>
                 </div>
-                <p style="font-size: 1rem; color: var(--text-muted);">
-                    Tieni premuto il tasto <strong>Windows</strong> (di solito in basso a sinistra sulla tastiera) e premi <strong>X</strong> — si apre un menu. Premi subito dopo <strong>I</strong> sulla tastiera (più veloce che cliccarci sopra) per aprire il Terminale.
-                </p>
-                <p style="font-size: 0.92rem; color: var(--text-muted); margin-top:0.6rem;">
-                    In alternativa: tasto destro sul menu Start, stessa voce nel menu che compare.
-                </p>
-            </div>
 
-            <!-- SLIDE 2: copiare/incollare il comando -->
-            <div class="wizard-slide" id="wizardSlide-2" style="display:none;">
-                <div style="text-align:center; font-size:0.85rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 2 di 3</div>
-                <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Copia e incolla questo comando</h3>
-                <div style="background:var(--danger-bg); border:1px solid var(--danger); border-radius:10px; padding:0.8rem 1rem; margin-bottom:0.8rem;">
-                    <p style="font-size:0.95rem; color:var(--danger); font-weight:700; margin:0 0 0.3rem;">⚠️ Prima di premere Invio</p>
-                    <p style="font-size:0.9rem; color:var(--text-dark); margin:0;">Questo comando <strong>chiude e riavvia Chrome</strong> (con 5 secondi di preavviso) — salva ora qualunque cosa stavi facendo in altre schede, o rischi di perderla.</p>
+                <div class="wizard-slide" id="wizardSlide-0">
+                    <div style="text-align:center;"><div class="cardsync-motivo-tema" id="motivoTemaWizard">🔄</div></div>
+                    <h3 style="font-weight: 800; text-align:center; margin-bottom: 0.6rem;">Aggiorna l'estensione</h3>
+                    <p style="font-size: 1rem; color: var(--text-muted); text-align:center;">
+                        3 passi veloci, solo la prima volta con qualche domanda in più — le volte dopo bastano 2 minuti.
+                        Funziona solo su Windows. È obbligatorio — sorry not sorry.
+                    </p>
                 </div>
-                <div style="display:flex; align-items:center; gap:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; padding:0.6rem 0.8rem; margin-bottom:0.6rem;">
-                    <code id="comandoAggiornaEstensione" style="flex:1; font-size:0.85rem; word-break:break-all; user-select:all;">irm https://claudio-git-poke.github.io/CardSyncProOnline/releases/aggiorna_cardsync.bat -OutFile "$env:TEMP\aggiorna_cardsync.bat"; & "$env:TEMP\aggiorna_cardsync.bat"
-                    <button class="btn-secondary" style="flex-shrink:0; padding:0.4rem 0.6rem;" onclick="copiaComandoAggiorna()" title="Copia" id="btnCopiaComando"><i class="fa-solid fa-copy"></i></button>
-                </div>
-                <p style="font-size: 1rem; color: var(--text-muted);">
-                    Clicca l'icona <i class="fa-solid fa-copy"></i> per copiarlo, poi nella finestra nera di PowerShell: tasto destro del mouse per incollarlo, e premi <strong>Invio</strong>.
-                </p>
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top:0.8rem;">
-                    Perché un comando e non un file da scaricare? Windows blocca senza appello i file da internet non firmati digitalmente — un comando incollato a mano da te no.
-                </p>
-            </div>
 
-            <!-- SLIDE 3: cosa succede dopo -->
-            <div class="wizard-slide" id="wizardSlide-3" style="display:none;">
-                <div style="text-align:center; font-size:0.85rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 3 di 3</div>
-                <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Fatto — pensa a tutto lui</h3>
-                <ul style="font-size: 1rem; color: var(--text-muted); padding-left:1.2rem; display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;">
-                    <li><strong>Solo la prima volta</strong>: si apre una finestra per scegliere la cartella dell'estensione — selezionala una volta sola, se la ricorda per sempre.</li>
-                    <li>Scarica e installa l'ultima versione da solo.</li>
-                    <li>Chiude Chrome (con 5 secondi di preavviso — salva prima eventuali lavori in corso) e lo riapre da solo.</li>
-                </ul>
-                <div style="background:var(--danger-bg); border:1px solid var(--danger); border-radius:10px; padding:0.8rem 1rem; margin-bottom:1rem;">
-                    <p style="font-size:0.95rem; color:var(--danger); font-weight:700; margin:0 0 0.3rem;">⚠️ Un passo che lo script NON può fare da solo</p>
-                    <p style="font-size:0.9rem; color:var(--text-dark); margin:0;">Se è la primissima volta su questo PC, alla fine dovrai comunque andare tu su <code>chrome://extensions</code>, attivare "Modalità sviluppatore", e cliccare <strong>"Carica estensione non pacchettizzata"</strong> selezionando la cartella indicata — lo script te lo scriverà chiaro alla fine. È l'unico passo che Chrome richiede sia fatto a mano, per sicurezza — non è automatizzabile.</p>
+                <div class="wizard-slide" id="wizardSlide-1" style="display:none;">
+                    <div style="text-align:center; font-size:0.85rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 1 di 3</div>
+                    <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Apri PowerShell</h3>
+                    <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:10px; padding:1rem; margin-bottom:0.8rem; flex-wrap:wrap;">
+                        <kbd class="wizard-tasto">⊞ Win</kbd>
+                        <span style="font-weight:800; color:var(--text-muted);">+</span>
+                        <kbd class="wizard-tasto">X</kbd>
+                        <span style="font-weight:800; color:var(--text-muted); margin: 0 0.2rem;">poi</span>
+                        <kbd class="wizard-tasto">I</kbd>
+                    </div>
+                    <p style="font-size: 1rem; color: var(--text-muted);">
+                        Tieni premuto il tasto <strong>Windows</strong> (di solito in basso a sinistra sulla tastiera) e premi <strong>X</strong> — si apre un menu. Premi subito dopo <strong>I</strong> sulla tastiera (più veloce che cliccarci sopra) per aprire il Terminale.
+                    </p>
+                    <p style="font-size: 0.92rem; color: var(--text-muted); margin-top:0.6rem;">
+                        In alternativa: tasto destro sul menu Start, stessa voce nel menu che compare.
+                    </p>
                 </div>
-                <p style="font-size: 0.92rem; color: var(--text-muted);">Le prossime volte, ripeti solo i passi 1 e 2 — niente più da scegliere.</p>
-            </div>
 
-            <!-- Navigazione -->
-            <div style="display:flex; gap:0.6rem; margin-top:1.4rem;">
-                <button class="btn-secondary" id="wizardBtnIndietro" style="flex:1; justify-content:center; display:flex; visibility:hidden;" onclick="wizardVai(-1)"><i class="fa-solid fa-arrow-left"></i> Indietro</button>
-                <button class="btn-main" id="wizardBtnAvanti" style="flex:1; justify-content:center;" onclick="wizardVai(1)">Avanti <i class="fa-solid fa-arrow-right"></i></button>
+                <div class="wizard-slide" id="wizardSlide-2" style="display:none;">
+                    <div style="text-align:center; font-size:0.85rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 2 di 3</div>
+                    <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Copia e incolla questo comando</h3>
+                    <div style="background:var(--danger-bg); border:1px solid var(--danger); border-radius:10px; padding:0.8rem 1rem; margin-bottom:0.8rem;">
+                        <p style="font-size:0.95rem; color:var(--danger); font-weight:700; margin:0 0 0.3rem;">⚠️ Prima di premere Invio</p>
+                        <p style="font-size:0.9rem; color:var(--text-dark); margin:0;">Questo comando <strong>chiude e riavvia Chrome</strong> (con 5 secondi di preavviso) — salva ora qualunque cosa stavi facendo in altre schede, o rischi di perderla.</p>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem; background:var(--bg-color); border:1px solid var(--border-color); border-radius:8px; padding:0.6rem 0.8rem; margin-bottom:0.6rem;">
+                        <code id="comandoAggiornaEstensione" style="flex:1; font-size:0.85rem; word-break:break-all; user-select:all;">irm https://claudio-git-poke.github.io/CardSyncProOnline/releases/aggiorna_cardsync.bat -OutFile "$env:TEMP\aggiorna_cardsync.bat"; & "$env:TEMP\aggiorna_cardsync.bat"
+                        <button class="btn-secondary" style="flex-shrink:0; padding:0.4rem 0.6rem;" onclick="copiaComandoAggiorna()" title="Copia" id="btnCopiaComando"><i class="fa-solid fa-copy"></i></button>
+                    </div>
+                    <p style="font-size: 1rem; color: var(--text-muted);">
+                        Clicca l'icona <i class="fa-solid fa-copy"></i> per copiarlo, poi nella finestra nera di PowerShell: tasto destro del mouse per incollarlo, e premi <strong>Invio</strong>.
+                    </p>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top:0.8rem;">
+                        Perché un comando e non un file da scaricare? Windows blocca senza appello i file da internet non firmati digitalmente — un comando incollato a mano da te no.
+                    </p>
+                </div>
+
+                <div class="wizard-slide" id="wizardSlide-3" style="display:none;">
+                    <div style="text-align:center; font-size:0.85rem; font-weight:800; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:0.4rem;">Passo 3 di 3</div>
+                    <h3 style="font-weight: 800; margin-bottom: 0.8rem;">Fatto — pensa a tutto lui</h3>
+                    <ul style="font-size: 1rem; color: var(--text-muted); padding-left:1.2rem; display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;">
+                        <li><strong>Solo la prima volta</strong>: si apre una finestra per scegliere la cartella dell'estensione — selezionala una volta sola, se la ricorda per sempre.</li>
+                        <li>Scarica e installa l'ultima versione da solo.</li>
+                        <li>Chiude Chrome (con 5 secondi di preavviso — salva prima eventuali lavori in corso) e lo riapre da solo.</li>
+                    </ul>
+                    <div style="background:var(--danger-bg); border:1px solid var(--danger); border-radius:10px; padding:0.8rem 1rem; margin-bottom:1rem;">
+                        <p style="font-size:0.95rem; color:var(--danger); font-weight:700; margin:0 0 0.3rem;">⚠️ Un passo che lo script NON può fare da solo</p>
+                        <p style="font-size:0.9rem; color:var(--text-dark); margin:0;">Se è la primissima volta su questo PC, alla fine dovrai comunque andare tu su <code>chrome://extensions</code>, attivare "Modalità sviluppatore", e cliccare <strong>"Carica estensione non pacchettizzata"</strong> selezionando la cartella indicata — lo script te lo scriverà chiaro alla fine. È l'unico passo che Chrome richiede sia fatto a mano, per sicurezza — non è automatizzabile.</p>
+                    </div>
+                    <p style="font-size: 0.92rem; color: var(--text-muted);">Le prossime volte, ripeti solo i passi 1 e 2 — niente più da scegliere.</p>
+                </div>
+
+                <div style="display:flex; gap:0.6rem; margin-top:1.4rem;">
+                    <button class="btn-secondary" id="wizardBtnIndietro" style="flex:1; justify-content:center; display:flex; visibility:hidden;" onclick="wizardVai(-1)"><i class="fa-solid fa-arrow-left"></i> Indietro</button>
+                    <button class="btn-main" id="wizardBtnAvanti" style="flex:1; justify-content:center;" onclick="wizardVai(1)">Avanti <i class="fa-solid fa-arrow-right"></i></button>
+                </div>
             </div>
         </div>
     </div>
@@ -3636,11 +3628,14 @@
             wizardSlideAttuale = 0;
             _wizardMostraSlide();
             _applicaMotiviTema();
-            document.getElementById('aggiornaEstensioneModal').style.display = 'flex';
+            document.getElementById('versioneOk').style.display = 'none';
+            document.getElementById('versioneKo').style.display = 'none';
+            document.getElementById('versioneDisinstalla').style.display = 'none';
+            document.getElementById('versioneBeccato').style.display = 'none';
+            document.getElementById('versioneAggiorna').style.display = 'block';
+            document.getElementById('controlloVersioneOverlay').style.display = 'flex';
         }
         async function chiudiAggiornaEstensione() {
-            document.getElementById('aggiornaEstensioneModal').style.display = 'none';
-
             // FIX: prima chiudere il wizard bastava per "farla franca" senza
             // aver davvero aggiornato — un utente poteva chiuderlo subito e
             // continuare come se avesse fatto l'aggiornamento. Ora, chiudendo,
@@ -3650,16 +3645,13 @@
             const versioneInstallata = await _chiediVersioneEstensione();
             const ultimaVersioneTesto = await fetch('releases/latest-version.txt?t=' + Date.now(), { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
             const ultimaVersione = (ultimaVersioneTesto || '').trim();
-            if (!ultimaVersione) return; // controllo non valido — non disturba
+            document.getElementById('versioneAggiorna').style.display = 'none';
+            if (!ultimaVersione) { chiudiControlloVersione(); return; } // controllo non valido — non disturba
 
-            if (versioneInstallata && !versioneMaggioreSito(ultimaVersione, versioneInstallata)) return; // davvero aggiornata, tutto ok
+            if (versioneInstallata && !versioneMaggioreSito(ultimaVersione, versioneInstallata)) { chiudiControlloVersione(); return; } // davvero aggiornata, tutto ok
 
             _applicaMotiviTema();
-            document.getElementById('versioneOk').style.display = 'none';
-            document.getElementById('versioneKo').style.display = 'none';
-            document.getElementById('versioneDisinstalla').style.display = 'none';
             document.getElementById('versioneBeccato').style.display = 'block';
-            document.getElementById('controlloVersioneOverlay').style.display = 'flex';
         }
         function wizardVai(direzione) {
             wizardSlideAttuale = Math.max(0, Math.min(WIZARD_TOTALE_SLIDE - 1, wizardSlideAttuale + direzione));
