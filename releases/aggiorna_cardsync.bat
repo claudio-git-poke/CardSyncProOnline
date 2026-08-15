@@ -1,5 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
+chcp 65001 >nul
 
 REM ===========================================================================
 REM CardSync Pro - Aggiornamento automatico estensione
@@ -42,10 +43,14 @@ REM rilevamento automatico da Chrome a volte non riesce, es. se Chrome era
 REM gia' aperto in quel momento).
 if /i "%~1"=="aggiornamento" set "RILEVATA_DA_CHROME=1"
 
+REM Colore a tema (sfondo nero, testo violetto chiaro) - puramente estetico,
+REM se il terminale non lo supporta viene semplicemente ignorato.
+color 0D
+
 echo.
-echo ================================================
-echo CardSync Pro - Aggiornamento estensione
-echo ================================================
+echo   ╔══════════════════════════════════════════════╗
+echo   ║          CardSync Pro — Aggiornamento          ║
+echo   ╚══════════════════════════════════════════════╝
 echo.
 
 if not exist "%CONFIG_DIR%" mkdir "%CONFIG_DIR%" >nul 2>&1
@@ -184,26 +189,46 @@ REM --- Passo 5: riavvia Chrome ------------------------------------------------
 echo Riavvio Chrome...
 start "" "chrome"
 echo.
-echo ================================================
-echo Installazione completata!
-echo ================================================
+echo   ╔══════════════════════════════════════════════╗
+echo   ║        Installazione completata!               ║
+echo   ╚══════════════════════════════════════════════╝
 echo.
 
 if "%RILEVATA_DA_CHROME%"=="1" (
     echo Chrome sapeva gia' di questa cartella - nessun altro passo necessario.
     echo.
+    echo Questa finestra si chiudera' da sola tra 5 secondi...
+    timeout /t 5 >nul
 ) else (
-    echo ULTIMO PASSO IMPORTANTE - se non l'hai gia' fatto per questa cartella:
-    echo Chrome deve "conoscere" questa cartella almeno una volta prima di
-    echo poterla usare come estensione. Vai su chrome://extensions, attiva
-    echo "Modalita' sviluppatore" in alto a destra se non e' gia' attiva, poi
-    echo "Carica estensione non pacchettizzata" e seleziona questa cartella:
-    echo !CARTELLA_ESTENSIONE!
+    REM Colore acceso, giallo su sfondo rosso scuro, SOLO per questo
+    REM messaggio - impossibile non notarlo.
+    color 4E
     echo.
-    echo Se l'avevi gia' fatto in precedenza per questa stessa cartella, puoi
-    echo ignorare questo avviso - non serve rifarlo due volte.
+    echo   ############################################
+    echo   #                                            #
+    echo   #   ULTIMO PASSO - da fare a mano una volta   #
+    echo   #                                            #
+    echo   ############################################
     echo.
+    echo   Chrome deve "conoscere" questa cartella almeno una volta
+    echo   prima di poterla usare come estensione:
+    echo.
+    echo     1. Vai su chrome://extensions
+    echo     2. Attiva "Modalita' sviluppatore" ^(in alto a destra^)
+    echo     3. Clicca "Carica estensione non pacchettizzata"
+    echo     4. Seleziona questa cartella:
+    echo.
+    echo        !CARTELLA_ESTENSIONE!
+    echo.
+    echo   ^(Se l'avevi gia' fatto in precedenza per questa stessa
+    echo   cartella, puoi ignorare questo avviso^)
+    echo.
+    echo   Questa finestra NON si chiudera' da sola stavolta - chiudila
+    echo   pure a mano quando hai fatto ^(o letto con calma^).
+    echo.
+    pause >nul
+    exit /b 0
 )
 
-timeout /t 3 >nul
 exit /b 0
+
