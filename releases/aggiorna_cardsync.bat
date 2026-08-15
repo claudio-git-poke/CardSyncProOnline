@@ -34,6 +34,14 @@ set "PS_RILEVA=%TEMP%\cardsync_rileva_cartella.ps1"
 set "PS_SCEGLI=%TEMP%\cardsync_scegli_cartella.ps1"
 set "RILEVATA_DA_CHROME=0"
 
+REM Il sito, quando genera il comando da copiare, sa già con certezza se
+REM e' un aggiornamento o una prima installazione (l'ha appena verificato
+REM chiedendo direttamente all'estensione) - se ce lo dice lui, ci
+REM fidiamo, invece di doverlo indovinare noi da soli piu' sotto (il
+REM rilevamento automatico da Chrome a volte non riesce, es. se Chrome era
+REM gia' aperto in quel momento).
+if /i "%~1"=="aggiornamento" set "RILEVATA_DA_CHROME=1"
+
 echo.
 echo ================================================
 echo CardSync Pro - Aggiornamento estensione
