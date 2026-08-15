@@ -1567,6 +1567,12 @@
                 <div style="text-align:center;"><div class="cardsync-motivo-tema" id="motivoIstruzioni">🔄</div></div>
                 <h2 style="font-weight:800; text-align:center; margin-bottom:1.6rem; font-size:1.5rem;">Aggiorna l'estensione</h2>
 
+                <div style="background:var(--danger-bg); border:1px solid var(--danger); border-radius:14px; padding:1.2rem 1.4rem; margin-bottom:1rem;">
+                    <p style="font-weight:800; margin:0 0 0.4rem; color:var(--danger);">⚠️ Prima di iniziare</p>
+                    <p style="font-size:0.9rem; color:var(--text-dark); margin:0 0 0.5rem;"><strong>Il comando qui sotto chiude e riavvia Chrome</strong> (con 5 secondi di preavviso) — salva ora qualunque lavoro in altre schede, o rischi di perderlo.</p>
+                    <p style="font-size:0.9rem; color:var(--text-dark); margin:0;">Al riavvio, se Chrome mostra un avviso <strong>"Ripristina le pagine?"</strong>, <strong>NON</strong> premere "Ripristina" — clicca sulla <strong>✕</strong> per chiuderlo e basta. È innocuo, ma ripristinare farebbe riaprire tutte le schede di prima inutilmente.</p>
+                </div>
+
                 <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:14px; padding:1.2rem 1.4rem; margin-bottom:1rem;">
                     <p style="font-weight:800; margin:0 0 0.6rem; color:var(--primary);">1. Apri PowerShell</p>
                     <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.6rem; flex-wrap:wrap;">
@@ -1585,10 +1591,9 @@
                     <p style="font-size:0.9rem; color:var(--text-muted); margin:0;">Clicca <i class="fa-solid fa-copy"></i> per copiarlo, poi in PowerShell: tasto destro per incollare, e premi <strong>Invio</strong>.</p>
                 </div>
 
-                <div style="background:var(--danger-bg); border:1px solid var(--danger); border-radius:14px; padding:1.2rem 1.4rem; margin-bottom:1rem;">
-                    <p style="font-weight:800; margin:0 0 0.4rem; color:var(--danger);">⚠️ 3. Cosa succede dopo</p>
-                    <p style="font-size:0.9rem; color:var(--text-dark); margin:0 0 0.5rem;"><strong>Il comando chiude e riavvia Chrome</strong> (con 5 secondi di preavviso) — salva ora qualunque lavoro in altre schede.</p>
-                    <p style="font-size:0.9rem; color:var(--text-dark); margin:0;">Poi scarica, installa da solo e riapre Chrome. <strong>Solo la primissima volta</strong> su un PC, alla fine ti chiederà di andare su <code>chrome://extensions</code>, attivare "Modalità sviluppatore" e cliccare <strong>"Carica estensione non pacchettizzata"</strong> — l'unico passo che Chrome richiede a mano, non automatizzabile.</p>
+                <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:14px; padding:1.2rem 1.4rem; margin-bottom:1rem;">
+                    <p style="font-weight:800; margin:0 0 0.6rem; color:var(--primary);">3. Fatto — pensa a tutto lui</p>
+                    <p style="font-size:0.9rem; color:var(--text-muted); margin:0;">Scarica, installa da solo e riapre Chrome (che aprirà anche la tab Prezzi dell'estensione e questo sito, da solo). <strong>Solo la primissima volta</strong> su un PC, alla fine ti chiederà di andare su <code>chrome://extensions</code>, attivare "Modalità sviluppatore" e cliccare <strong>"Carica estensione non pacchettizzata"</strong> — l'unico passo che Chrome richiede a mano, non automatizzabile.</p>
                 </div>
 
                 <button class="btn-main" style="width:100%; justify-content:center; padding:0.9rem; margin-top:0.6rem;" onclick="_ricontrollaEChiudiIstruzioni()">Fatto — ricontrolla <i class="fa-solid fa-arrow-right"></i></button>
