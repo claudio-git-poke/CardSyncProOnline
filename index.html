@@ -1551,7 +1551,7 @@
                         <i class="fa-solid fa-bolt"></i> Voglio aggiornarla — così il mio PC può aiutare a fare i calcoli (per me, e magari anche per il gruppo)
                     </button>
                     <button class="btn-secondary" id="btnNonInstallare" style="width:100%; justify-content:center; display:none; padding:0.9rem;" onclick="_sceltaNonUsoEstensione()">
-                        <i class="fa-solid fa-couch"></i> Non installarla — uso solo il sito, lascio lavorare gli altri PC
+                        <i class="fa-solid fa-couch"></i> Non installarla — il mio PC non deve fare calcoli, ci pensi il PC di Bill
                     </button>
                     <button class="btn-secondary" id="btnDisinstallare" style="width:100%; justify-content:center; display:none; padding:0.9rem; color:var(--danger);" onclick="mostraIstruzioniDisinstallazione()">
                         <i class="fa-solid fa-trash"></i> Disinstallala — è una versione vecchia, non si può usare
@@ -1593,7 +1593,7 @@
 
                 <div style="background:var(--card-bg); border:1px solid var(--border-color); border-radius:14px; padding:1.2rem 1.4rem; margin-bottom:1rem;">
                     <p style="font-weight:800; margin:0 0 0.6rem; color:var(--primary);">3. Fatto — pensa a tutto lui</p>
-                    <p style="font-size:0.9rem; color:var(--text-muted); margin:0;">Scarica, installa da solo e riapre Chrome (che aprirà anche la tab Prezzi dell'estensione e questo sito, da solo). <strong>Solo la primissima volta</strong> su un PC, alla fine ti chiederà di andare su <code>chrome://extensions</code>, attivare "Modalità sviluppatore" e cliccare <strong>"Carica estensione non pacchettizzata"</strong> — l'unico passo che Chrome richiede a mano, non automatizzabile.</p>
+                    <p style="font-size:0.9rem; color:var(--text-muted); margin:0;" id="statoIstruzioniPasso3">Scarica, installa da solo e riapre Chrome (che aprirà anche la tab Prezzi dell'estensione e questo sito, da solo).</p>
                 </div>
 
                 <button class="btn-main" style="width:100%; justify-content:center; padding:0.9rem; margin-top:0.6rem;" onclick="_ricontrollaEChiudiIstruzioni()">Fatto — ricontrolla <i class="fa-solid fa-arrow-right"></i></button>
@@ -1651,7 +1651,7 @@
                         <input type="password" id="authPassword" placeholder="••••••••" autocomplete="current-password">
                     </div>
                     <div style="display:flex; align-items:center; justify-content:space-between; margin:0.8rem 0 1.2rem;">
-                        <span style="font-size:0.88rem; color:var(--text-muted);">Tienimi acceso, non voglio evolvermi in un logout 🥚</span>
+                        <span style="font-size:0.88rem; color:var(--text-muted);">Mantienimi loggato — questo è il mio PC, mica il PC di Bill 💻</span>
                         <label class="toggle"><input type="checkbox" id="mantieniAccesso" checked><span class="toggle-slider"></span></label>
                     </div>
                     <div id="authError"></div>
@@ -3527,6 +3527,7 @@
         // ═══════════════════════════════════════════════════════════════════
         const ID_ESTENSIONE_CARDSYNC = 'hoibifiiabdlndcdopfjjpahchhbmojo';
         let _ultimaVersioneRichiesta = null; // memorizzata per i ricontrolli successivi
+        let _versioneVecchiaRilevata = false; // true se un'estensione (vecchia) ha risposto — determina il bivio delle istruzioni
 
         function versioneMaggioreSito(a, b) {
             const pa = String(a).split('.').map(Number);
@@ -3607,6 +3608,7 @@
                 ]);
                 const ultimaVersione = (ultimaVersioneTesto || '').trim();
                 _ultimaVersioneRichiesta = ultimaVersione || null;
+                _versioneVecchiaRilevata = !!versioneInstallata;
 
                 const estensioneOk = !ultimaVersione || (versioneInstallata && !versioneMaggioreSito(ultimaVersione, versioneInstallata));
 
@@ -3652,6 +3654,19 @@
         function mostraIstruzioniInstallazione() {
             _mostraSoloStato('statoIstruzioni');
             _applicaMotiviTema();
+
+            // Bivio: il sito sa già (dal controllo appena fatto) se è la
+            // prima installazione o un semplice aggiornamento — mostra solo
+            // le istruzioni rilevanti al caso specifico, invece di un
+            // generico "solo la prima volta potrebbe...".
+            const elPasso3 = document.getElementById('statoIstruzioniPasso3');
+            if (_versioneVecchiaRilevata) {
+                // Chrome conosce già questa cartella (un'estensione ha
+                // risposto) — nessun passo manuale in più da fare.
+                elPasso3.innerHTML = 'Scarica, installa da solo e riapre Chrome (che aprirà anche la tab Prezzi dell\'estensione e questo sito, da solo). Chrome conosce già questa estensione — nessun altro passo da fare.';
+            } else {
+                elPasso3.innerHTML = 'Scarica, installa da solo e riapre Chrome (che aprirà anche la tab Prezzi dell\'estensione e questo sito, da solo). <strong>Poi, un ultimo passo a mano</strong> (Chrome lo richiede per sicurezza, non è automatizzabile): vai su <code>chrome://extensions</code>, attiva <strong>"Modalità sviluppatore"</strong> in alto a destra se non è già attiva, poi clicca <strong>"Carica estensione non pacchettizzata"</strong> e seleziona la cartella che lo script ti indicherà.';
+            }
         }
 
         async function _ricontrollaEChiudiIstruzioni() {
