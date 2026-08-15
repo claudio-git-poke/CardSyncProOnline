@@ -1,6 +1,5 @@
 @echo off
 setlocal enabledelayedexpansion
-chcp 65001 >nul
 
 REM ===========================================================================
 REM CardSync Pro - Aggiornamento automatico estensione
@@ -35,7 +34,7 @@ set "PS_RILEVA=%TEMP%\cardsync_rileva_cartella.ps1"
 set "PS_SCEGLI=%TEMP%\cardsync_scegli_cartella.ps1"
 set "RILEVATA_DA_CHROME=0"
 
-REM Il sito, quando genera il comando da copiare, sa già con certezza se
+REM Il sito, quando genera il comando da copiare, sa gia' con certezza se
 REM e' un aggiornamento o una prima installazione (l'ha appena verificato
 REM chiedendo direttamente all'estensione) - se ce lo dice lui, ci
 REM fidiamo, invece di doverlo indovinare noi da soli piu' sotto (il
@@ -48,9 +47,9 @@ REM se il terminale non lo supporta viene semplicemente ignorato.
 color 0D
 
 echo.
-echo   ╔══════════════════════════════════════════════╗
-echo   ║          CardSync Pro — Aggiornamento          ║
-echo   ╚══════════════════════════════════════════════╝
+echo   ================================================
+echo            CardSync Pro - Aggiornamento
+echo   ================================================
 echo.
 
 if not exist "%CONFIG_DIR%" mkdir "%CONFIG_DIR%" >nul 2>&1
@@ -189,16 +188,14 @@ REM --- Passo 5: riavvia Chrome ------------------------------------------------
 echo Riavvio Chrome...
 start "" "chrome"
 echo.
-echo   ╔══════════════════════════════════════════════╗
-echo   ║        Installazione completata!               ║
-echo   ╚══════════════════════════════════════════════╝
+echo   ================================================
+echo          Installazione completata!
+echo   ================================================
 echo.
 
 if "%RILEVATA_DA_CHROME%"=="1" (
     echo Chrome sapeva gia' di questa cartella - nessun altro passo necessario.
     echo.
-    echo Questa finestra si chiudera' da sola tra 5 secondi...
-    timeout /t 5 >nul
 ) else (
     REM Colore acceso, giallo su sfondo rosso scuro, SOLO per questo
     REM messaggio - impossibile non notarlo.
@@ -223,12 +220,16 @@ if "%RILEVATA_DA_CHROME%"=="1" (
     echo   ^(Se l'avevi gia' fatto in precedenza per questa stessa
     echo   cartella, puoi ignorare questo avviso^)
     echo.
-    echo   Questa finestra NON si chiudera' da sola stavolta - chiudila
-    echo   pure a mano quando hai fatto ^(o letto con calma^).
-    echo.
-    pause >nul
-    exit /b 0
+    color 0D
 )
 
+echo.
+echo   ================================================
+echo    Ora che hai terminato l'installazione puoi
+echo    chiudere questo terminale!
+echo.
+echo    Grazie per aver scelto CardSync Pro.
+echo   ================================================
+echo.
+pause >nul
 exit /b 0
-
