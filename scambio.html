@@ -360,6 +360,22 @@
         let carte = [];
         const selezioni = {}; // { [id]: quantitaSelezionata }
 
+        // Il campo 'immagine' può contenere tre formati diversi, a seconda
+        // di quando la carta è stata processata:
+        // 1. Link a Supabase Storage (nuovo, leggero — riconoscibile da
+        //    "supabase.co") → si usa direttamente.
+        // 2. Data URI base64 (vecchio formato, prima che passassimo a
+        //    Storage) → si usa direttamente, funziona comunque.
+        // 3. URL esterno grezzo di Cardmarket (carte processate PRIMA di
+        //    qualunque correzione) → Cardmarket lo blocca se richiesto da
+        //    un altro dominio, tentiamo il proxy come ripiego (funziona
+        //    solo per alcune, meglio di niente per lo storico).
+        function _urlImmagineVisualizzabile(immagine) {
+            if (!immagine) return null;
+            if (immagine.startsWith('data:') || immagine.includes('supabase.co')) return immagine;
+            return `https://images.weserv.nl/?url=${encodeURIComponent(immagine)}&w=64`;
+        }
+
         function apriImmagineIngrandita(src) {
             document.getElementById('immagineIngranditaImg').src = src;
             document.getElementById('immagineModal').style.display = 'flex';
@@ -436,7 +452,7 @@
                     <div class="card-row ${selezionata ? 'selected' : ''}" id="row-${c.id}">
                         <input type="checkbox" class="card-checkbox" ${selezionata ? 'checked' : ''}
                                onchange="toggleSelezione('${c.id}', this.checked)">
-                        ${c.immagine ? `<img src="${c.immagine}" alt="" class="card-thumb" onclick="event.stopPropagation(); apriImmagineIngrandita('${c.immagine}')" onerror="this.style.display='none';">` : ''}
+                        ${(() => { const immagineSrc = _urlImmagineVisualizzabile(c.immagine); return immagineSrc ? `<img src="${immagineSrc}" alt="" class="card-thumb" onclick="event.stopPropagation(); apriImmagineIngrandita('${immagineSrc}')" onerror="this.style.display='none';">` : ''; })()}
                         <div class="card-info">
                             <div class="card-name">${c.name}${c.code ? ` <span style="color:var(--text-muted); font-weight:600;">(${c.code})</span>` : ''}</div>
                             <div class="card-meta">
