@@ -1086,7 +1086,6 @@
             </div>
             <div class="header-actions-group">
                 <button class="header-search-btn" onclick="apriRicercaGlobale()" aria-label="Cerca ovunque"><i class="fa-solid fa-magnifying-glass"></i></button>
-                <button class="header-search-btn" onclick="_apriPannelloCardsync(); mostraIstruzioniInstallazione();" aria-label="Aggiorna estensione" title="Aggiorna estensione"><i class="fa-solid fa-download"></i></button>
                 <button class="header-search-btn" onclick="switchTab('impostazioni', document.getElementById('mNav-impostazioni'))" aria-label="Impostazioni" title="Impostazioni"><i class="fa-solid fa-gear"></i></button>
                 <div class="profilo-container" id="profiloContainer">
                     <button class="profilo-avatar" id="profiloAvatar" onclick="toggleMenuProfilo()" aria-label="Profilo">?</button>
@@ -1554,11 +1553,11 @@
                         <i class="fa-solid fa-couch"></i> Non installarla — il mio PC non deve fare calcoli, ci pensi il PC di Bill
                     </button>
                     <button class="btn-secondary" id="btnDisinstallare" style="width:100%; justify-content:center; display:none; padding:0.9rem; color:var(--danger);" onclick="mostraIstruzioniDisinstallazione()">
-                        <i class="fa-solid fa-trash"></i> Disinstallala — è una versione vecchia, non si può usare
+                        <i class="fa-solid fa-trash"></i> Disinstallala — lascio che sia il PC di Bill a fare i calcoli per me
                     </button>
                 </div>
                 <p style="font-size:0.85rem; color:var(--text-muted); margin-top:1.6rem;">
-                    Non è obbligatorio avere l'estensione su <em>ogni</em> PC — basta che sia aggiornata su quelli dove la usi. E ricorda: chi tiene gentilmente un PC acceso 24/7 per aiutare tutto il gruppo... una Charizard ogni tanto come "grazie" non si rifiuta mai. 🔥🐉
+                    Non è obbligatorio avere l'estensione sul tuo PC, in quanto Bill tiene gentilmente il suo PC acceso 24/7 per aiutare tutto il gruppo... un Charizard Base Set ogni tanto come "grazie" non si rifiuta mai. 🔥🐉
                 </p>
             </div>
 
@@ -1633,7 +1632,7 @@
             <div id="statoBossFiero" style="display:none; text-align:center;">
                 <div class="cardsync-motivo-tema" id="motivoBossFiero">🎉</div>
                 <h2 style="font-weight:800; margin-bottom:0.6rem; font-size:1.5rem;">Il boss è fiero di te!</h2>
-                <p style="font-size:1.02rem; color:var(--text-muted); margin-bottom:1.8rem;">Hai l'estensione installata e aggiornata all'ultima versione — pronto a catturarli tutti (i prezzi, intendo).</p>
+                <p style="font-size:1.02rem; color:var(--text-muted); margin-bottom:1.8rem;">Hai l'estensione installata e aggiornata all'ultima versione — valuta di attivare la funzione "Aiuta il gruppo" per far sì che non sia solo il PC di Bill a fare i calcoli per gli altri. In questo modo l'app sarà più veloce per tutti noi. Bill ringrazia. 🙏</p>
 
                 <!-- Se già loggato -->
                 <div id="bossFieroGiaLoggato" style="display:none;">
@@ -1659,7 +1658,7 @@
                 </div>
 
                 <button class="btn-secondary" style="width:100%; justify-content:center; display:flex; padding:0.8rem; margin-top:1rem; font-size:0.88rem;" onclick="mostraIstruzioniDisinstallazione()">
-                    <i class="fa-solid fa-trash"></i> Voglio disinstallarla comunque
+                    <i class="fa-solid fa-trash"></i> Voglio disinstallarla comunque — lascio che sia il PC di Bill a fare i calcoli per me
                 </button>
             </div>
 
