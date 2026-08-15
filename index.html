@@ -1631,8 +1631,8 @@
             <!-- STATO: estensione aggiornata — accesso -->
             <div id="statoBossFiero" style="display:none; text-align:center;">
                 <div class="cardsync-motivo-tema" id="motivoBossFiero">🎉</div>
-                <h2 style="font-weight:800; margin-bottom:0.6rem; font-size:1.5rem;">Il boss è fiero di te!</h2>
-                <p style="font-size:1.02rem; color:var(--text-muted); margin-bottom:1.8rem;">Hai l'estensione installata e aggiornata all'ultima versione — valuta di attivare la funzione "Aiuta il gruppo" per far sì che non sia solo il PC di Bill a fare i calcoli per gli altri. In questo modo l'app sarà più veloce per tutti noi. Bill ringrazia. 🙏</p>
+                <h2 style="font-weight:800; margin-bottom:0.6rem; font-size:1.5rem;" id="statoBossFieroTitolo">Il boss è fiero di te!</h2>
+                <p style="font-size:1.02rem; color:var(--text-muted); margin-bottom:1.8rem;" id="statoBossFieroTesto">Hai l'estensione installata e aggiornata all'ultima versione — valuta di attivare la funzione "Aiuta il gruppo" per far sì che non sia solo il PC di Bill a fare i calcoli per gli altri. In questo modo l'app sarà più veloce per tutti noi. Bill ringrazia. 🙏</p>
 
                 <!-- Se già loggato -->
                 <div id="bossFieroGiaLoggato" style="display:none;">
@@ -3633,21 +3633,38 @@
                 // boss è fiero di te" compare sempre, anche se già loggato —
                 // cambia solo cosa c'è sotto: il form, o un solo bottone
                 // "Continua come..." per chi deve solo confermare.
-                const sessione = await assicuraLoginSupabase();
-                _apriPannelloCardsync();
-                _mostraSoloStato('statoBossFiero');
-
-                if (sessione) {
-                    document.getElementById('bossFieroLoginForm').style.display = 'none';
-                    document.getElementById('bossFieroGiaLoggato').style.display = 'block';
-                    document.getElementById('btnContinuaComeUtente').innerHTML =
-                        `Continua come ${_nomeDaEmail(sessione.user.email)} <i class="fa-solid fa-arrow-right"></i>`;
-                } else {
-                    document.getElementById('bossFieroGiaLoggato').style.display = 'none';
-                    document.getElementById('bossFieroLoginForm').style.display = 'block';
-                    authEmail.focus();
-                }
+                await _mostraStatoLoginOControllo();
             } catch (_) { /* silenzioso: un controllo fallito non deve mai bloccare il sito */ }
+        }
+
+        // Estratta a parte perché richiamabile anche da "Non installarla"
+        // (chi sceglie di non usare l'estensione su questo PC deve comunque
+        // poter accedere al sito — prima questo passaggio veniva saltato
+        // del tutto, bloccando di fatto il login per sempre in quel caso).
+        //
+        // mostraTestoEstensione=false: usato da chi ha scelto di NON
+        // installare (o non può, es. dispositivo non Windows) — il testo
+        // "hai l'estensione installata" sarebbe falso in quel caso.
+        async function _mostraStatoLoginOControllo(mostraTestoEstensione = true) {
+            document.getElementById('statoBossFieroTitolo').textContent = mostraTestoEstensione ? 'Il boss è fiero di te!' : 'Nessun problema!';
+            document.getElementById('statoBossFieroTesto').textContent = mostraTestoEstensione
+                ? 'Hai l\'estensione installata e aggiornata all\'ultima versione — valuta di attivare la funzione "Aiuta il gruppo" per far sì che non sia solo il PC di Bill a fare i calcoli per gli altri. In questo modo l\'app sarà più veloce per tutti noi. Bill ringrazia. 🙏'
+                : 'Puoi usare il sito tranquillamente anche senza l\'estensione su questo dispositivo — accedi per continuare.';
+
+            const sessione = await assicuraLoginSupabase();
+            _apriPannelloCardsync();
+            _mostraSoloStato('statoBossFiero');
+
+            if (sessione) {
+                document.getElementById('bossFieroLoginForm').style.display = 'none';
+                document.getElementById('bossFieroGiaLoggato').style.display = 'block';
+                document.getElementById('btnContinuaComeUtente').innerHTML =
+                    `Continua come ${_nomeDaEmail(sessione.user.email)} <i class="fa-solid fa-arrow-right"></i>`;
+            } else {
+                document.getElementById('bossFieroGiaLoggato').style.display = 'none';
+                document.getElementById('bossFieroLoginForm').style.display = 'block';
+                authEmail.focus();
+            }
         }
 
         function mostraIstruzioniInstallazione() {
@@ -3692,8 +3709,8 @@
             controlloIngressoCardsync();
         }
 
-        function _sceltaNonUsoEstensione() {
-            nascondiPannelloCardsync();
+        async function _sceltaNonUsoEstensione() {
+            await _mostraStatoLoginOControllo(false);
         }
         function mostraIstruzioniDisinstallazione() {
             _mostraSoloStato('statoDisinstalla');
