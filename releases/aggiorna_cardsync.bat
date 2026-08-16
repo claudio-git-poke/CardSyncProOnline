@@ -34,22 +34,10 @@ set "PS_RILEVA=%TEMP%\cardsync_rileva_cartella.ps1"
 set "PS_SCEGLI=%TEMP%\cardsync_scegli_cartella.ps1"
 set "RILEVATA_DA_CHROME=0"
 
-REM Il sito, quando genera il comando da copiare, sa gia' con certezza se
-REM e' un aggiornamento o una prima installazione (l'ha appena verificato
-REM chiedendo direttamente all'estensione) - se ce lo dice lui, ci
-REM fidiamo, invece di doverlo indovinare noi da soli piu' sotto (il
-REM rilevamento automatico da Chrome a volte non riesce, es. se Chrome era
-REM gia' aperto in quel momento).
-if /i "%~1"=="aggiornamento" set "RILEVATA_DA_CHROME=1"
-
-REM Colore a tema (sfondo nero, testo violetto chiaro) - puramente estetico,
-REM se il terminale non lo supporta viene semplicemente ignorato.
-color 0D
-
 echo.
-echo   ================================================
-echo            CardSync Pro - Aggiornamento
-echo   ================================================
+echo ================================================
+echo CardSync Pro - Aggiornamento estensione
+echo ================================================
 echo.
 
 if not exist "%CONFIG_DIR%" mkdir "%CONFIG_DIR%" >nul 2>&1
@@ -100,17 +88,6 @@ REM --- Passo 1b: legge quella salvata da una volta precedente (se c'e') -----
 set "CARTELLA_RICORDATA="
 if exist "%CONFIG_FILE%" (
     for /f "usebackq delims=" %%L in ("%CONFIG_FILE%") do set "CARTELLA_RICORDATA=%%L"
-)
-
-REM Se il sito ci ha gia' detto che e' un aggiornamento (quindi l'estensione
-REM esiste di sicuro da qualche parte) e abbiamo una cartella ricordata da
-REM prima, usiamola direttamente - non serve aprire nessuna finestra ne'
-REM chiedere conferma, rende tutto piu' snello per l'uso di tutti i giorni.
-if "%RILEVATA_DA_CHROME%"=="1" if defined CARTELLA_RICORDATA (
-    set "CARTELLA_ESTENSIONE=!CARTELLA_RICORDATA!"
-    echo Uso la cartella salvata: !CARTELLA_ESTENSIONE!
-    echo.
-    goto :cartella_pronta
 )
 
 REM --- Passo 1c: selettore di cartelle, PRE-COMPILATO con quella ricordata --
@@ -195,52 +172,38 @@ del "%TEMP_ZIP%" >nul 2>&1
 echo Fatto.
 echo.
 
-REM --- Passo 5: riavvia Chrome ------------------------------------------------
-echo Riavvio Chrome...
-start "" "chrome"
+REM --- Passo 5: riavvia Chrome, forzando il ricaricamento dell'estensione ----
+REM FIX (estensione rimasta alla versione vecchia dopo l'aggiornamento):
+REM un semplice "start chrome" dopo il taskkill /F si affida al fatto che
+REM Chrome "si ricordi" da solo di ricaricare da disco l'estensione non
+REM pacchettizzata - non sempre affidabile con una chiusura forzata. Il
+REM flag --load-extension e' il modo ufficiale per dire a Chrome "carica
+REM (o ricarica) DAVVERO questa cartella come estensione adesso", cosi'
+REM il codice nuovo appena estratto viene letto per certo, senza bisogno
+REM di cliccare "ricarica" a mano su chrome://extensions.
+echo Riavvio Chrome (forzando il ricaricamento dell'estensione)...
+start "" "chrome" --load-extension="!CARTELLA_ESTENSIONE!"
 echo.
-echo   ================================================
-echo          Installazione completata!
-echo   ================================================
+echo ================================================
+echo Installazione completata!
+echo ================================================
 echo.
 
 if "%RILEVATA_DA_CHROME%"=="1" (
     echo Chrome sapeva gia' di questa cartella - nessun altro passo necessario.
     echo.
 ) else (
-    REM Colore acceso, giallo su sfondo rosso scuro, SOLO per questo
-    REM messaggio - impossibile non notarlo.
-    color 4E
+    echo ULTIMO PASSO IMPORTANTE - se non l'hai gia' fatto per questa cartella:
+    echo Chrome deve "conoscere" questa cartella almeno una volta prima di
+    echo poterla usare come estensione. Vai su chrome://extensions, attiva
+    echo "Modalita' sviluppatore" in alto a destra se non e' gia' attiva, poi
+    echo "Carica estensione non pacchettizzata" e seleziona questa cartella:
+    echo !CARTELLA_ESTENSIONE!
     echo.
-    echo   ############################################
-    echo   #                                            #
-    echo   #   ULTIMO PASSO - da fare a mano una volta   #
-    echo   #                                            #
-    echo   ############################################
+    echo Se l'avevi gia' fatto in precedenza per questa stessa cartella, puoi
+    echo ignorare questo avviso - non serve rifarlo due volte.
     echo.
-    echo   Chrome deve "conoscere" questa cartella almeno una volta
-    echo   prima di poterla usare come estensione:
-    echo.
-    echo     1. Vai su chrome://extensions
-    echo     2. Attiva "Modalita' sviluppatore" ^(in alto a destra^)
-    echo     3. Clicca "Carica estensione non pacchettizzata"
-    echo     4. Seleziona questa cartella:
-    echo.
-    echo        !CARTELLA_ESTENSIONE!
-    echo.
-    echo   ^(Se l'avevi gia' fatto in precedenza per questa stessa
-    echo   cartella, puoi ignorare questo avviso^)
-    echo.
-    color 0D
 )
 
-echo.
-echo   ================================================
-echo    Ora che hai terminato l'installazione puoi
-echo    chiudere questo terminale!
-echo.
-echo    Grazie per aver scelto CardSync Pro.
-echo   ================================================
-echo.
-pause >nul
+timeout /t 3 >nul
 exit /b 0
