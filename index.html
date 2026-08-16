@@ -1710,7 +1710,7 @@
                     <button class="btn-main" id="authSubmit" style="width: 100%; padding:0.9rem;">Accedi</button>
                 </div>
 
-                <button class="btn-secondary" style="width:100%; justify-content:center; display:flex; padding:0.8rem; margin-top:1rem; font-size:0.88rem;" onclick="mostraIstruzioniDisinstallazione()">
+                <button id="btnDisinstallaComunque" class="btn-secondary" style="width:100%; justify-content:center; display:flex; padding:0.8rem; margin-top:1rem; font-size:0.88rem;" onclick="mostraIstruzioniDisinstallazione()">
                     <i class="fa-solid fa-trash"></i> Voglio disinstallarla comunque — lascio che sia il PC di Bill a fare i calcoli per me
                 </button>
             </div>
@@ -3799,6 +3799,13 @@
         // proponibile — messaggio dedicato invece del generico "Nessun
         // problema!" usato da chi sceglie volontariamente di non installare.
         async function _mostraStatoLoginOControllo(mostraTestoEstensione = true, nonWindows = false) {
+            // FIX: il bottone "Voglio disinstallarla comunque" non ha senso su
+            // un dispositivo dove l'estensione non è nemmeno installabile
+            // (es. Android) — prima restava visibile comunque. Lo mostriamo
+            // solo quando il caso è davvero "hai Windows ma scegli di non
+            // installarla" (nonWindows=false).
+            document.getElementById('btnDisinstallaComunque').style.display = nonWindows ? 'none' : 'flex';
+
             if (nonWindows) {
                 document.getElementById('statoBossFieroTitolo').textContent = 'Niente Windows, nessun problema!';
                 document.getElementById('statoBossFieroTesto').textContent =
