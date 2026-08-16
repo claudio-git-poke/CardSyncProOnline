@@ -399,11 +399,14 @@
                 return;
             }
 
+            // Dalla v4.8: non si legge più direttamente la tabella
+            // 'wishlist' (in precedenza leggibile per intero da chiunque
+            // tramite anon key, non solo filtrata lato client) — si passa
+            // da una funzione RPC dedicata che restituisce solo le righe
+            // del singolo owner richiesto. Vedi migrazione
+            // 2026-08-16_restringi_lettura_pubblica.sql.
             const { data, error } = await supabaseClient
-                .from('wishlist')
-                .select('id, nome, codice, lingua, condizione, qty, prezzo, prezzo_obiettivo, note, url, immagine')
-                .eq('owner_id', userId)
-                .order('nome');
+                .rpc('leggi_wishlist_condivisa', { p_owner_id: userId });
 
             if (error) {
                 container.innerHTML = `<div class="stato-errore"><i class="fa-solid fa-triangle-exclamation"></i> Errore nel caricamento: ${error.message}</div>`;

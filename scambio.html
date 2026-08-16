@@ -399,13 +399,14 @@
                 return;
             }
 
+            // Dalla v4.8: non si legge più direttamente la tabella 'carte'
+            // (in precedenza le carte in scambio di TUTTI gli utenti erano
+            // leggibili tramite anon key, non solo filtrate lato client) —
+            // si passa da una funzione RPC dedicata che restituisce solo
+            // le carte in scambio del singolo owner richiesto. Vedi
+            // migrazione 2026-08-16_restringi_lettura_pubblica.sql.
             const { data, error } = await supabaseClient
-                .from('carte')
-                .select('id, nome, codice, lingua, condizione, qty, prezzo, note, url, immagine')
-                .eq('owner_id', userId)
-                .eq('location', 'SCAMBIO')
-                .eq('stato', 'collezione')
-                .order('nome');
+                .rpc('leggi_scambio_condiviso', { p_owner_id: userId });
 
             if (error) {
                 container.innerHTML = `<div class="stato-errore"><i class="fa-solid fa-triangle-exclamation"></i> Errore nel caricamento: ${error.message}</div>`;
