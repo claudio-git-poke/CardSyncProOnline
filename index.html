@@ -1244,23 +1244,22 @@
         .binder-grid-4x4 { grid-template-columns: repeat(4, 1fr); max-width: 820px; margin-left: auto; margin-right: auto; }
 
         @media (max-width: 640px) {
-            /* Sotto i 640px anche i layout più fitti (3x3/4x4) mostrano
-               al massimo 3 colonne, il resto va a capo — evita celle troppo
-               piccole per essere leggibili su telefono. Il numero di carte
-               per pagina resta invariato (definito dal layout scelto), solo
-               la disposizione visiva si adatta allo schermo. Il layout
-               "4×3" (chiave interna 3x4) ha una regola propria qui sotto,
-               con soglia più ampia — vedi commento. */
-            .binder-grid-3x3, .binder-grid-4x4 { grid-template-columns: repeat(3, 1fr); max-width: 420px; }
+            /* Sotto i 640px il layout 3x3 mostra al massimo 3 colonne (già
+               il suo numero naturale di colonne, invariato). I due layout a
+               4 colonne (4×4 e "4×3"/chiave interna 3x4) NON hanno più un
+               fallback qui: restano a 4 colonne anche su telefono, si
+               restringono naturalmente grazie a max-width + margin auto —
+               vedi commento sotto per "4×3", stessa regola vale per 4×4. */
+            .binder-grid-3x3 { grid-template-columns: repeat(3, 1fr); max-width: 420px; }
             .binder-grid-2x2 { max-width: 320px; }
         }
 
-        /* A15 (aggiornato dopo test su dispositivo): il layout "4×3"
-           (chiave interna "3x4") NON ha più un fallback mobile a 3 colonne
-           — su richiesta di Claudio resta a 4 colonne anche su telefono.
-           Grazie a max-width:820px + margin auto, la griglia si restringe
-           naturalmente fino alla larghezza dello schermo mantenendo 4
-           colonne uguali (celle più piccole ma leggibili, testato). */
+        /* A15 (aggiornato dopo test su dispositivo): i layout "4×3" (chiave
+           interna "3x4") e "4×4" NON hanno più un fallback mobile a 3
+           colonne — su richiesta di Claudio restano a 4 colonne anche su
+           telefono. Grazie a max-width:820px + margin auto, la griglia si
+           restringe naturalmente fino alla larghezza dello schermo
+           mantenendo 4 colonne uguali (celle più piccole ma leggibili). */
 
         /* A15 — Home su schermi stretti (sotto 768px, stessa soglia già
            usata per tabelle→schedine). Nessuna riga JS di renderBinderInPrimoPianoHome()
@@ -4941,6 +4940,7 @@
         }
 
         function apriRicercaGlobale() {
+            closeDrawer(); // stesso pattern di switchTab(): su mobile il drawer si richiude dopo la scelta
             document.getElementById('ricercaGlobaleModal').style.display = 'flex';
             document.getElementById('ricercaGlobaleInput').value = '';
             document.getElementById('ricercaGlobaleRisultati').innerHTML = '<p style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:1rem 0;">Scrivi per cercare tra tutte le tue carte.</p>';
