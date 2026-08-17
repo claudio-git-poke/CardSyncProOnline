@@ -310,6 +310,54 @@
         }
 
         .btn-copia:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* A16: statistica di riepilogo in cima alla pagina */
+        .stat-riepilogo {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 0.4rem;
+        }
+
+        /* A16: flip-modal (fronte/retro con statistiche) — stesso concetto
+           già usato nel sito privato (index.html, Home "In primo piano" e
+           poi esteso a tutto il sito in A15), riadattato qui senza il
+           pulsante "Vai al binder" (non ha senso su una pagina pubblica) e
+           senza location (la wishlist non la possiede ancora). */
+        #flipCardScene { perspective: 1200px; position: relative; z-index: 1; }
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 5 / 7;
+            transition: transform 0.7s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+        .flip-card-inner.flipped { transform: rotateY(180deg); }
+        .flip-card-face {
+            position: absolute;
+            inset: 0;
+            backface-visibility: hidden;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        .flip-card-front { background: var(--bg-color); display: flex; align-items: center; justify-content: center; }
+        .flip-card-front img { width: 100%; height: 100%; object-fit: cover; }
+        .flip-card-back {
+            background: var(--primary);
+            color: white;
+            transform: rotateY(180deg);
+            display: flex;
+            align-items: flex-end;
+        }
+        .flip-card-back-overlay { padding: 1rem; width: 100%; }
+        .close-modal-btn {
+            position: absolute; top: 0.6rem; right: 0.6rem;
+            background: none; border: none; font-size: 1.2rem;
+            color: var(--text-muted); cursor: pointer;
+            z-index: 20; /* resta sempre sopra la scena flip 3D */
+        }
     </style>
 </head>
 <body>
@@ -320,13 +368,25 @@
             <span>CardSync Pro — Wishlist</span>
         </div>
         <p>Le carte che vorrebbe — seleziona quelle che potresti procurargli/le.</p>
+        <p class="stat-riepilogo" id="statRiepilogo"></p>
     </header>
 
-    <!-- MODALE IMMAGINE INGRANDITA -->
+    <!-- MODALE IMMAGINE INGRANDITA / FLIP-CARD -->
     <div id="immagineModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center;" onclick="chiudiImmagineIngrandita()">
         <div style="max-width:320px; width:90%; background:var(--card-bg); border-radius:16px; padding:1rem; position:relative;" onclick="event.stopPropagation()">
-            <button onclick="chiudiImmagineIngrandita()" style="position:absolute; top:0.6rem; right:0.6rem; background:none; border:none; font-size:1.2rem; color:var(--text-muted); cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
-            <img id="immagineIngranditaImg" src="" alt="" style="width:100%; border-radius:12px; margin-top:0.5rem;">
+            <button class="close-modal-btn" onclick="chiudiImmagineIngrandita()"><i class="fa-solid fa-xmark"></i></button>
+            <div id="flipCardScene" style="margin-top:0.5rem;">
+                <div class="flip-card-inner" id="flipCardInner" onclick="toggleFlipCard()">
+                    <div class="flip-card-face flip-card-front">
+                        <img id="flipCardFrontImg" src="" alt="">
+                    </div>
+                    <div class="flip-card-face flip-card-back">
+                        <div class="flip-card-back-overlay">
+                            <div id="flipCardStats"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -383,13 +443,50 @@
             return `https://images.weserv.nl/?url=${encodeURIComponent(immagine)}&w=64`;
         }
 
-        function apriImmagineIngrandita(src) {
-            document.getElementById('immagineIngranditaImg').src = src;
+        // A16: flip-modal — mostra prima il fronte (immagine reale), poi
+        // gira da sola dopo una breve pausa rivelando nome/codice/prezzo/
+        // obiettivo/note. Stesso concetto già esteso a tutto il sito
+        // privato in A15, qui riadattato per la pagina pubblica: niente
+        // "Vai al binder" (non ha senso per chi non è il proprietario) e
+        // niente location (la wishlist non la possiede ancora).
+        let _flipCardTimeout = null;
+
+        function apriFlipCard(id) {
+            const card = carte.find(c => String(c.id) === String(id));
+            if (!card) return;
+
+            const inner = document.getElementById('flipCardInner');
+            inner.classList.remove('flipped');
+
+            const frontImg = document.getElementById('flipCardFrontImg');
+            const immagineSrc = _urlImmagineVisualizzabile(card.immagine);
+            frontImg.style.display = '';
+            frontImg.src = immagineSrc || '';
+            if (!immagineSrc) frontImg.style.display = 'none';
+
+            document.getElementById('flipCardStats').innerHTML = `
+                <div style="font-weight:800; font-size:0.95rem; margin-bottom:0.2rem;">${card.name}</div>
+                <div style="font-size:0.78rem; opacity:0.85; margin-bottom:0.6rem;"><code style="background:none; color:inherit; padding:0;">${card.code}</code></div>
+                <div style="font-size:0.85rem;">Vuole: <strong>${card.qtyDisponibile}</strong></div>
+                ${card.prezzoObiettivo != null ? `<div style="font-size:0.85rem;">Obiettivo: <strong>${formattaEuro(card.prezzoObiettivo)}</strong></div>` : ''}
+                <div style="font-size:0.8rem; opacity:0.9;">Prezzo attuale: ${formattaEuro(card.price)}</div>
+                ${card.notes ? `<div style="font-size:0.78rem; opacity:0.85; margin-top:0.4rem;">✨ ${card.notes}</div>` : ''}
+            `;
+
             document.getElementById('immagineModal').style.display = 'flex';
+
+            if (_flipCardTimeout) clearTimeout(_flipCardTimeout);
+            _flipCardTimeout = setTimeout(() => inner.classList.add('flipped'), 500);
+        }
+
+        function toggleFlipCard() {
+            document.getElementById('flipCardInner').classList.toggle('flipped');
         }
 
         function chiudiImmagineIngrandita() {
             document.getElementById('immagineModal').style.display = 'none';
+            document.getElementById('flipCardInner').classList.remove('flipped');
+            if (_flipCardTimeout) { clearTimeout(_flipCardTimeout); _flipCardTimeout = null; }
         }
 
         function formattaEuro(v) {
@@ -435,8 +532,14 @@
 
             if (carte.length === 0) {
                 container.innerHTML = '<div class="stato-vuoto"><i class="fa-solid fa-box-open"></i><br>Nessuna carta in wishlist al momento.</div>';
+                document.getElementById('statRiepilogo').textContent = '';
                 return;
             }
+
+            // A16: statistica in cima — conta sempre TUTTE le carte
+            // caricate, non solo quelle visibili dopo un'eventuale ricerca.
+            document.getElementById('statRiepilogo').textContent =
+                `${carte.length} cart${carte.length === 1 ? 'a desiderata' : 'e desiderate'}`;
 
             renderLista();
         }
@@ -461,7 +564,7 @@
                     <div class="card-row ${selezionata ? 'selected' : ''}" id="row-${c.id}">
                         <input type="checkbox" class="card-checkbox" ${selezionata ? 'checked' : ''}
                                onchange="toggleSelezione('${c.id}', this.checked)">
-                        ${(() => { const immagineSrc = _urlImmagineVisualizzabile(c.immagine); return immagineSrc ? `<img src="${immagineSrc}" alt="" class="card-thumb" onclick="event.stopPropagation(); apriImmagineIngrandita('${immagineSrc}')" onerror="this.style.display='none';">` : ''; })()}
+                        ${(() => { const immagineSrc = _urlImmagineVisualizzabile(c.immagine); return immagineSrc ? `<img src="${immagineSrc}" alt="" class="card-thumb" onclick="event.stopPropagation(); apriFlipCard('${c.id}')" onerror="this.style.display='none';">` : ''; })()}
                         <div class="card-info">
                             <div class="card-name">${c.name}${c.code ? ` <span style="color:var(--text-muted); font-weight:600;">(${c.code})</span>` : ''}</div>
                             <div class="card-meta">
@@ -513,6 +616,14 @@
             document.getElementById('btnCopiaRiepilogo').disabled = numCarte === 0;
         }
 
+        // A16: nome del proprietario della wishlist, passato nell'URL dal
+        // sito privato (stesso pattern già usato per tema/dark-mode) —
+        // nessuna nuova chiamata a Supabase, nessun dato sensibile in più
+        // esposto (solo il nome, non l'email completa). Link vecchi senza
+        // questo parametro restano compatibili: si usa il testo generico
+        // di prima.
+        const _nomeProprietarioWishlist = new URLSearchParams(window.location.search).get('nome');
+
         function copiaRiepilogo() {
             const righe = [];
             let totale = 0;
@@ -525,7 +636,10 @@
             });
             if (righe.length === 0) return;
 
-            const testo = `Carte dalla wishlist che potrei procurargli/le:\n\n${righe.join('\n')}\n\nTotale: ${formattaEuro(totale)}`;
+            const intestazione = _nomeProprietarioWishlist
+                ? `Carte che potrei procurare a ${_nomeProprietarioWishlist}:`
+                : `Carte dalla wishlist che potrei procurargli/le:`;
+            const testo = `${intestazione}\n\n${righe.join('\n')}\n\nTotale: ${formattaEuro(totale)}`;
 
             navigator.clipboard.writeText(testo).then(() => {
                 const btn = document.getElementById('btnCopiaRiepilogo');
