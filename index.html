@@ -134,45 +134,14 @@
                                     viewport height) si adatta subito, senza */
         }
 
-        /* --- HEADER & NAVIGATION --- */
-        header {
-            background-color: var(--header-bg);
-            border-bottom: 1px solid var(--border-color);
-            padding: 0.8rem 1.2rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: var(--shadow-soft);
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-            width: 100%;
-            justify-content: space-between;
-        }
-
-        /* FIX (spazio vuoto enorme a destra su schermi larghi): prima
-           TUTTO l'header (logo+menu+ricerca+profilo) viveva in un unico
-           blocco che, oltre i 1150px, diventava largo solo quanto il suo
-           contenuto (width:auto) — restando incollato a sinistra, con
-           tutto il resto della larghezza semplicemente vuoto (space-between
-           non ha alcun effetto quando c'è un solo blocco a cui applicarlo).
-           Ora ci sono DUE gruppi separati (marchio+menu / ricerca+profilo)
-           che si distribuiscono sempre sull'intera larghezza dell'header,
-           a qualunque risoluzione — niente più larghezza fissa "shrink to
-           fit" che lascia spazio morto. */
-        .header-brand-group, .header-actions-group {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-        .header-actions-group { gap: 0.8rem; flex-shrink: 0; }
-
+        /* --- SIDEBAR & NAVIGAZIONE ───────────────────────────────────────────
+           CONSEGNA 2 (17/08/2026): l'header desktop orizzontale + il drawer
+           mobile separato di prima sono stati sostituiti da UN'UNICA sidebar
+           (stessa lista di voci per desktop e mobile), comprimibile su
+           desktop e a scomparsa su mobile. Il gradiente e i colori usano le
+           variabili dei temi già esistenti (--primary, --primary-light,
+           ecc.), quindi cambiano da soli con temi/dark mode, senza
+           introdurre una palette nuova indipendente. */
         .logo {
             display: flex;
             align-items: center;
@@ -196,41 +165,160 @@
             object-fit: contain;
         }
 
-        nav {
-            display: none;
-            gap: 0.3rem;
+        .logo-text { white-space: nowrap; }
+
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            width: 248px;
+            background: linear-gradient(165deg, var(--primary-light) 0%, var(--card-bg) 100%);
+            border-right: 1px solid var(--border-color);
+            z-index: 1101;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem 0.9rem;
+            /* iPhone con notch/home indicator: evita che le voci del menu
+               finiscano sotto l'area "sicura" in alto/in basso */
+            padding-top: max(1rem, env(safe-area-inset-top));
+            padding-left: max(0.9rem, env(safe-area-inset-left));
+            padding-bottom: max(1rem, env(safe-area-inset-bottom));
+            transform: translateX(-100%);
+            transition: transform 0.25s ease, width 0.25s ease;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         @media (min-width: 1150px) {
-            nav { display: flex; }
+            .sidebar { transform: translateX(0); box-shadow: var(--shadow-soft); }
+        }
+
+        .sidebar.open { transform: translateX(0); box-shadow: 4px 0 20px rgba(0,0,0,0.15); }
+
+        /* Sidebar comprimibile (solo desktop — il bottone che attiva questa
+           classe è nascosto sotto i 1150px, vedi .sidebar-collapse-btn). */
+        body.sidebar-collapsed .sidebar { width: 84px; }
+        body.sidebar-collapsed .sidebar .nav-label,
+        body.sidebar-collapsed .sidebar .logo-text,
+        body.sidebar-collapsed .sidebar .app-launch-auto-text,
+        body.sidebar-collapsed .sidebar .app-launch-btn-text,
+        body.sidebar-collapsed .sidebar .nav-soon-badge {
+            display: none;
+        }
+        body.sidebar-collapsed .sidebar .nav-item { justify-content: center; }
+        body.sidebar-collapsed .sidebar .sidebar-header { justify-content: center; }
+        body.sidebar-collapsed .sidebar .app-launch-group { align-items: center; padding: 8px; }
+        body.sidebar-collapsed .sidebar .badge-pallino { display: none !important; }
+
+        @media (min-width: 1150px) {
+            body { padding-left: 248px; transition: padding-left 0.25s ease; }
+            body.sidebar-collapsed { padding-left: 84px; }
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding-bottom: 0.9rem;
+            margin-bottom: 0.6rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-collapse-btn {
+            display: none;
+            background: none; border: none; color: var(--text-muted);
+            cursor: pointer; font-size: 1rem; padding: 0.3rem; flex-shrink: 0;
+        }
+        @media (min-width: 1150px) { .sidebar-collapse-btn { display: inline-flex; } }
+
+        .sidebar-mobile-close {
+            background: none; border: none; color: var(--text-muted);
+            cursor: pointer; font-size: 1.3rem; flex-shrink: 0;
+        }
+        @media (min-width: 1150px) { .sidebar-mobile-close { display: none; } }
+
+        /* Profilo, in cima alla sidebar (sostituisce l'avatar che prima
+           stava nell'angolo in alto a destra dell'header). */
+        .profilo-container { position: relative; flex-shrink: 0; margin-bottom: 0.8rem; }
+
+        .profilo-avatar {
+            width: 38px; height: 38px; border-radius: 50%;
+            background-color: var(--primary); color: white;
+            border: none; cursor: pointer;
+            font-weight: 800; font-size: 0.95rem;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .profilo-menu {
+            position: absolute; top: calc(100% + 0.5rem); left: 0; z-index: 200;
+            background-color: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 12px; box-shadow: var(--shadow-soft);
+            padding: 0.8rem; min-width: 200px;
+        }
+        .profilo-menu-nome { font-weight: 800; font-size: 0.95rem; color: var(--text-dark); }
+        .profilo-menu-email {
+            font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.7rem;
+            padding-bottom: 0.7rem; border-bottom: 1px solid var(--border-color);
+            word-break: break-all;
+        }
+        .profilo-menu-logout {
+            width: 100%; background: none; border: none; color: var(--danger);
+            font-weight: 700; font-size: 0.82rem; cursor: pointer;
+            display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0;
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            flex: 1;
+            overflow-y: auto;
         }
 
         .nav-item {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.6rem 0.9rem;
+            gap: 0.8rem;
+            padding: 0.65rem 0.7rem;
             border-radius: 10px;
             color: var(--text-muted);
             text-decoration: none;
             font-size: 0.85rem;
             font-weight: 600;
             cursor: pointer;
+            position: relative;
+        }
+        .nav-item i { width: 18px; text-align: center; flex-shrink: 0; }
+        .nav-label { white-space: nowrap; overflow: hidden; }
+
+        .nav-item:hover { background-color: var(--primary-light); color: var(--primary); }
+        .nav-item.active { background-color: var(--primary); color: #fff; }
+
+        .nav-item.nav-item-disabled { opacity: 0.5; cursor: default; }
+        .nav-item.nav-item-disabled:hover { background-color: transparent; color: var(--text-muted); }
+        .nav-soon-badge {
+            margin-left: auto; flex-shrink: 0; white-space: nowrap;
+            font-size: 0.62rem; font-weight: 800;
+            background-color: var(--border-color); color: var(--text-muted);
+            padding: 0.1rem 0.4rem; border-radius: 20px;
         }
 
-        .nav-item:hover, .nav-item.active {
-            background-color: var(--primary-light);
-            color: var(--primary);
+        .badge-pallino {
+            margin-left: auto; flex-shrink: 0;
+            min-width: 16px; height: 16px; border-radius: 8px;
+            background-color: var(--danger); color: white;
+            font-size: 0.62rem; font-weight: 800;
+            align-items: center; justify-content: center; padding: 0 3px;
         }
 
-        .profilo-container { position: relative; flex-shrink: 0; }
-
-        .header-search-btn {
-            width: 38px; height: 38px; border-radius: 50%;
-            background-color: var(--primary-light); color: var(--primary);
-            border: none; cursor: pointer; font-size: 0.95rem;
-            display: flex; align-items: center; justify-content: center;
+        .sidebar-bottom {
             flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            padding-top: 0.6rem;
+            margin-top: 0.4rem;
+            border-top: 1px solid var(--border-color);
         }
 
         .wizard-puntino {
@@ -251,18 +339,22 @@
            aprirsi (un sito normale non può farlo da solo su una pagina
            chrome-extension://) passando la sessione già attiva qui, così non
            serve un secondo login. Lo switch è una preferenza LOCALE a questo
-           browser/dispositivo (localStorage, non nel profilo Supabase). */
+           browser/dispositivo (localStorage, non nel profilo Supabase).
+           CONSEGNA 2: da pillola orizzontale nell'header a blocco verticale
+           in fondo alla sidebar — stessi id, stessa logica JS, solo veste
+           diversa. */
         .app-launch-group {
             display: none;
-            align-items: center;
-            gap: 10px;
-            padding: 5px 12px 5px 6px;
-            border-radius: 99px;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+            padding: 10px;
+            border-radius: 14px;
             background-color: var(--primary-light);
             flex-shrink: 0;
         }
         .app-launch-btn {
-            display: flex; align-items: center; gap: 6px;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
             border: none; border-radius: 99px;
             background-color: var(--primary); color: #fff;
             font-family: inherit; font-weight: 700; font-size: 0.8rem;
@@ -272,17 +364,13 @@
         .app-launch-btn:disabled { opacity: 0.6; cursor: default; }
         .app-launch-auto {
             display: flex; align-items: center; gap: 6px;
-            font-size: 0.7rem; color: var(--text-muted); white-space: nowrap;
+            font-size: 0.7rem; color: var(--text-muted);
         }
         .switch-mini { position: relative; display: inline-block; width: 32px; height: 18px; flex-shrink: 0; }
         .switch-mini input { opacity: 0; width: 0; height: 0; }
         .switch-mini .slider { border-radius: 20px; }
         .switch-mini .slider:before { height: 12px; width: 12px; left: 3px; bottom: 3px; }
         .switch-mini input:checked + .slider:before { transform: translateX(14px); }
-        @media (max-width: 900px) {
-            .app-launch-auto-text { display: none; }
-            .app-launch-btn-text { display: none; }
-        }
 
         /* ── CORNICE A TEMA per i popup di controllo/aggiornamento estensione ──
            Stessa cornice, colore diverso in base al tema attivo del sito
@@ -317,14 +405,6 @@
             font-size: 0.9rem; color: var(--primary); opacity: 0.6;
         }
 
-        .badge-pallino {
-            position: absolute; top: 0.15rem; right: 0.15rem;
-            min-width: 16px; height: 16px; border-radius: 8px;
-            background-color: var(--danger); color: white;
-            font-size: 0.62rem; font-weight: 800;
-            align-items: center; justify-content: center; padding: 0 3px;
-        }
-
         .risultato-ricerca-globale {
             display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
             padding: 0.6rem 0.3rem; border-bottom: 1px solid var(--border-color); cursor: pointer;
@@ -335,46 +415,32 @@
             font-size: 0.65rem; font-weight: 800; padding: 0.15rem 0.55rem; border-radius: 20px; flex-shrink: 0;
         }
 
-        .profilo-avatar {
-            width: 38px; height: 38px; border-radius: 50%;
-            background-color: var(--primary); color: white;
-            border: none; cursor: pointer;
-            font-weight: 800; font-size: 0.95rem;
-            display: flex; align-items: center; justify-content: center;
+        /* MENU MOBILE — barra sottile in cima con solo hamburger+logo,
+           visibile SOLO sotto i 1150px (sopra quella soglia la sidebar è
+           sempre visibile ed espansa, questa barra sparisce del tutto). */
+        header#mainHeader {
+            background-color: var(--header-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.7rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-soft);
+        }
+        @media (min-width: 1150px) {
+            header#mainHeader { display: none; }
         }
 
-        .profilo-menu {
-            position: absolute; top: calc(100% + 0.5rem); right: 0; z-index: 200;
-            background-color: var(--card-bg); border: 1px solid var(--border-color);
-            border-radius: 12px; box-shadow: var(--shadow-soft);
-            padding: 0.8rem; min-width: 200px;
-        }
-        .profilo-menu-nome { font-weight: 800; font-size: 0.95rem; color: var(--text-dark); }
-        .profilo-menu-email {
-            font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.7rem;
-            padding-bottom: 0.7rem; border-bottom: 1px solid var(--border-color);
-            word-break: break-all;
-        }
-        .profilo-menu-logout {
-            width: 100%; background: none; border: none; color: var(--danger);
-            font-weight: 700; font-size: 0.82rem; cursor: pointer;
-            display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0;
-        }
-
-        /* MENU MOBILE — drawer laterale da sinistra (sostituisce la vecchia
-           barra in basso, che con 7 sezioni non ci stava più comodamente) */
         .hamburger-btn {
-            display: none;
             background: none;
             border: none;
             font-size: 1.3rem;
             color: var(--text-dark);
             cursor: pointer;
             padding: 0.3rem 0.5rem;
-        }
-
-        @media (max-width: 1149px) {
-            .hamburger-btn { display: inline-flex; }
         }
 
         .drawer-overlay {
@@ -388,67 +454,11 @@
             -webkit-backdrop-filter: blur(2px); /* iOS Safari richiede il prefisso -webkit- */
             backdrop-filter: blur(2px);
         }
+        @media (min-width: 1150px) {
+            .drawer-overlay { display: none !important; }
+        }
 
         .drawer-overlay.open { display: block; }
-
-        .drawer-panel {
-            position: fixed;
-            top: 0; left: 0; bottom: 0;
-            width: 250px;
-            max-width: 80vw;
-            background-color: var(--card-bg);
-            z-index: 1101;
-            transform: translateX(-100%);
-            transition: transform 0.25s ease;
-            box-shadow: 4px 0 20px rgba(0,0,0,0.15);
-            display: flex;
-            flex-direction: column;
-            padding: 1rem 0.8rem;
-            /* iPhone con notch/home indicator: evita che le voci del menu
-               finiscano sotto l'area "sicura" in alto/in basso */
-            padding-top: max(1rem, env(safe-area-inset-top));
-            padding-left: max(0.8rem, env(safe-area-inset-left));
-            padding-bottom: max(1rem, env(safe-area-inset-bottom));
-        }
-
-        .drawer-panel.open { transform: translateX(0); }
-
-        .drawer-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.4rem 0.4rem 1rem 0.4rem;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 0.8rem;
-        }
-
-        .drawer-close-btn {
-            background: none;
-            border: none;
-            font-size: 1.3rem;
-            color: var(--text-muted);
-            cursor: pointer;
-        }
-
-        .drawer-item {
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-            padding: 0.8rem 0.7rem;
-            border-radius: 10px;
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .drawer-item i { width: 20px; text-align: center; }
-
-        .drawer-item:hover, .drawer-item.active {
-            background-color: var(--primary-light);
-            color: var(--primary);
-        }
 
         /* --- CONTAINER --- */
         .container {
@@ -1105,87 +1115,96 @@
 <body>
 
     <!-- OVERLAY DI LOGIN -->
-    <!-- HEADER DESKTOP / LOGO MOBILE -->
-    <header id="mainHeader">
-        <div class="header-left">
-            <button class="hamburger-btn" onclick="openDrawer()" aria-label="Apri menu">
-                <i class="fa-solid fa-bars"></i>
+    <!-- SIDEBAR — CONSEGNA 2 (17/08/2026): sostituisce sia il vecchio header
+         desktop orizzontale sia il vecchio drawer mobile separato. Un'unica
+         lista di voci di navigazione, riusata sia su desktop (sempre visibile,
+         comprimibile) sia su mobile (a scomparsa, aperta dall'hamburger).
+         switchTab() in JS non è stata toccata: cerca ancora elementi con
+         classe "nav-item" dentro un tag <nav> e con id "mNav-{sezione}",
+         quindi qui sotto ogni voce ha entrambi. -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <img src="favicon.ico" alt="Favicon">
+                <span class="logo-text">CardSync Pro</span>
+            </div>
+            <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" onclick="toggleSidebarCollapse()" aria-label="Comprimi o espandi il menu" title="Comprimi o espandi il menu">
+                <i class="fa-solid fa-angles-left" id="sidebarCollapseIcon"></i>
             </button>
-            <div class="header-brand-group">
-                <div class="logo">
-                    <img src="favicon.ico" alt="Favicon">
-                    <span>CardSync Pro</span>
-                </div>
-                <nav>
-                    <a class="nav-item active" onclick="switchTab('visualizzazione', this)"><i class="fa-solid fa-list-check"></i> Visualizzazione</a>
-                    <a class="nav-item" style="position:relative;" onclick="switchTab('inserimento', this)"><i class="fa-solid fa-plus"></i> Inserimento<span class="badge-pallino" data-badge-tab="inserimento" style="display:none;"></span></a>
-                    <a class="nav-item" onclick="switchTab('prezzi', this)"><i class="fa-solid fa-chart-line"></i> Prezzi</a>
-                    <a class="nav-item" style="position:relative;" onclick="switchTab('scambio', this)"><i class="fa-solid fa-right-left"></i> Scambio<span class="badge-pallino" data-badge-tab="scambio" style="display:none;"></span></a>
-                    <a class="nav-item" style="position:relative;" onclick="switchTab('wishlist', this)"><i class="fa-solid fa-bookmark"></i> Wishlist<span class="badge-pallino" data-badge-tab="wishlist" style="display:none;"></span></a>
-                    <a class="nav-item" onclick="switchTab('sealed', this)"><i class="fa-solid fa-box-archive"></i> Sealed</a>
-                </nav>
+            <button class="sidebar-mobile-close" onclick="closeDrawer()" aria-label="Chiudi menu"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="profilo-container" id="profiloContainer">
+            <button class="profilo-avatar" id="profiloAvatar" onclick="toggleMenuProfilo()" aria-label="Profilo">?</button>
+            <div class="profilo-menu" id="profiloMenu" style="display:none;">
+                <div class="profilo-menu-nome" id="profiloMenuNome">—</div>
+                <div class="profilo-menu-email" id="profiloMenuEmail">—</div>
+                <button class="profilo-menu-logout" id="profiloMenuLogout"><i class="fa-solid fa-right-from-bracket"></i> Esci</button>
             </div>
-            <div class="header-actions-group">
-                <button class="header-search-btn" onclick="apriRicercaGlobale()" aria-label="Cerca ovunque"><i class="fa-solid fa-magnifying-glass"></i></button>
-                <button class="header-search-btn" onclick="switchTab('impostazioni', document.getElementById('mNav-impostazioni'))" aria-label="Impostazioni" title="Impostazioni"><i class="fa-solid fa-gear"></i></button>
-                <div class="app-launch-group" id="appLaunchGroup">
-                    <button class="app-launch-btn" id="btnApriApp" onclick="apriAppEstensione()"
-                        title="Apri l'app per far sì che questo PC possa fare calcoli">
-                        <i class="fa-solid fa-desktop"></i>
-                        <span class="app-launch-btn-text">Apri l'app</span>
-                    </button>
-                    <label class="app-launch-auto" title="Apri sempre l'app all'apertura del sito da questo dispositivo">
-                        <span class="switch-mini">
-                            <input type="checkbox" id="chkApriSempreApp" onchange="salvaPreferenzaApriSempreApp(this.checked)">
-                            <span class="slider"></span>
-                        </span>
-                        <span class="app-launch-auto-text">Apri sempre l'app all'apertura del sito da questo dispositivo</span>
-                    </label>
-                </div>
-                <div class="profilo-container" id="profiloContainer">
-                    <button class="profilo-avatar" id="profiloAvatar" onclick="toggleMenuProfilo()" aria-label="Profilo">?</button>
-                    <div class="profilo-menu" id="profiloMenu" style="display:none;">
-                        <div class="profilo-menu-nome" id="profiloMenuNome">—</div>
-                        <div class="profilo-menu-email" id="profiloMenuEmail">—</div>
-                        <button class="profilo-menu-logout" id="profiloMenuLogout"><i class="fa-solid fa-right-from-bracket"></i> Esci</button>
-                    </div>
-                </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a class="nav-item" onclick="apriRicercaGlobale()" aria-label="Cerca ovunque">
+                <i class="fa-solid fa-magnifying-glass"></i><span class="nav-label">Cerca</span>
+            </a>
+            <a class="nav-item active" id="mNav-visualizzazione" onclick="switchTab('visualizzazione', this)">
+                <i class="fa-solid fa-list-check"></i><span class="nav-label">Visualizzazione</span>
+            </a>
+            <a class="nav-item" id="mNav-inserimento" onclick="switchTab('inserimento', this)">
+                <i class="fa-solid fa-plus"></i><span class="nav-label">Inserimento</span><span class="badge-pallino" data-badge-tab="inserimento" style="display:none;"></span>
+            </a>
+            <a class="nav-item" id="mNav-prezzi" onclick="switchTab('prezzi', this)">
+                <i class="fa-solid fa-chart-line"></i><span class="nav-label">Prezzi</span>
+            </a>
+            <a class="nav-item" id="mNav-scambio" onclick="switchTab('scambio', this)">
+                <i class="fa-solid fa-right-left"></i><span class="nav-label">Scambio</span><span class="badge-pallino" data-badge-tab="scambio" style="display:none;"></span>
+            </a>
+            <a class="nav-item" id="mNav-wishlist" onclick="switchTab('wishlist', this)">
+                <i class="fa-solid fa-bookmark"></i><span class="nav-label">Wishlist</span><span class="badge-pallino" data-badge-tab="wishlist" style="display:none;"></span>
+            </a>
+            <!-- Segnaposto Binder: nessuna funzione dietro, verrà attivato
+                 quando costruiremo il Binder vero (Fase A0 in poi). -->
+            <a class="nav-item nav-item-disabled" id="mNav-binder" aria-disabled="true" title="Binder — presto disponibile">
+                <i class="fa-solid fa-layer-group"></i><span class="nav-label">Binder</span><span class="nav-soon-badge">presto</span>
+            </a>
+            <a class="nav-item" id="mNav-sealed" onclick="switchTab('sealed', this)">
+                <i class="fa-solid fa-box-archive"></i><span class="nav-label">Sealed</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-bottom">
+            <div class="app-launch-group" id="appLaunchGroup">
+                <button class="app-launch-btn" id="btnApriApp" onclick="apriAppEstensione()"
+                    title="Apri l'app per far sì che questo PC possa fare calcoli">
+                    <i class="fa-solid fa-desktop"></i>
+                    <span class="app-launch-btn-text nav-label">Apri l'app</span>
+                </button>
+                <label class="app-launch-auto" title="Apri sempre l'app all'apertura del sito da questo dispositivo">
+                    <span class="switch-mini">
+                        <input type="checkbox" id="chkApriSempreApp" onchange="salvaPreferenzaApriSempreApp(this.checked)">
+                        <span class="slider"></span>
+                    </span>
+                    <span class="app-launch-auto-text nav-label">Apri sempre l'app all'apertura del sito da questo dispositivo</span>
+                </label>
             </div>
+            <a class="nav-item" id="mNav-impostazioni" onclick="switchTab('impostazioni', this)">
+                <i class="fa-solid fa-gear"></i><span class="nav-label">Impostazioni</span>
+            </a>
+        </div>
+    </aside>
+
+    <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+
+    <!-- BARRA MOBILE — visibile solo sotto i 1150px, apre la sidebar -->
+    <header id="mainHeader">
+        <button class="hamburger-btn" onclick="openDrawer()" aria-label="Apri menu">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="logo">
+            <img src="favicon.ico" alt="Favicon">
+            <span class="logo-text">CardSync Pro</span>
         </div>
     </header>
-
-    <!-- MENU MOBILE — drawer laterale (tutte le 7 sezioni, niente più tagliate) -->
-    <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
-    <div class="drawer-panel" id="drawerPanel">
-        <div class="drawer-header">
-            <div class="logo" style="font-size: 1.05rem;">
-                <img src="favicon.ico" alt="Favicon">
-                <span>CardSync Pro</span>
-            </div>
-            <button class="drawer-close-btn" onclick="closeDrawer()" aria-label="Chiudi menu"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <a class="drawer-item active" id="mNav-visualizzazione" onclick="switchTab('visualizzazione', this)">
-            <i class="fa-solid fa-list-check"></i> Visualizzazione
-        </a>
-        <a class="drawer-item" id="mNav-inserimento" style="position:relative;" onclick="switchTab('inserimento', this)">
-            <i class="fa-solid fa-plus"></i> Inserimento<span class="badge-pallino" data-badge-tab="inserimento" style="display:none; position:static; margin-left:auto;"></span>
-        </a>
-        <a class="drawer-item" id="mNav-prezzi" onclick="switchTab('prezzi', this)">
-            <i class="fa-solid fa-chart-line"></i> Prezzi
-        </a>
-        <a class="drawer-item" id="mNav-scambio" style="position:relative;" onclick="switchTab('scambio', this)">
-            <i class="fa-solid fa-right-left"></i> Scambio<span class="badge-pallino" data-badge-tab="scambio" style="display:none; position:static; margin-left:auto;"></span>
-        </a>
-        <a class="drawer-item" id="mNav-wishlist" style="position:relative;" onclick="switchTab('wishlist', this)">
-            <i class="fa-solid fa-bookmark"></i> Wishlist<span class="badge-pallino" data-badge-tab="wishlist" style="display:none; position:static; margin-left:auto;"></span>
-        </a>
-        <a class="drawer-item" id="mNav-sealed" onclick="switchTab('sealed', this)">
-            <i class="fa-solid fa-box-archive"></i> Sealed
-        </a>
-        <a class="drawer-item" id="mNav-impostazioni" onclick="switchTab('impostazioni', this)">
-            <i class="fa-solid fa-gear"></i> Impostazioni
-        </a>
-    </div>
 
     <div class="container">
 
@@ -4273,16 +4292,33 @@
             filterTable();
         }
 
-        // ── MENU MOBILE (drawer laterale) ────────────────────────────────────────
+        // ── SIDEBAR — apertura/chiusura su mobile (a scomparsa) ─────────────────
+        // CONSEGNA 2: stessa funzione di prima (usata anche da switchTab per
+        // richiudersi da sola dopo aver scelto una sezione), ora punta alla
+        // sidebar unica invece del vecchio drawerPanel separato.
         function openDrawer() {
             document.getElementById('drawerOverlay').classList.add('open');
-            document.getElementById('drawerPanel').classList.add('open');
+            document.getElementById('sidebar').classList.add('open');
         }
 
         function closeDrawer() {
             document.getElementById('drawerOverlay').classList.remove('open');
-            document.getElementById('drawerPanel').classList.remove('open');
+            document.getElementById('sidebar').classList.remove('open');
         }
+
+        // ── SIDEBAR — comprimi/espandi (solo desktop) ───────────────────────────
+        const CHIAVE_SIDEBAR_COMPRESSA = 'cardsync_sidebar_collapsed';
+        function _applicaStatoSidebarCompressa(compressa) {
+            document.body.classList.toggle('sidebar-collapsed', compressa);
+            const icona = document.getElementById('sidebarCollapseIcon');
+            if (icona) icona.className = compressa ? 'fa-solid fa-angles-right' : 'fa-solid fa-angles-left';
+        }
+        function toggleSidebarCollapse() {
+            const compressa = !document.body.classList.contains('sidebar-collapsed');
+            _applicaStatoSidebarCompressa(compressa);
+            localStorage.setItem(CHIAVE_SIDEBAR_COMPRESSA, compressa ? 'true' : 'false');
+        }
+        _applicaStatoSidebarCompressa(localStorage.getItem(CHIAVE_SIDEBAR_COMPRESSA) === 'true');
 
         function switchTab(tabId, element) {
             currentMode = tabId;
