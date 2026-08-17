@@ -1590,7 +1590,7 @@
                     Nessuna carta trovata in collezione.
                 </p>
 
-                <div class="binder-pagination">
+                <div class="binder-pagination" id="binderPagination">
                     <button type="button" class="binder-page-btn" id="binderPrevBtn" onclick="binderPaginaPrecedente()" aria-label="Pagina precedente"><i class="fa-solid fa-chevron-left"></i></button>
                     <span id="binderPaginaLabel">Pagina 1 di 1</span>
                     <button type="button" class="binder-page-btn" id="binderNextBtn" onclick="binderPaginaSuccessiva()" aria-label="Pagina successiva"><i class="fa-solid fa-chevron-right"></i></button>
@@ -3817,6 +3817,10 @@
             document.getElementById('binderPrevBtn').disabled = _binderPagina <= 0;
             document.getElementById('binderNextBtn').disabled = _binderPagina >= totalePagine - 1;
             document.getElementById('binderEmptyMsg').style.display = carte.length ? 'none' : 'block';
+            // A5: il pager si nasconde del tutto se esiste una sola pagina
+            // (o nessuna carta) — prima restava sempre visibile con le
+            // frecce disattivate.
+            document.getElementById('binderPagination').style.display = totalePagine > 1 ? 'flex' : 'none';
         }
 
         function impostaBinderLayout(layout) {
