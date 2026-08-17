@@ -766,6 +766,24 @@
         .badge-rh { background-color: #f3e5f5; color: #7b1fa2; font-weight: 700; max-width: 140px; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; }
 
         .price { font-weight: 700; color: var(--text-dark); font-family: 'JetBrains Mono', monospace; }
+
+        /* A14 — ANIMAZIONE DI FEEDBACK SUL PREZZO (breve flash colorato).
+           Scatta solo su modifica diretta dell'utente, mai sugli
+           aggiornamenti automatici/di massa della coda prezzi — vedi
+           _animaPrezzoCarta() più sotto nel file. Disattivabile dal
+           toggle "Riduci animazioni" in Impostazioni (per-dispositivo). */
+        @keyframes prezzoFlashSu {
+            0% { background-color: transparent; }
+            25% { background-color: var(--success-bg); }
+            100% { background-color: transparent; }
+        }
+        @keyframes prezzoFlashGiu {
+            0% { background-color: transparent; }
+            25% { background-color: var(--danger-bg); }
+            100% { background-color: transparent; }
+        }
+        .prezzo-flash-su { animation: prezzoFlashSu 0.9s ease; border-radius: 6px; }
+        .prezzo-flash-giu { animation: prezzoFlashGiu 0.9s ease; border-radius: 6px; }
         code { font-family: 'JetBrains Mono', monospace; }
         .variation-up { color: var(--success); font-weight: 700; font-size: 0.75rem; }
         .variation-down { color: var(--danger); font-weight: 700; font-size: 0.75rem; }
@@ -1612,6 +1630,21 @@
                     </div>
                     <label class="switch">
                         <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- TOGGLE RIDUCI ANIMAZIONI (A14) — per-dispositivo, come
+                     "Aiuta il gruppo": ogni PC/telefono ha la propria
+                     preferenza. Disattiva solo il breve flash colorato sul
+                     prezzo quando sale/scende per una modifica diretta. -->
+                <div class="setting-row">
+                    <div>
+                        <h4 style="font-size: 0.9rem; font-weight: 700;">Riduci Animazioni</h4>
+                        <p style="font-size: 0.75rem; color: var(--text-muted);">Disattiva il flash colorato sul prezzo quando lo modifichi (solo su questo dispositivo)</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="riduciAnimazioniToggle" onchange="toggleRiduciAnimazioni(this.checked)">
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -2680,6 +2713,8 @@
                 document.getElementById('darkModeToggle').checked = true;
                 toggleDarkMode(true);
             }
+            // Ripristina la preferenza "Riduci animazioni" (per-dispositivo)
+            document.getElementById('riduciAnimazioniToggle').checked = _animazioniRidotte();
 
             // Ripristina bozza d'inserimento o ne crea una vuota
             if (!restoreEntryDraft()) {
@@ -3207,7 +3242,7 @@
                     <td data-label="Location"><span class="badge badge-location" title="${(card.location || '').replace(/"/g, '&quot;')} — clicca per modificare" onclick="event.stopPropagation(); modificaLocationInline(event, '${idAttr}', '${card.tabella}', '${locAttr}')">${card.location || '—'}</span></td>
                     <td data-label="Lingua"><span class="badge ${langClass} cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaLinguaInline(event, '${idAttr}', '${card.tabella}', '${card.lang}')">${card.lang}</span></td>
                     <td data-label="Cond."><span class="badge ${condClass} cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCondizioneInline(event, '${idAttr}', '${card.tabella}', '${card.cond}')">${card.cond}</span></td>
-                    <td data-label="Prezzo" class="price cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'prezzo', ${card.price}, 'Prezzo (€)', 'numero')">${card.price.toFixed(2)} €</td>
+                    <td data-label="Prezzo" id="prezzoCella-${idAttr}" class="price cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'prezzo', ${card.price}, 'Prezzo (€)', 'numero')">${card.price.toFixed(2)} €</td>
                     <td data-label="Var." class="${varClass}">${card.variation}</td>
                     <td data-label="Link">
                         <a href="${card.link}" target="_blank" class="link-icon">
@@ -3276,7 +3311,7 @@
                             ${linkIcona}
                         </span>
                         ${iconaVariazione}
-                        <span class="riga-compatta-prezzo" onclick="modificaCampoInline('${idAttr}', '${card.tabella}', 'prezzo', ${card.price}, 'Prezzo (€)', 'numero')">${card.price.toFixed(2)}€</span>
+                        <span class="riga-compatta-prezzo" id="prezzoCellaCompatta-${idAttr}" onclick="modificaCampoInline('${idAttr}', '${card.tabella}', 'prezzo', ${card.price}, 'Prezzo (€)', 'numero')">${card.price.toFixed(2)}€</span>
                         <button class="riga-compatta-menu-btn" onclick="event.stopPropagation(); toggleMenuCompatto('${idAttr}')"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                     </div>
                     <div class="riga-compatta-meta">
@@ -3368,6 +3403,10 @@
         async function salvaModificaCarta() {
             if (!_cartaInModifica) return;
             const isWishlist = _cartaInModifica.tabella === 'wishlist';
+            // Catturati PRIMA di chiudiModificaCarta(), che azzera
+            // _cartaInModifica — servono dopo per il feedback A14.
+            const idCartaModificata = _cartaInModifica.id;
+            const prezzoPrecedente = _cartaInModifica.price;
 
             const aggiornamento = {
                 nome: document.getElementById('editNome').value.trim(),
@@ -3400,8 +3439,16 @@
                 return;
             }
 
+            // A14: feedback visivo solo se il prezzo è stato toccato
+            // (campo lasciato/impostato non-vuoto) e risulta davvero
+            // salito o sceso rispetto a prima.
+            const direzionePrezzo = (aggiornamento.prezzo != null && prezzoPrecedente != null)
+                ? (aggiornamento.prezzo > prezzoPrecedente ? 'su' : (aggiornamento.prezzo < prezzoPrecedente ? 'giu' : null))
+                : null;
+
             chiudiModificaCarta();
             await caricaCarteReali();
+            if (direzionePrezzo) _animaPrezzoCarta(idCartaModificata, direzionePrezzo);
         }
 
         // Sposta una carta dalla wishlist alla collezione vera e propria —
@@ -4463,7 +4510,16 @@
 
             const { error } = await supabaseClient.from(tabella).update({ [campo]: valore }).eq('id', id);
             if (error) { alert(`❌ Errore nel salvare "${etichetta}": ` + error.message); return; }
+
+            // A14: feedback visivo solo quando il campo modificato è il
+            // prezzo e il valore è davvero salito/sceso (il controllo
+            // sopra ha già escluso il caso "nessuna modifica reale").
+            const direzionePrezzo = campo === 'prezzo'
+                ? (valore > valoreAttuale ? 'su' : (valore < valoreAttuale ? 'giu' : null))
+                : null;
+
             await caricaCarteReali();
+            if (direzionePrezzo) _animaPrezzoCarta(id, direzionePrezzo);
         }
 
         // ── SELEZIONE MULTIPLA ────────────────────────────────────────────────────
@@ -4699,6 +4755,39 @@
             } else {
                 document.body.classList.remove('dark-mode');
             }
+        }
+
+        // ── A14 — TOGGLE "RIDUCI ANIMAZIONI" + FEEDBACK VISIVO SUL PREZZO ───────
+        // Preferenza per-dispositivo (localStorage, stesso pattern di
+        // "Aiuta il gruppo" e del layout Binder), NON legata all'account:
+        // ogni PC/telefono la sceglie per sé.
+        const CHIAVE_RIDUCI_ANIMAZIONI = 'cardsync_riduci_animazioni';
+        function _animazioniRidotte() {
+            return localStorage.getItem(CHIAVE_RIDUCI_ANIMAZIONI) === 'true';
+        }
+        function toggleRiduciAnimazioni(ridotte) {
+            localStorage.setItem(CHIAVE_RIDUCI_ANIMAZIONI, ridotte ? 'true' : 'false');
+        }
+
+        // Flash colorato breve sulla cella prezzo (verde se sale, rosso se
+        // scende). Scatta SOLO dalle due funzioni che rappresentano una
+        // modifica diretta dell'utente su questo sito (modificaCampoInline
+        // e salvaModificaCarta) — MAI dal ricaricamento innescato da
+        // Realtime (_pianificaRicaricaCarte), che copre anche gli
+        // aggiornamenti automatici/di massa della coda prezzi: farla
+        // scattare lì avrebbe animato decine di righe in sequenza durante
+        // un controllo prezzi, risultando fastidiosa invece che utile.
+        function _animaPrezzoCarta(id, direzione) {
+            if (!direzione || _animazioniRidotte()) return;
+            const classe = direzione === 'su' ? 'prezzo-flash-su' : 'prezzo-flash-giu';
+            ['prezzoCella-' + id, 'prezzoCellaCompatta-' + id].forEach(elId => {
+                const el = document.getElementById(elId);
+                if (!el) return;
+                el.classList.remove('prezzo-flash-su', 'prezzo-flash-giu');
+                void el.offsetWidth; // forza il reflow, per far ripartire l'animazione se era già in corso
+                el.classList.add(classe);
+                el.addEventListener('animationend', () => el.classList.remove(classe), { once: true });
+            });
         }
 
         function setSiteTheme(themeName) {
