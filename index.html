@@ -2018,9 +2018,17 @@
             <h3 style="font-weight: 800;">QR Code</h3>
             <p id="qrModalSubtext" style="font-size: 0.8rem; color: var(--text-muted);">Inquadra per aprire la lista.</p>
             <div id="qrcodeContainer"></div>
-            <button class="btn-secondary" style="width: 100%;" onclick="copyShareLink()">
-                <i class="fa-solid fa-link"></i> Copia Link
-            </button>
+            <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">
+                <button class="btn-secondary" style="width: 100%;" onclick="apriAnteprimaLinkCondiviso()">
+                    <i class="fa-solid fa-up-right-from-square"></i> Anteprima
+                </button>
+                <button class="btn-secondary" style="width: 100%;" onclick="copyShareLink()">
+                    <i class="fa-solid fa-link"></i> Copia Link
+                </button>
+                <button class="btn-secondary" id="btnCondividiNativo" style="width: 100%; display:none;" onclick="condividiLinkNativo()">
+                    <i class="fa-solid fa-share-nodes"></i> Condividi
+                </button>
+            </div>
         </div>
     </div>
 
@@ -5558,6 +5566,14 @@
             const temaSalvato = localStorage.getItem('siteTheme');
             if (temaSalvato) url.searchParams.set('tema', temaSalvato);
             if (localStorage.getItem('darkMode') === 'true') url.searchParams.set('scuro', '1');
+            // A16: solo per la Wishlist, passa anche il nome del proprietario
+            // (riusa _nomeDaEmail già esistente) — serve a personalizzare il
+            // testo di "Copia riepilogo" su wishlist.html ("Carte che potrei
+            // procurare a [Nome]"), senza nessuna nuova chiamata a Supabase
+            // né esporre l'email completa, solo un nome leggibile.
+            if (currentMode === 'wishlist' && sessionData.session.user.email) {
+                url.searchParams.set('nome', _nomeDaEmail(sessionData.session.user.email));
+            }
             return url.href;
         }
 
@@ -5585,11 +5601,38 @@
                 colorDark : "#2a2438",
                 colorLight : "#ffffff"
             });
+            // A16: il pulsante di condivisione nativa (foglio di condivisione
+            // del telefono) compare solo dove il browser lo supporta
+            // davvero (navigator.share) — niente pulsante rotto altrove.
+            document.getElementById('btnCondividiNativo').style.display = navigator.share ? 'flex' : 'none';
             modal.style.display = 'flex';
         }
 
         function closeQrModal() {
             document.getElementById('qrModal').style.display = 'none';
+        }
+
+        // A16: apre la pagina pubblica reale (con i dati veri di quel
+        // proprietario) in una nuova scheda — scelta di Claudio al posto di
+        // una mini-anteprima dentro il modale, più semplice e affidabile.
+        async function apriAnteprimaLinkCondiviso() {
+            const link = await _linkPubblicoCondivisione();
+            if (!link) { alert('Devi essere loggato per generare l\'anteprima.'); return; }
+            window.open(link, '_blank');
+        }
+
+        // A16: foglio di condivisione nativo del sistema (WhatsApp/Messaggi/
+        // Email a scelta dell'utente) — IN AGGIUNTA a "Copia Link", non al
+        // posto. Bottone visibile solo dove il browser lo supporta.
+        async function condividiLinkNativo() {
+            const link = await _linkPubblicoCondivisione();
+            if (!link) { alert('Devi essere loggato per condividere il link.'); return; }
+            try {
+                await navigator.share({ title: 'CardSync Pro', url: link });
+            } catch (e) {
+                // L'utente ha annullato la condivisione, o il browser l'ha
+                // bloccata — nessun errore da mostrare, è un'azione normale.
+            }
         }
 
         function saveDataMock() {
