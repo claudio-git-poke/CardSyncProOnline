@@ -958,6 +958,17 @@
             position: relative;
             border: 1px solid var(--border-color);
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            /* A15: fix condiviso da TUTTI i modali del sito — prima solo
+               "Prezzi da aggiornare" limitava la propria lista interna,
+               gli altri (in particolare "Modifica Carta", 7 campi) non
+               avevano altezza massima né scroll: su schermo basso/con
+               tastiera aperta il pulsante in fondo poteva finire fuori
+               schermo senza modo di raggiungerlo. Ora ogni modale scorre
+               internamente se il contenuto supera l'altezza disponibile,
+               lasciando il pulsante chiudi sempre raggiungibile. */
+            max-height: calc(100vh - 2rem);
+            max-height: calc(100dvh - 2rem);
+            overflow-y: auto;
         }
 
         #qrcodeContainer { display: flex; justify-content: center; margin: 1rem 0; }
@@ -3286,11 +3297,14 @@
                 </div>`;
         }
 
-        // ── A10 (Dashboard/Home) — flip-modal, ESTENDE lo stesso modale già
-        // usato da apriImmagineIngrandita (#immagineModal / stesso pulsante
-        // chiudi), come deciso da Claudio, invece di crearne uno separato.
-        // Animazione: rotazione orizzontale (rotateY), 0.7s — placeholder
-        // ragionevole, da aggiustare se Claudio preferisce altro.
+        // ── FLIP-MODAL — usato in TUTTO IL SITO da ogni click su una carta
+        // (tabella, vista compatta mobile, Binder, Home "In primo piano"):
+        // ESTENDE lo stesso modale già usato da apriImmagineIngrandita
+        // (#immagineModal / stesso pulsante chiudi), come deciso da Claudio
+        // per Home, ora esteso a tutti i punti di ingresso su richiesta di
+        // Claudio (A15). Animazione: rotazione orizzontale (rotateY), 0.7s
+        // — placeholder ragionevole, da aggiustare se Claudio preferisce
+        // altro.
         let _flipCardTimeout = null;
 
         function apriFlipCardHome(id) {
@@ -4412,15 +4426,17 @@
             return `https://images.weserv.nl/?url=${encodeURIComponent(immagine)}&w=${larghezza || 64}`;
         }
 
+        // A15: prima apriva solo l'immagine statica; ora richiama lo stesso
+        // flip-modal di apriFlipCardHome, su richiesta di Claudio, così il
+        // comportamento è identico ovunque nel sito (tabella, vista
+        // compatta mobile, Binder, Home). Tutti i punti che chiamavano
+        // questa funzione restano invariati, cambia solo cosa succede
+        // dentro. Nota: se la carta non ha immagine, prima il click non
+        // faceva nulla (guardia bloccante) — ora il modale si apre lo
+        // stesso e mostra direttamente il retro con le statistiche, senza
+        // fronte (comportamento più utile, non un difetto).
         function apriImmagineIngrandita(id) {
-            const card = carteReali.find(c => String(c.id) === String(id));
-            if (!card || !card.immagine) return;
-            document.getElementById('immagineErroreMsg').style.display = 'none';
-            document.getElementById('flipCardScene').style.display = 'none'; // A10: mai insieme alla scena flip
-            const img = document.getElementById('immagineIngranditaImg');
-            img.style.display = '';
-            img.src = _urlImmagineVisualizzabile(card.immagine);
-            document.getElementById('immagineModal').style.display = 'flex';
+            apriFlipCardHome(id);
         }
 
         function chiudiImmagineIngrandita() {
