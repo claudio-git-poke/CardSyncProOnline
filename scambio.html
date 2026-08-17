@@ -6,7 +6,7 @@
     <title>CardSync Pro — Catalogo Scambio</title>
 
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -81,7 +81,7 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-family: 'Space Grotesk', sans-serif;
         }
 
         body {
@@ -110,9 +110,15 @@
             display: flex;
             align-items: center;
             gap: 0.6rem;
-            font-weight: 800;
-            font-size: 1.15rem;
+            font-family: 'Press Start 2P', monospace;
+            font-weight: 400;
+            font-size: 0.85rem;
             color: var(--primary);
+            letter-spacing: -0.5px;
+        }
+
+        @media (max-width: 420px) {
+            .logo { font-size: 0.7rem; }
         }
 
         .logo img { width: 24px; height: 24px; object-fit: contain; }
@@ -212,6 +218,7 @@
         }
 
         .card-price {
+            font-family: 'JetBrains Mono', monospace;
             font-weight: 800;
             font-size: 0.95rem;
             color: var(--text-dark);
