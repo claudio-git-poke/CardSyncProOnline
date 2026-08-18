@@ -569,37 +569,16 @@
                 return;
             }
 
-            // ⚠️ PROBLEMA #2 (vedi STATO_PROGETTO.txt sez. 9, segnalato
-            // 17/08/2026): questa pagina legge ANCORA direttamente la
-            // tabella 'carte' filtrata solo lato client, a differenza di
-            // scambio.html/wishlist.html che usano già una RPC dedicata
-            // (leggi_scambio_condiviso / leggi_wishlist_condivisa) proprio
-            // per evitare che chiunque possa leggere i dati di TUTTI gli
-            // utenti bypassando il filtro owner_id. NON corretto in questa
-            // sessione di proposito: richiede prima la verifica diretta
-            // della RLS (regola metodologica, STATO_PROGETTO.txt sez. 0),
-            // poi l'allineamento allo stesso schema in Fase A0. Il filtro
-            // location='SCAMBIO' aggiunto sotto (18/08/2026) riduce il
-            // rischio per chi usa normalmente il link condiviso, ma NON
-            // sostituisce la correzione: chi ha strumenti tecnici potrebbe
-            // ancora bypassarlo — motivo in più per dare priorità ad A0.
-            //
-            // A16 (18/08/2026): SOLO i prodotti sealed con location =
-            // 'SCAMBIO' vengono letti — stesso meccanismo già usato per le
-            // carte in scambio (location è un valore libero, "SCAMBIO" è
-            // solo uno dei tanti possibili, non un campo dedicato). Scelta
-            // esplicita di Claudio per non esporre pubblicamente il resto
-            // della collezione sealed (valore economico + dove si trova
-            // fisicamente) — di default NESSUN prodotto è condiviso finché
-            // non viene marcato manualmente.
+            // RISOLTO 18/08/2026 (Problema #2, STATO_PROGETTO.txt sez.7):
+            // non si legge più direttamente la tabella 'carte' filtrata solo
+            // lato client — si passa dalla RPC dedicata leggi_sealed_condiviso
+            // (SECURITY DEFINER, stesso pattern già in uso da mesi in
+            // scambio.html/wishlist.html con leggi_scambio_condiviso /
+            // leggi_wishlist_condivisa), che applica il filtro tipo='sealed'
+            // AND stato='collezione' AND location='SCAMBIO' direttamente nel
+            // database, non più solo nel browser di chi guarda la pagina.
             const { data, error } = await supabaseClient
-                .from('carte')
-                .select('id, nome, codice, lingua, condizione, qty, prezzo, note, url, location, immagine')
-                .eq('owner_id', userId)
-                .eq('tipo', 'sealed')
-                .eq('stato', 'collezione')
-                .eq('location', 'SCAMBIO')
-                .order('nome');
+                .rpc('leggi_sealed_condiviso', { p_owner_id: userId });
 
             if (error) {
                 container.innerHTML = `<div class="stato-errore"><i class="fa-solid fa-triangle-exclamation"></i> Errore nel caricamento: ${error.message}</div>`;
@@ -613,7 +592,6 @@
                     code: r.codice || '',
                     lang: r.lingua || 'IT',
                     cond: r.condizione || 'NM',
-                    location: r.location || '',
                     qtyDisponibile: r.qty || 1,
                     price: r.prezzo != null ? Number(r.prezzo) : 0,
                     notes: r.note || '',
