@@ -3092,23 +3092,27 @@
         // Claudio per privacy). Stesso identico pattern già usato
         // dall'estensione in coda_pendente.js (scheda "Controllo prezzi",
         // "Dispositivi al lavoro"): carte con claimed_by valorizzato di
-        // recente = qualcuno del gruppo sta calcolando prezzi ADESSO. Stessa
-        // soglia di 10 minuti (FINESTRA_CLAIM_PREZZI_MIN in coda_pendente.js).
+        // recente = qualcuno del gruppo sta calcolando prezzi ADESSO.
+        //
+        // RISOLTO (Problema #1, parte SELECT): prima leggeva direttamente
+        // 'carte' con la policy larga "collezione condivisa per controllo
+        // prezzi gruppo", che espone TUTTE le colonne di TUTTI gli owner —
+        // qui bastava sapere se esiste almeno una riga prenotata, non serve
+        // vedere note/prezzo/location di nessuno. Ora passa dalla RPC
+        // leggi_stato_claim_gruppo (SECURITY DEFINER), che restituisce SOLO
+        // le colonne di coordinamento (id/dispositivo/claimed_by/claimed_at)
+        // e applica lei stessa la soglia di 10 minuti — non serve più
+        // calcolarla qui lato client.
         const SOGLIA_MINUTI_CLAIM_PREZZI = 10;
 
         async function _dispositiviAttiviOra() {
-            const sogliaClaim = new Date(Date.now() - SOGLIA_MINUTI_CLAIM_PREZZI * 60 * 1000).toISOString();
             const { data, error } = await supabaseClient
-                .from('carte')
-                .select('id')
-                .eq('stato', 'collezione')
-                .not('claimed_by', 'is', null)
-                .gt('claimed_at', sogliaClaim)
-                .limit(1);
+                .rpc('leggi_stato_claim_gruppo', { p_soglia_minuti: SOGLIA_MINUTI_CLAIM_PREZZI });
 
             if (error) { console.error('Errore lettura dispositivi attivi:', error.message); return false; }
             return (data || []).length > 0;
         }
+
 
         async function caricaAvvisiHome() {
             const collezione = carteReali.filter(c => c.stato === 'collezione');
