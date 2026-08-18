@@ -1831,7 +1831,7 @@
                 <div class="binder-grid" id="binderGrid"></div>
 
                 <p id="binderEmptyMsg" style="display:none; text-align:center; color: var(--text-muted); font-size: 0.85rem; margin-top: 1rem;">
-                    Nessuna carta trovata in collezione.
+                    Non hai ancora aggiunto nessuna carta al Binder.
                 </p>
 
                 <div class="binder-pagination" id="binderPagination">
@@ -2862,6 +2862,12 @@
         // location "SCAMBIO" invece è solo un valore di location come un altro,
         // scelto liberamente per marcare le carte in scambio dentro la collezione.
         let carteReali = [];
+        // Fase A0/A3: id delle carte che l'utente ha esplicitamente scelto
+        // di mettere nel Binder (tabella binder_carte). L'aggiunta vera e
+        // propria è ancora nella Fase A6 (non implementata) — per ora il
+        // Set resta vuoto finché non esiste una UI per popolarlo, ed è
+        // normale che il Binder appaia vuoto fino ad allora.
+        let _idsNelBinder = new Set();
 
         function _mappaVariazione(r) {
             let variation = '—';
@@ -2907,14 +2913,25 @@
             // uniamo in un solo array per riusare la stessa tabella/filtri sul
             // sito. 'tabella' su ogni riga ricorda da dove viene, così
             // modifica/eliminazione sanno su quale tabella agire dopo.
-            const [{ data: dataCarte, error: errCarte }, { data: dataWishlist, error: errWishlist }] = await Promise.all([
+            const [{ data: dataCarte, error: errCarte }, { data: dataWishlist, error: errWishlist }, { data: dataBinder, error: errBinder }] = await Promise.all([
                 _selectTuttePagine(supabaseClient.from('carte').select('*').eq('owner_id', userId).eq('stato', 'collezione').order('nome')),
                 _selectTuttePagine(supabaseClient.from('wishlist').select('*').eq('owner_id', userId).order('nome')),
+                _selectTuttePagine(supabaseClient.from('binder_carte').select('carta_id').eq('owner_id', userId)),
             ]);
 
             if (errCarte || errWishlist) {
                 console.error('Errore caricamento carte:', (errCarte || errWishlist).message);
                 return;
+            }
+
+            // Fase A0/A3: non blocchiamo il caricamento della collezione se
+            // la lettura del Binder fallisce (tabella nuova) — logghiamo e
+            // procediamo con Set vuoto, il resto del sito resta usabile.
+            if (errBinder) {
+                console.error('Errore caricamento binder_carte:', errBinder.message);
+                _idsNelBinder = new Set();
+            } else {
+                _idsNelBinder = new Set((dataBinder || []).map(r => String(r.carta_id)));
             }
 
             const righeCarte = (dataCarte || []).map(r => ({
@@ -4563,8 +4580,13 @@
             const layout = BINDER_LAYOUTS[_binderLayout] || BINDER_LAYOUTS['3x3'];
             const perPagina = layout.cols * layout.rows;
 
+            // Fase A0/A3: filtro vero "nel Binder" al posto di tutta la
+            // collezione. _idsNelBinder viene da binder_carte (caricaCarteReali);
+            // finché non esiste la Fase A6 (Aggiungi al Binder) resta vuoto
+            // e questa vista appare vuota di conseguenza — comportamento
+            // atteso, non un bug.
             const carte = carteReali
-                .filter(c => c.stato === 'collezione')
+                .filter(c => c.stato === 'collezione' && _idsNelBinder.has(String(c.id)))
                 .slice()
                 .sort((a, b) => {
                     const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
