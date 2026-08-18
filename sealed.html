@@ -310,6 +310,130 @@
         }
 
         .btn-copia:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* A16: pulsante "Filtri" espandibile — il pannello resta chiuso di
+           default per non occupare spazio fisso, coerente con la scelta di
+           Claudio di tenerlo dietro un tocco invece che sempre visibile. */
+        .btn-filtri {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.7rem 1rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-soft);
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            cursor: pointer;
+            width: 100%;
+        }
+        .btn-filtri i.fa-chevron-down { margin-left: auto; transition: transform 0.2s; color: var(--text-muted); }
+        .btn-filtri.aperto i.fa-chevron-down { transform: rotate(180deg); }
+        #filtriAttiviCount {
+            background-color: var(--primary);
+            color: white;
+            border-radius: 20px;
+            font-size: 0.68rem;
+            padding: 0.1rem 0.5rem;
+        }
+
+        .pannello-filtri {
+            display: none;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.9rem 1rem;
+            margin-bottom: 1rem;
+            margin-top: -0.5rem;
+            box-shadow: var(--shadow-soft);
+        }
+        .pannello-filtri.aperto { display: block; }
+
+        .filtro-gruppo-titolo {
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Pillole lingua — selezione MULTIPLA: ogni pillola si accende/
+           spegne in modo indipendente dalle altre. */
+        .filtro-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.35rem 0.7rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-right: 0.35rem;
+            margin-bottom: 0.35rem;
+        }
+        .filtro-pill.attivo {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        /* Slider doppio prezzo — costruito su misura con due <input
+           type="range"> sovrapposti (nessuna libreria esterna, coerente
+           col resto del progetto). Solo le manopole sono cliccabili
+           (pointer-events sul thumb, non sulla barra), così i due cursori
+           non si "rubano" il click a vicenda. */
+        .price-slider-wrap { position: relative; height: 32px; margin: 0.3rem 0 0.2rem; }
+        .price-slider-track {
+            position: absolute; top: 50%; left: 0; right: 0; height: 4px;
+            background-color: var(--border-color); border-radius: 2px;
+            transform: translateY(-50%);
+        }
+        .price-slider-range {
+            position: absolute; top: 50%; height: 4px;
+            background-color: var(--primary); border-radius: 2px;
+            transform: translateY(-50%);
+        }
+        .price-slider-wrap input[type="range"] {
+            position: absolute; top: 50%; left: 0; width: 100%;
+            transform: translateY(-50%);
+            -webkit-appearance: none; appearance: none;
+            background: transparent; pointer-events: none; margin: 0;
+        }
+        .price-slider-wrap input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; pointer-events: auto;
+            width: 18px; height: 18px; border-radius: 50%;
+            background-color: var(--primary); cursor: pointer;
+            border: 2px solid var(--card-bg); box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+        .price-slider-wrap input[type="range"]::-moz-range-thumb {
+            pointer-events: auto; width: 18px; height: 18px; border-radius: 50%;
+            background-color: var(--primary); cursor: pointer;
+            border: 2px solid var(--card-bg); box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+        .price-slider-labels {
+            display: flex; justify-content: space-between;
+            font-size: 0.75rem; color: var(--text-muted); font-weight: 700;
+        }
+
+        .btn-reset-filtri {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 0.4rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .btn-reset-filtri:hover { color: var(--primary); }
     </style>
 </head>
 <body>
@@ -334,6 +458,33 @@
         <div class="search-box">
             <i class="fa-solid fa-magnifying-glass" style="color: var(--text-muted);"></i>
             <input type="text" id="searchInput" placeholder="Cerca carta o codice..." oninput="renderLista()">
+        </div>
+
+        <button class="btn-filtri" id="btnFiltri" onclick="toggleFiltri()">
+            <i class="fa-solid fa-filter"></i> Filtri
+            <span id="filtriAttiviCount" style="display:none;"></span>
+            <i class="fa-solid fa-chevron-down"></i>
+        </button>
+
+        <div class="pannello-filtri" id="pannelloFiltri">
+            <div class="filtro-gruppo-titolo">Lingua</div>
+            <div id="filtriLinguaPills"></div>
+
+            <div class="filtro-gruppo-titolo" style="margin-top:0.9rem;">Prezzo</div>
+            <div class="price-slider-wrap">
+                <div class="price-slider-track"></div>
+                <div class="price-slider-range" id="priceSliderRange"></div>
+                <input type="range" id="sliderPrezzoMin" oninput="onSliderPrezzoInput('min')">
+                <input type="range" id="sliderPrezzoMax" oninput="onSliderPrezzoInput('max')">
+            </div>
+            <div class="price-slider-labels">
+                <span id="labelPrezzoMin"></span>
+                <span id="labelPrezzoMax"></span>
+            </div>
+
+            <button class="btn-reset-filtri" onclick="resetFiltri()">
+                <i class="fa-solid fa-rotate-left"></i> Reset filtri
+            </button>
         </div>
 
         <div id="listaContainer">
@@ -366,6 +517,18 @@
 
         let carte = [];
         const selezioni = {}; // { [id]: quantitaSelezionata }
+
+        // A16: stato dei filtri — Lingua è selezione MULTIPLA (Set vuoto =
+        // nessun filtro attivo, mostra tutte le lingue). Prezzo è un range
+        // [min, max] calcolato DINAMICAMENTE dai prodotti realmente
+        // disponibili al caricamento, non un range fisso.
+        const filtriStato = {
+            lingue: new Set(),
+            prezzoMin: 0,
+            prezzoMax: 0,
+        };
+        let prezzoDatiMin = 0;
+        let prezzoDatiMax = 0;
 
         // Il campo 'immagine' può contenere tre formati diversi, a seconda
         // di quando la carta è stata processata:
@@ -406,12 +569,36 @@
                 return;
             }
 
+            // ⚠️ PROBLEMA #2 (vedi STATO_PROGETTO.txt sez. 9, segnalato
+            // 17/08/2026): questa pagina legge ANCORA direttamente la
+            // tabella 'carte' filtrata solo lato client, a differenza di
+            // scambio.html/wishlist.html che usano già una RPC dedicata
+            // (leggi_scambio_condiviso / leggi_wishlist_condivisa) proprio
+            // per evitare che chiunque possa leggere i dati di TUTTI gli
+            // utenti bypassando il filtro owner_id. NON corretto in questa
+            // sessione di proposito: richiede prima la verifica diretta
+            // della RLS (regola metodologica, STATO_PROGETTO.txt sez. 0),
+            // poi l'allineamento allo stesso schema in Fase A0. Il filtro
+            // location='SCAMBIO' aggiunto sotto (18/08/2026) riduce il
+            // rischio per chi usa normalmente il link condiviso, ma NON
+            // sostituisce la correzione: chi ha strumenti tecnici potrebbe
+            // ancora bypassarlo — motivo in più per dare priorità ad A0.
+            //
+            // A16 (18/08/2026): SOLO i prodotti sealed con location =
+            // 'SCAMBIO' vengono letti — stesso meccanismo già usato per le
+            // carte in scambio (location è un valore libero, "SCAMBIO" è
+            // solo uno dei tanti possibili, non un campo dedicato). Scelta
+            // esplicita di Claudio per non esporre pubblicamente il resto
+            // della collezione sealed (valore economico + dove si trova
+            // fisicamente) — di default NESSUN prodotto è condiviso finché
+            // non viene marcato manualmente.
             const { data, error } = await supabaseClient
                 .from('carte')
                 .select('id, nome, codice, lingua, condizione, qty, prezzo, note, url, location, immagine')
                 .eq('owner_id', userId)
                 .eq('tipo', 'sealed')
                 .eq('stato', 'collezione')
+                .eq('location', 'SCAMBIO')
                 .order('nome');
 
             if (error) {
@@ -419,37 +606,146 @@
                 return;
             }
 
-            carte = (data || []).map(r => ({
-                id: r.id,
-                name: r.nome || '',
-                code: r.codice || '',
-                lang: r.lingua || 'IT',
-                cond: r.condizione || 'NM',
-                location: r.location || '',
-                qtyDisponibile: r.qty || 1,
-                price: r.prezzo != null ? Number(r.prezzo) : 0,
-                notes: r.note || '',
-                immagine: r.immagine || null,
-            }));
+            carte = (data || [])
+                .map(r => ({
+                    id: r.id,
+                    name: r.nome || '',
+                    code: r.codice || '',
+                    lang: r.lingua || 'IT',
+                    cond: r.condizione || 'NM',
+                    location: r.location || '',
+                    qtyDisponibile: r.qty || 1,
+                    price: r.prezzo != null ? Number(r.prezzo) : 0,
+                    notes: r.note || '',
+                    immagine: r.immagine || null,
+                }))
+                // A16: quantità a 0 nascoste ALLA FONTE — non devono
+                // comparire mai, nemmeno cercandole per nome nella barra
+                // di ricerca (decisione esplicita di Claudio).
+                .filter(c => c.qtyDisponibile > 0);
 
             if (carte.length === 0) {
-                container.innerHTML = '<div class="stato-vuoto"><i class="fa-solid fa-box-open"></i><br>Nessun prodotto sealed disponibile al momento.</div>';
+                container.innerHTML = '<div class="stato-vuoto"><i class="fa-solid fa-box-open"></i><br>Nessun prodotto sealed condiviso per lo scambio al momento.</div>';
                 return;
             }
 
+            inizializzaFiltri();
             renderLista();
+        }
+
+        // A16: costruisce le pillole Lingua in base a quelle REALMENTE
+        // presenti nei dati caricati (non un elenco fisso — se un giorno
+        // arriva una lingua nuova, compare da sola), e calcola il range di
+        // prezzo dinamico dai prodotti disponibili in quel momento.
+        function inizializzaFiltri() {
+            const lingue = [...new Set(carte.map(c => c.lang))].sort();
+            document.getElementById('filtriLinguaPills').innerHTML = lingue.map(l =>
+                `<button type="button" class="filtro-pill" id="pillLingua-${l}" onclick="toggleFiltroLingua('${l}')">${l}</button>`
+            ).join('');
+
+            const prezzi = carte.map(c => c.price);
+            prezzoDatiMin = Math.floor(Math.min(...prezzi));
+            prezzoDatiMax = Math.ceil(Math.max(...prezzi));
+            if (prezzoDatiMin === prezzoDatiMax) prezzoDatiMax += 1; // evita uno slider "piatto" con un solo prodotto
+
+            const sliderMin = document.getElementById('sliderPrezzoMin');
+            const sliderMax = document.getElementById('sliderPrezzoMax');
+            [sliderMin, sliderMax].forEach(s => { s.min = prezzoDatiMin; s.max = prezzoDatiMax; });
+            sliderMin.value = prezzoDatiMin;
+            sliderMax.value = prezzoDatiMax;
+            filtriStato.prezzoMin = prezzoDatiMin;
+            filtriStato.prezzoMax = prezzoDatiMax;
+
+            aggiornaVisualeSliderPrezzo();
+        }
+
+        function toggleFiltroLingua(lingua) {
+            if (filtriStato.lingue.has(lingua)) {
+                filtriStato.lingue.delete(lingua);
+            } else {
+                filtriStato.lingue.add(lingua);
+            }
+            document.getElementById('pillLingua-' + lingua).classList.toggle('attivo');
+            aggiornaContatoreFiltriAttivi();
+            renderLista();
+        }
+
+        function onSliderPrezzoInput(quale) {
+            const sliderMin = document.getElementById('sliderPrezzoMin');
+            const sliderMax = document.getElementById('sliderPrezzoMax');
+            let min = parseInt(sliderMin.value, 10);
+            let max = parseInt(sliderMax.value, 10);
+
+            // Impedisce ai due cursori di "scavalcarsi" — il minimo non può
+            // superare il massimo e viceversa.
+            if (quale === 'min' && min > max) { min = max; sliderMin.value = min; }
+            if (quale === 'max' && max < min) { max = min; sliderMax.value = max; }
+
+            filtriStato.prezzoMin = min;
+            filtriStato.prezzoMax = max;
+            aggiornaVisualeSliderPrezzo();
+            aggiornaContatoreFiltriAttivi();
+            renderLista();
+        }
+
+        function aggiornaVisualeSliderPrezzo() {
+            const range = prezzoDatiMax - prezzoDatiMin || 1;
+            const percMin = ((filtriStato.prezzoMin - prezzoDatiMin) / range) * 100;
+            const percMax = ((filtriStato.prezzoMax - prezzoDatiMin) / range) * 100;
+            const barraColorata = document.getElementById('priceSliderRange');
+            barraColorata.style.left = percMin + '%';
+            barraColorata.style.right = (100 - percMax) + '%';
+            document.getElementById('labelPrezzoMin').textContent = formattaEuro(filtriStato.prezzoMin);
+            document.getElementById('labelPrezzoMax').textContent = formattaEuro(filtriStato.prezzoMax);
+        }
+
+        function aggiornaContatoreFiltriAttivi() {
+            const prezzoModificato = filtriStato.prezzoMin !== prezzoDatiMin || filtriStato.prezzoMax !== prezzoDatiMax;
+            const numeroFiltriAttivi = filtriStato.lingue.size + (prezzoModificato ? 1 : 0);
+            const badge = document.getElementById('filtriAttiviCount');
+            if (numeroFiltriAttivi > 0) {
+                badge.textContent = numeroFiltriAttivi;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function resetFiltri() {
+            filtriStato.lingue.clear();
+            document.querySelectorAll('.filtro-pill.attivo').forEach(p => p.classList.remove('attivo'));
+
+            filtriStato.prezzoMin = prezzoDatiMin;
+            filtriStato.prezzoMax = prezzoDatiMax;
+            document.getElementById('sliderPrezzoMin').value = prezzoDatiMin;
+            document.getElementById('sliderPrezzoMax').value = prezzoDatiMax;
+            aggiornaVisualeSliderPrezzo();
+
+            aggiornaContatoreFiltriAttivi();
+            renderLista();
+        }
+
+        function toggleFiltri() {
+            document.getElementById('pannelloFiltri').classList.toggle('aperto');
+            document.getElementById('btnFiltri').classList.toggle('aperto');
         }
 
         function renderLista() {
             const container = document.getElementById('listaContainer');
             const searchVal = document.getElementById('searchInput').value.toLowerCase();
 
-            const filtrate = carte.filter(c =>
-                c.name.toLowerCase().includes(searchVal) || c.code.toLowerCase().includes(searchVal)
-            );
+            // A16: ricerca testuale + filtro Lingua (multi-selezione) +
+            // filtro Prezzo (range) — tutti combinati insieme (AND), come
+            // richiesto da Claudio.
+            const filtrate = carte.filter(c => {
+                const corrispondeRicerca = c.name.toLowerCase().includes(searchVal) || c.code.toLowerCase().includes(searchVal);
+                const corrispondeLingua = filtriStato.lingue.size === 0 || filtriStato.lingue.has(c.lang);
+                const corrispondePrezzo = c.price >= filtriStato.prezzoMin && c.price <= filtriStato.prezzoMax;
+                return corrispondeRicerca && corrispondeLingua && corrispondePrezzo;
+            });
 
             if (filtrate.length === 0) {
-                container.innerHTML = '<div class="stato-vuoto"><i class="fa-solid fa-magnifying-glass"></i><br>Nessuna carta corrisponde alla ricerca.</div>';
+                container.innerHTML = '<div class="stato-vuoto"><i class="fa-solid fa-magnifying-glass"></i><br>Nessun prodotto corrisponde alla ricerca/ai filtri.</div>';
                 return;
             }
 
@@ -467,7 +763,10 @@
                                 <span class="badge">${c.lang}</span>
                                 <span class="badge">${c.cond}</span>
                                 <span class="badge">Disp. ${c.qtyDisponibile}</span>
-                                ${c.location ? `<span class="badge">📍 ${c.location}</span>` : ''}
+                                <!-- A16 (18/08/2026): badge location rimosso — con il filtro
+                                     location='SCAMBIO' applicato in caricaCatalogo(), ogni riga
+                                     mostrata ha sempre lo stesso valore, quindi il badge sarebbe
+                                     ridondante su ogni singola carta. -->
                                 ${c.notes ? `<span class="badge">✨ ${c.notes}</span>` : ''}
                             </div>
                         </div>
