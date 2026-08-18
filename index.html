@@ -1621,12 +1621,8 @@
                 </div>
 
                 <div class="filters">
-                    <button id="btnCopyShareLink" class="btn-secondary" style="display:none;" onclick="copyShareLink()">
-                        <i class="fa-solid fa-share-nodes"></i> Link
-                    </button>
-
                     <button id="btnShowQrCode" class="btn-main" style="display:none;" onclick="openQrModal()">
-                        <i class="fa-solid fa-qrcode"></i> QR
+                        <i class="fa-solid fa-share-nodes"></i> Condividi
                     </button>
 
                     <select class="filter-select" id="filterLocation" onchange="filterTable()">
@@ -5394,23 +5390,20 @@
                 pannelloMatch.style.display = 'none';
             }
 
-            const copyBtn = document.getElementById('btnCopyShareLink');
             const qrBtn = document.getElementById('btnShowQrCode');
             const locFilter = document.getElementById('filterLocation');
 
             if (tabId === 'scambio') {
-                copyBtn.style.display = 'inline-flex';
                 qrBtn.style.display = 'inline-flex';
                 locFilter.value = 'SCAMBIO';
                 locFilter.disabled = true;
                 document.getElementById('statLabelCount').innerText = 'In Scambio';
             } else if (tabId === 'wishlist') {
-                // Ora esiste anche wishlist.html — riattiva link/QR, che
-                // punteranno lì invece che a scambio.html (vedi
+                // Ora esiste anche wishlist.html — riattiva il pulsante
+                // Condividi, che punterà lì invece che a scambio.html (vedi
                 // _linkPubblicoCondivisione più sotto). Il filtro location
                 // resta non pertinente alla wishlist (che è una tabella a
                 // parte, non un valore di location).
-                copyBtn.style.display = 'inline-flex';
                 qrBtn.style.display = 'inline-flex';
                 locFilter.value = '';
                 locFilter.disabled = true;
@@ -5421,13 +5414,11 @@
                 // invece che su location='SCAMBIO'. La location resta
                 // filtrabile (i prodotti sealed hanno comunque una location
                 // fisica), a differenza della wishlist.
-                copyBtn.style.display = 'inline-flex';
                 qrBtn.style.display = 'inline-flex';
                 locFilter.value = '';
                 locFilter.disabled = false;
                 document.getElementById('statLabelCount').innerText = 'Sealed';
             } else {
-                copyBtn.style.display = 'none';
                 qrBtn.style.display = 'none';
                 locFilter.value = '';
                 locFilter.disabled = false;
