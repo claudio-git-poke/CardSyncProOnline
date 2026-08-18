@@ -2292,6 +2292,10 @@
                 <input type="text" id="editLocation" list="datalistEditLocation">
                 <datalist id="datalistEditLocation"></datalist>
             </div>
+            <div class="auth-field" id="campoEditObiettivo">
+                <label>Prezzo obiettivo (€) <span style="font-weight:600; color:var(--text-muted);">— opzionale</span></label>
+                <input type="number" id="editObiettivo" step="0.01" min="0" placeholder="Es. 25.00">
+            </div>
             <div class="auth-field">
                 <label>Note</label>
                 <input type="text" id="editNote">
@@ -4104,6 +4108,17 @@
             inputLocation.disabled = isWishlist;
             inputLocation.placeholder = isWishlist ? 'Non applicabile alla wishlist' : '';
 
+            // Prezzo obiettivo — opposto di Location: ha senso SOLO in
+            // Wishlist (quanto sei disposto a spendere per una carta che
+            // non hai ancora), non sulle carte già in collezione. Il campo
+            // viene nascosto del tutto (non solo disabilitato) quando non
+            // pertinente, per non confondere.
+            const campoObiettivo = document.getElementById('campoEditObiettivo');
+            campoObiettivo.style.display = isWishlist ? '' : 'none';
+            if (isWishlist) {
+                document.getElementById('editObiettivo').value = card.prezzoObiettivo != null ? card.prezzoObiettivo : '';
+            }
+
             const datalist = document.getElementById('datalistEditLocation');
             datalist.innerHTML = [...new Set(carteReali.map(c => c.location).filter(Boolean))]
                 .map(loc => `<option value="${loc}"></option>`).join('');
@@ -4136,6 +4151,12 @@
             // La colonna 'location' esiste solo su 'carte', non su 'wishlist'.
             if (!isWishlist) {
                 aggiornamento.location = document.getElementById('editLocation').value.trim() || null;
+            } else {
+                // Speculare: 'prezzo_obiettivo' esiste solo su 'wishlist'.
+                // Campo facoltativo — vuoto significa "nessun obiettivo
+                // impostato", non "zero euro".
+                const valoreObiettivo = document.getElementById('editObiettivo').value;
+                aggiornamento.prezzo_obiettivo = valoreObiettivo !== '' ? parseFloat(valoreObiettivo) : null;
             }
 
             const btn = document.getElementById('btnSalvaModificaCarta');
