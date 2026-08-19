@@ -272,11 +272,22 @@ async function controllaRuoloEAvvia() {
 
   const { data: profilo, error } = await supabaseClient
     .from('profiles')
-    .select('role, username')
+    .select('role, username, banned_until, deleted_at')
     .eq('id', sessionData.session.user.id)
     .single();
 
   if (error || !profilo || profilo.role !== 'admin') {
+    mostraSolo(deniedScreen);
+    return;
+  }
+
+  const bannatoAdesso = profilo.banned_until && new Date(profilo.banned_until) > new Date();
+  if (profilo.deleted_at || bannatoAdesso) {
+    // Auth Hooks non disponibile sul piano attuale (vedi sez.9 stato):
+    // il blocco vero e proprio del login lo facciamo qui, subito dopo
+    // il login riuscito — non impedisce l'accesso via chiamata diretta
+    // alle API, ma copre l'uso normale della dashboard.
+    await supabaseClient.auth.signOut();
     mostraSolo(deniedScreen);
     return;
   }

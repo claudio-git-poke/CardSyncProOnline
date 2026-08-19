@@ -286,13 +286,18 @@ end;
 $$ language plpgsql security definer set search_path = public;
 
 
--- ── 6) AUTH HOOK — blocca il login di utenti bannati/eliminati ───
--- Contratto ufficiale Supabase (verificato su doc, 19/08/2026):
--- input {user_id, valid} — output {decision, message, should_logout_user}
--- Fail-open per scelta deliberata: se il profilo non si legge per
--- qualunque motivo imprevisto, NON blocca tutti gli utenti (rischio
--- P0 di autolockout) — blocca solo se banned_until/deleted_at sono
--- esplicitamente valorizzati.
+-- ── 6) AUTH HOOK — NON UTILIZZABILE sul piano Supabase attuale ───
+-- [SOSPESO, 19/08/2026] Claudio ha verificato dal vivo che "Password
+-- verification attempt" non è disponibile sul suo progetto (piano
+-- Free). La funzione qui sotto resta pronta e corretta (contratto
+-- ufficiale Supabase verificato su doc: input {user_id, valid},
+-- output {decision, message, should_logout_user}) per il giorno in
+-- cui si passasse a un piano che la sblocca — ma OGGI non è
+-- collegabile a nessun hook. Il blocco del ban oggi passa da:
+-- (a) revoca sessione immediata (funzioni sez.5) + (b) controllo
+-- lato client subito dopo login (admin.html aggiornato) + (c) RLS
+-- sulle tabelle dati, NON ancora estese in questa sessione (vedi
+-- Domanda #11 nel file di stato).
 create or replace function public.handle_password_verification_attempt(event jsonb)
 returns jsonb as $$
 declare
@@ -329,6 +334,10 @@ begin
   return jsonb_build_object('decision', 'continue');
 end;
 $$ language plpgsql security definer set search_path = public;
+-- Nessun grant necessario: la funzione resta "orfana" (nessun hook la
+-- chiama) finché non si sblocca la sezione su Supabase o si passa a
+-- un'Edge Function come tramite del login (opzione B discussa in chat,
+-- non implementata).
 
 -- ============================================================
 -- 7) ESTENSIONE pending_requests.type — aggiunge username_change
@@ -338,17 +347,12 @@ alter table public.pending_requests add constraint pending_requests_type_check
   check (type in ('photo_upload','password_reset','username_change','other'));
 
 -- ============================================================
--- 8) PASSO MANUALE OBBLIGATORIO — da fare TU sulla Dashboard,
---    non eseguibile da SQL:
---    Authentication > Auth Hooks > Add hook > "Password verification
---    attempt" > Postgres function > seleziona
---    public.handle_password_verification_attempt > Save.
---
---    TEST CONSIGLIATO prima di fidarti: banna temporaneamente
---    (1 minuto) un account di TEST (non admino/admina) da admin.html
---    dopo aver eseguito questo script, prova a fare login con quello
---    e verifica che venga rifiutato. Se qualcosa va storto e blocca
---    login che non dovrebbe, disabilita l'hook dalla stessa pagina
---    (basta rimuoverlo, l'hook non è obbligatorio per il funzionamento
---    base di Supabase Auth).
+-- 8) NESSUN PASSO MANUALE SU AUTH HOOKS — non disponibile sul piano
+--    Free (verificato da Claudio, 19/08/2026). Il ban oggi funziona
+--    così: appena bannato, admin_ban_user revoca la sessione attiva
+--    (l'utente viene sloggato entro il refresh, di norma <1h); al
+--    prossimo tentativo di login, admin.html blocca subito
+--    (controllo aggiunto lato client). Per bloccare login/uso anche
+--    a chi chiama le API direttamente (bot), serve estendere le RLS
+--    delle tabelle dati — non fatto qui, vedi Domanda #11.
 -- ============================================================
