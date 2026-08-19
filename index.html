@@ -1334,6 +1334,25 @@
             animation: binderToggleFlash 0.55s ease;
         }
 
+        .binder-slot-remove-btn {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.55);
+            color: #fff;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+        .binder-slot-remove-btn:hover { background: var(--danger); transform: scale(1.1); }
+
         .binder-slot-qty-badge {
             position: absolute;
             top: 6px;
@@ -4865,6 +4884,7 @@
                     const immagineSrc = _urlImmagineVisualizzabile(card.immagine, 300);
                     html += `
                         <div class="binder-slot binder-slot-filled" onclick="apriImmagineIngrandita('${idAttr}')" title="${nomeAttr}">
+                            <button type="button" class="binder-slot-remove-btn" title="Rimuovi dal Binder" aria-label="Rimuovi dal Binder" onclick="event.stopPropagation(); rimuoviDalBinderSlot('${idAttr}')"><i class="fa-solid fa-xmark"></i></button>
                             <div class="binder-slot-fallback"><i class="fa-solid fa-image"></i><span>${nomeAttr}</span></div>
                             ${immagineSrc ? `<img src="${immagineSrc}" alt="${nomeAttr}" loading="lazy" onerror="this.remove();">` : ''}
                             ${card.qty > 1 ? `<span class="binder-slot-qty-badge" title="Hai ${card.qty} copie di questa carta — occupano un solo slot">×${card.qty}</span>` : ''}
@@ -5030,6 +5050,18 @@
 
             event.target.value = '';
             await caricaBinderCoverStato();
+        }
+
+        // A6, punto 4 — rimozione diretta dallo slot pieno nel Binder.
+        // Riusa toggleBinderMembership() così com'è (già gestisce la conferma
+        // di rimozione e l'update di _idsNelBinder) — qui aggiungo solo il
+        // refresh immediato della griglia, dato che siamo già sulla tab
+        // Binder e vogliamo vedere lo slot sparire subito, non al prossimo
+        // cambio tab. Se l'utente annulla la conferma, renderBinder() ridisegna
+        // comunque la stessa identica situazione (nessun effetto visibile).
+        async function rimuoviDalBinderSlot(id) {
+            await toggleBinderMembership(id);
+            renderBinder();
         }
 
         function impostaBinderLayout(layout) {
