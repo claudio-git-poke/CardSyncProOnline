@@ -5067,8 +5067,22 @@
             renderBinder();
         }
 
+        // A6, punto 5 — conferma al cambio layout: la disposizione visiva
+        // cambia (più/meno colonne), quindi un ordine "curato" a mano può
+        // risultare diverso. Nessuna conferma se il Binder è vuoto (niente da
+        // riorganizzare) o se si risceglie il layout già attivo (no-op).
+        const BINDER_LAYOUT_ETICHETTE = { '2x2': '2×2', '3x3': '3×3', '3x4': '4×3', '4x4': '4×4' };
+
         function impostaBinderLayout(layout) {
             if (!BINDER_LAYOUTS[layout]) return;
+            if (layout === _binderLayout) return;
+
+            if (_idsNelBinder.size > 0) {
+                const etichetta = BINDER_LAYOUT_ETICHETTE[layout] || layout;
+                const ok = confirm(`Passando al layout ${etichetta} la disposizione cambierà — se avevi organizzato le carte in un ordine preciso potrebbe risultare diversa. Continuare?`);
+                if (!ok) return;
+            }
+
             _binderLayout = layout;
             _binderPagina = 0;
             localStorage.setItem(CHIAVE_BINDER_LAYOUT, layout);
