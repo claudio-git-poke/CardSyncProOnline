@@ -1686,6 +1686,7 @@
             <div class="card-panel" id="barraSelezioneMultipla" style="display:none; padding: 0.8rem 1rem; margin-bottom: 1rem; align-items:center; justify-content:space-between; gap: 0.8rem; flex-wrap: wrap;">
                 <span style="font-weight:700; font-size:0.85rem;" id="conteggioSelezioneMultipla">0 selezionate</span>
                 <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                    <button class="btn-secondary" onclick="aggiungiSelezionateAlBinder()"><i class="fa-solid fa-layer-group"></i> Aggiungi al Binder</button>
                     <button class="btn-secondary" onclick="spostaLocationSelezionate()"><i class="fa-solid fa-warehouse"></i> Sposta Location</button>
                     <button class="btn-secondary" style="color:var(--danger); background-color:var(--danger-bg);" onclick="eliminaSelezionate()"><i class="fa-solid fa-trash"></i> Elimina</button>
                 </div>
@@ -5910,6 +5911,47 @@
                 if (error) { alert(`❌ Errore nell'eliminazione (${tabella}): ` + error.message); return; }
             }
             await caricaCarteReali();
+        }
+
+        // A6, punto 3 — azione bulk "Aggiungi al Binder" sulla barra di
+        // selezione multipla esistente. Solo ADD (nessuna rimozione da qui:
+        // per togliere si usa il toggle singolo o il modale del punto 2) —
+        // stesso motivo per cui l'aggiunta singola non chiede conferma.
+        // Righe non eleggibili (wishlist, o già presenti nel Binder) vengono
+        // saltate silenziosamente dal conteggio inserito, ma segnalate a
+        // parte se TUTTE le righe selezionate erano non eleggibili.
+        async function aggiungiSelezionateAlBinder() {
+            const righe = _righeSelezionate();
+            if (righe.length === 0) return;
+
+            const idsEleggibili = righe
+                .filter(r => r.tabella === 'carte')
+                .map(r => r.id)
+                .filter(id => !_idsNelBinder.has(String(id)));
+
+            if (idsEleggibili.length === 0) {
+                alert('Nessuna carta selezionata da aggiungere: erano già tutte nel Binder, oppure erano righe di Wishlist (non aggiungibili al Binder).');
+                return;
+            }
+
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) return;
+
+            const { error } = await supabaseClient.from('binder_carte')
+                .insert(idsEleggibili.map(id => ({ owner_id: userId, carta_id: id })));
+            if (error) { alert('❌ Errore nell\'aggiungere le carte al Binder: ' + error.message); return; }
+
+            idsEleggibili.forEach(id => {
+                _idsNelBinder.add(String(id));
+                _aggiornaBottoniBinderToggle(id);
+            });
+
+            // Deseleziona tutto e nasconde la barra — stessa sensazione di
+            // "azione completata" delle altre azioni bulk (che invece
+            // deselezionano indirettamente ricaricando la tabella).
+            document.querySelectorAll('.riga-checkbox:checked').forEach(cb => { cb.checked = false; });
+            _aggiornaBarraSelezioneMultipla();
         }
 
         async function spostaLocationSelezionate() {
