@@ -1424,6 +1424,7 @@
             <div class="profilo-menu" id="profiloMenu" style="display:none;">
                 <div class="profilo-menu-nome" id="profiloMenuNome">—</div>
                 <div class="profilo-menu-email" id="profiloMenuEmail">—</div>
+                <button class="profilo-menu-logout" id="profiloMenuCambioUsername" onclick="apriModaleCambioUsername()" style="color:var(--text-muted); margin-bottom:0.4rem; padding-bottom:0.4rem; border-bottom:1px solid var(--border-color);"><i class="fa-solid fa-pen"></i> Cambia username</button>
                 <button class="profilo-menu-logout" id="profiloMenuLogout"><i class="fa-solid fa-right-from-bracket"></i> Esci</button>
             </div>
         </div>
@@ -2185,6 +2186,24 @@
         </div>
     </div>
 
+    <!-- MODALE CAMBIO USERNAME (Fase 2b, 19/08/2026) — utente già loggato,
+         insert diretto in pending_requests (type: username_change), il
+         dispatcher lato admin applica il cambio solo all'approvazione. -->
+    <div id="cambioUsernameModal" class="modal-overlay" style="z-index:10000000;" onclick="chiudiModaleCambioUsername()">
+        <div class="modal-content" style="max-width: 380px; text-align:left;" onclick="event.stopPropagation()">
+            <button class="close-modal-btn" onclick="chiudiModaleCambioUsername()"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="font-weight: 800; margin-bottom: 0.6rem;"><i class="fa-solid fa-pen" style="color: var(--primary);"></i> Cambia username</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">La richiesta va approvata da un admin prima di diventare effettiva.</p>
+            <div class="auth-field">
+                <label>Nuovo username</label>
+                <input type="text" id="cambioUsernameNuovo" placeholder="es. irene2" autocomplete="off">
+            </div>
+            <div id="cambioUsernameError" style="display:none; color:var(--danger); font-size:0.85rem; margin-top:0.4rem;"></div>
+            <div id="cambioUsernameEsito" style="display:none; font-size:0.9rem; margin-top:0.8rem; padding:0.7rem; border-radius:8px; background:rgba(34,197,94,0.12); color:#16a34a;">✅ Richiesta inviata. Un admin la esaminerà a breve.</div>
+            <button class="btn-main" id="cambioUsernameSubmit" style="width:100%; padding:0.85rem; margin-top:1rem;" onclick="inviaRichiestaCambioUsername()">Invia richiesta</button>
+        </div>
+    </div>
+
     <!-- MODALE RICERCA GLOBALE -->
     <div id="ricercaGlobaleModal" class="modal-overlay" onclick="chiudiRicercaGlobale()">
         <div class="modal-content" style="max-width: 440px; text-align:left;" onclick="event.stopPropagation()">
@@ -2500,6 +2519,81 @@
             esitoEl.style.display = 'block';
             btn.style.display = 'none';
             document.getElementById('resetPasswordUsername').disabled = true;
+        }
+
+        // ── CAMBIO USERNAME (Fase 2b) ───────────────────────────────
+        // Entry point per utente già loggato (menu Profilo). Insert
+        // diretto in pending_requests: nessuna RPC dedicata, secondo il
+        // file di stato la policy RLS esistente su insert per utenti
+        // loggati dovrebbe bastare — MA questo insert diretto non è
+        // ancora stato testato dal vivo in questa sessione. Se fallisce
+        // per RLS, va verificata/creata una policy INSERT dedicata
+        // (verifica diretta sul DB, mai a scatola chiusa). Il cambio
+        // reale avviene solo quando un admin approva, tramite
+        // admin_process_pending_request (Fase 3, non ancora collegata
+        // in admin.html).
+        // Validazione lato client: 3-20 caratteri, solo a-z0-9_ —
+        // assunzione presa in sessione, da correggere se Claudio vuole
+        // regole diverse.
+        const REGEX_USERNAME = /^[a-z0-9_]{3,20}$/;
+
+        function apriModaleCambioUsername() {
+            document.getElementById('cambioUsernameNuovo').value = '';
+            document.getElementById('cambioUsernameError').style.display = 'none';
+            document.getElementById('cambioUsernameEsito').style.display = 'none';
+            document.getElementById('cambioUsernameSubmit').style.display = 'block';
+            document.getElementById('cambioUsernameNuovo').disabled = false;
+            document.getElementById('profiloMenu').style.display = 'none';
+            document.getElementById('cambioUsernameModal').style.display = 'flex';
+        }
+
+        function chiudiModaleCambioUsername() {
+            document.getElementById('cambioUsernameModal').style.display = 'none';
+        }
+
+        async function inviaRichiestaCambioUsername() {
+            const nuovoUsername = document.getElementById('cambioUsernameNuovo').value.trim().toLowerCase();
+            const errEl = document.getElementById('cambioUsernameError');
+            const esitoEl = document.getElementById('cambioUsernameEsito');
+            const btn = document.getElementById('cambioUsernameSubmit');
+            errEl.style.display = 'none';
+
+            if (!REGEX_USERNAME.test(nuovoUsername)) {
+                errEl.textContent = 'Username non valido: 3-20 caratteri, solo minuscole, numeri e underscore.';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) {
+                errEl.textContent = 'Sessione non valida, ricarica la pagina e riprova.';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Invio in corso…';
+
+            const { error } = await supabaseClient.from('pending_requests').insert({
+                user_id: userId,
+                type: 'username_change',
+                status: 'pending',
+                payload: { nuovo_username: nuovoUsername }
+            });
+
+            btn.disabled = false;
+            btn.textContent = 'Invia richiesta';
+
+            if (error) {
+                errEl.textContent = '❌ ' + (error.message || 'Errore imprevisto, riprova più tardi.');
+                errEl.style.display = 'block';
+                return;
+            }
+
+            esitoEl.style.display = 'block';
+            btn.style.display = 'none';
+            document.getElementById('cambioUsernameNuovo').disabled = true;
         }
 
         // Ora ritorna solo lo stato della sessione — è compitoVersioneECardsyncPanel
