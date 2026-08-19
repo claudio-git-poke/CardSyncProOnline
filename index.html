@@ -2155,6 +2155,9 @@
                     </div>
                     <div id="authError"></div>
                     <button class="btn-main" id="authSubmit" style="width: 100%; padding:0.9rem;">Accedi</button>
+                    <div style="text-align:center; margin-top:0.8rem;">
+                        <a href="#" onclick="apriModaleResetPassword(); return false;" style="font-size:0.85rem; color:var(--text-muted); text-decoration:underline;">Password dimenticata?</a>
+                    </div>
                 </div>
 
                 <button class="btn-secondary" style="width:100%; justify-content:center; display:flex; padding:0.8rem; margin-top:1rem; font-size:0.88rem;" onclick="mostraIstruzioniDisinstallazione()">
@@ -2163,6 +2166,22 @@
             </div>
 
         </div>
+        </div>
+    </div>
+
+    <!-- MODALE RECUPERO ACCESSO (reset password) -->
+    <div id="resetPasswordModal" class="modal-overlay" onclick="chiudiModaleResetPassword()">
+        <div class="modal-content" style="max-width: 380px; text-align:left;" onclick="event.stopPropagation()">
+            <button class="close-modal-btn" onclick="chiudiModaleResetPassword()"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="font-weight: 800; margin-bottom: 0.6rem;"><i class="fa-solid fa-key" style="color: var(--primary);"></i> Recupera l'accesso</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Inserisci il tuo nome utente: un admin ti darà una nuova password.</p>
+            <div class="auth-field">
+                <label>Nome utente</label>
+                <input type="text" id="resetPasswordUsername" placeholder="es. irene" autocomplete="username">
+            </div>
+            <div id="resetPasswordError" style="display:none; color:var(--danger); font-size:0.85rem; margin-top:0.4rem;"></div>
+            <div id="resetPasswordEsito" style="display:none; font-size:0.9rem; margin-top:0.8rem; padding:0.7rem; border-radius:8px; background:rgba(34,197,94,0.12); color:#16a34a;">✅ Richiesta inviata. Un admin ti contatterà a breve.</div>
+            <button class="btn-main" id="resetPasswordSubmit" style="width:100%; padding:0.85rem; margin-top:1rem;" onclick="inviaRichiestaResetPassword()">Invia richiesta</button>
         </div>
     </div>
 
@@ -2428,6 +2447,60 @@
         [authEmail, authPassword].forEach((el) => {
             el.addEventListener('keydown', (e) => { if (e.key === 'Enter') tentaLogin(); });
         });
+
+        // ── RECUPERO ACCESSO (reset password) ──────────────────────
+        // Entry point pubblico: nessun login richiesto, l'utente non può
+        // accedere. Chiama la RPC request_password_reset (SECURITY
+        // DEFINER, rate limit 3/ora lato DB). Il messaggio di esito è
+        // SEMPRE lo stesso, anche se lo username non esiste, per non
+        // rivelare quali username sono validi.
+        function apriModaleResetPassword() {
+            document.getElementById('resetPasswordUsername').value = '';
+            document.getElementById('resetPasswordError').style.display = 'none';
+            document.getElementById('resetPasswordEsito').style.display = 'none';
+            document.getElementById('resetPasswordSubmit').style.display = 'block';
+            document.getElementById('resetPasswordUsername').disabled = false;
+            document.getElementById('resetPasswordModal').style.display = 'flex';
+        }
+
+        function chiudiModaleResetPassword() {
+            document.getElementById('resetPasswordModal').style.display = 'none';
+        }
+
+        async function inviaRichiestaResetPassword() {
+            const username = document.getElementById('resetPasswordUsername').value.trim();
+            const errEl = document.getElementById('resetPasswordError');
+            const esitoEl = document.getElementById('resetPasswordEsito');
+            const btn = document.getElementById('resetPasswordSubmit');
+            errEl.style.display = 'none';
+
+            if (!username) {
+                errEl.textContent = 'Inserisci il tuo nome utente.';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Invio in corso…';
+
+            const { error } = await supabaseClient.rpc('request_password_reset', { p_username: username });
+
+            btn.disabled = false;
+            btn.textContent = 'Invia richiesta';
+
+            if (error) {
+                // Unico caso di errore visibile: rate limit superato
+                // (3 richieste/ora per lo stesso username) — tutto il
+                // resto (anche username inesistente) risponde sempre ok.
+                errEl.textContent = '❌ ' + (error.message || 'Errore imprevisto, riprova più tardi.');
+                errEl.style.display = 'block';
+                return;
+            }
+
+            esitoEl.style.display = 'block';
+            btn.style.display = 'none';
+            document.getElementById('resetPasswordUsername').disabled = true;
+        }
 
         // Ora ritorna solo lo stato della sessione — è compitoVersioneECardsyncPanel
         // (vedi più sotto) decidere se e come mostrare il pannello.
