@@ -320,6 +320,13 @@ function mostraStatus(msg, ok) {
 
 function fmtData(d) { return d ? new Date(d).toLocaleString('it-IT') : '—'; }
 
+// Escaping minimo per valori utente inseriti in attributi HTML (campi
+// anagrafici editabili sotto) — evita che virgolette/tag nel dato
+// rompano il markup della modale.
+function escAttr(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // ── RICHIESTE PENDENTI ─────────────────────────────────────────
 async function caricaRichieste() {
   const cont = document.getElementById('richieste-list');
@@ -526,6 +533,27 @@ function renderModaleBody(u) {
     <div class="section-title">Stato</div>
     <span class="badge ${s.key}">${s.label}</span> <span class="badge ${u.role}">${u.role}</span>
 
+    <div class="section-title">Dati anagrafici (facoltativi, solo admin)</div>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      <div>
+        <label for="anag-nome" style="margin:0 0 3px;">Nome reale</label>
+        <input type="text" id="anag-nome" value="${escAttr(u.nome_reale)}" placeholder="—">
+      </div>
+      <div>
+        <label for="anag-cognome" style="margin:0 0 3px;">Cognome reale</label>
+        <input type="text" id="anag-cognome" value="${escAttr(u.cognome_reale)}" placeholder="—">
+      </div>
+      <div>
+        <label for="anag-telefono" style="margin:0 0 3px;">Telefono</label>
+        <input type="text" id="anag-telefono" value="${escAttr(u.telefono)}" placeholder="—">
+      </div>
+      <div>
+        <label for="anag-email" style="margin:0 0 3px;">Email di contatto <span style="font-weight:400;text-transform:none;">(mai usata per l'accesso al sito)</span></label>
+        <input type="text" id="anag-email" value="${escAttr(u.email_contatto)}" placeholder="—">
+      </div>
+      <button class="btn-small btn-toggle-role" data-act="salva-anagrafica" style="align-self:flex-start;">💾 Salva dati anagrafici</button>
+    </div>
+
     <div class="section-title">Ban</div>
     <div class="action-grid">
       <div class="inline-form">
@@ -620,6 +648,18 @@ async function gestisciAzioneUtente(u, azione) {
         if (navigator.share) { try { await navigator.share({ text: testo }); } catch(e) {} }
         else { await navigator.clipboard.writeText(testo); mostraStatus('Copiato negli appunti (condivisione nativa non disponibile su questo browser).', true); }
       });
+    }
+    else if (azione === 'salva-anagrafica') {
+      const payload = {
+        nome_reale: document.getElementById('anag-nome').value.trim() || null,
+        cognome_reale: document.getElementById('anag-cognome').value.trim() || null,
+        telefono: document.getElementById('anag-telefono').value.trim() || null,
+        email_contatto: document.getElementById('anag-email').value.trim() || null
+      };
+      const { error } = await supabaseClient.from('profiles').update(payload).eq('id', u.id);
+      if (error) throw error;
+      await supabaseClient.rpc('log_admin_action', { p_action: 'anagrafica_update', p_target: u.id, p_details: payload });
+      mostraStatus('Dati anagrafici salvati.', true);
     }
     else if (azione === 'hard-delete') {
       const conferma = prompt(`⚠️ AZIONE IRREVERSIBILE.\nQuesto cancella DEFINITIVAMENTE l'account "${u.username}" e tutti i suoi dati.\nScrivi esattamente "${u.username}" per confermare:`);
