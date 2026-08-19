@@ -325,11 +325,26 @@ async function caricaRichieste() {
   const cont = document.getElementById('richieste-list');
   const { data, error } = await supabaseClient
     .from('pending_requests')
-    .select('*, profiles!user_id (username)')
+    .select('*')
     .is('deleted_at', null)
     .order('created_at', { ascending: false });
 
   if (error) { cont.innerHTML = `<div class="empty-state">Errore: ${error.message}</div>`; return; }
+
+  // Join fatto qui in JS invece che con l'embed di PostgREST: evita di
+  // dipendere dalla cache schema delle foreign key (che si è dimostrata
+  // inaffidabile per questa tabella), con una seconda query separata.
+  const userIds = [...new Set((data || []).map(r => r.user_id).filter(Boolean))];
+  let mappaUsername = {};
+  if (userIds.length > 0) {
+    const { data: profili, error: erroreProfili } = await supabaseClient
+      .from('profiles')
+      .select('id, username')
+      .in('id', userIds);
+    if (!erroreProfili && profili) {
+      mappaUsername = Object.fromEntries(profili.map(p => [p.id, p.username]));
+    }
+  }
 
   const nPending = (data || []).filter(r => r.status === 'pending').length;
   document.getElementById('count-richieste').textContent = nPending;
@@ -340,7 +355,7 @@ async function caricaRichieste() {
     <div class="row" data-id="${r.id}">
       <div class="main">
         <div class="name">${r.type} <span class="badge ${r.status}">${r.status}</span></div>
-        <div class="meta mono">${(r.profiles && r.profiles.username) || r.user_id} · ${fmtData(r.created_at)}</div>
+        <div class="meta mono">${mappaUsername[r.user_id] || r.user_id} · ${fmtData(r.created_at)}</div>
       </div>
       ${r.status === 'pending' ? `
         <button class="btn-small btn-approve" data-action="approve">✔ Approva</button>
