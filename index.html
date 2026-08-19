@@ -1321,6 +1321,19 @@
             #ricercaGlobaleModal { align-items: flex-start; padding-top: max(4.5rem, calc(env(safe-area-inset-top) + 3.5rem)); }
         }
 
+        /* A6 — feedback visivo sul toggle "Aggiungi/Rimuovi dal Binder": nessun
+           sistema di toast nel progetto, quindi l'icona del pulsante stesso
+           "pulsa" un istante quando l'azione va a buon fine (colore primario,
+           poi torna normale da sola togliendo la classe via JS). */
+        @keyframes binderToggleFlash {
+            0%   { transform: scale(1);   color: inherit; }
+            35%  { transform: scale(1.35); color: var(--primary); }
+            100% { transform: scale(1);   color: inherit; }
+        }
+        .btn-binder-toggle.binder-toggle-flash i {
+            animation: binderToggleFlash 0.55s ease;
+        }
+
         .binder-slot {
             position: relative;
             aspect-ratio: 63 / 88;
@@ -4188,6 +4201,7 @@
                             <div id="menuAzioniTabella-${idAttr}" class="menu-azioni-tabella" style="display:none;">
                                 <button onclick="apriModificaCarta('${idAttr}')"><i class="fa-solid fa-pen"></i> Modifica</button>
                                 ${card.tabella === 'wishlist' ? `<button onclick="segnaOttenuta('${card.id}')" style="color:var(--success);"><i class="fa-solid fa-check"></i> Ottenuta</button>` : ''}
+                                ${card.tabella === 'carte' && card.stato === 'collezione' ? `<button class="btn-binder-toggle" data-id="${idAttr}" onclick="event.stopPropagation(); toggleBinderMembership('${idAttr}')"><i class="fa-solid fa-layer-group"></i> ${_idsNelBinder.has(String(card.id)) ? 'Rimuovi dal Binder' : 'Aggiungi al Binder'}</button>` : ''}
                                 <button onclick="apriGraficoPrezzo('${idAttr}', '${card.tabella}', '${card.name.replace(/'/g, "\\'")}')"><i class="fa-solid fa-chart-line"></i> Andamento prezzo</button>
                                 <button onclick="apriFotoDettaglio('${idAttr}', '${card.tabella}', '${card.name.replace(/'/g, "\\'")}')"><i class="fa-solid fa-camera"></i> Foto dettaglio</button>
                                 <button onclick="eliminaCarta('${card.id}')" style="color:var(--danger);"><i class="fa-solid fa-trash"></i> Elimina</button>
@@ -4255,6 +4269,7 @@
                     <div class="riga-compatta-azioni" id="menuCompatto-${idAttr}" style="display:none;">
                         <button onclick="event.stopPropagation(); apriModificaCarta('${idAttr}')"><i class="fa-solid fa-pen"></i> Modifica</button>
                         ${card.tabella === 'wishlist' ? `<button onclick="segnaOttenuta('${card.id}')"><i class="fa-solid fa-check"></i> Ottenuta</button>` : ''}
+                        ${card.tabella === 'carte' && card.stato === 'collezione' ? `<button class="btn-binder-toggle" data-id="${idAttr}" onclick="event.stopPropagation(); toggleBinderMembership('${idAttr}')"><i class="fa-solid fa-layer-group"></i> ${_idsNelBinder.has(String(card.id)) ? 'Rimuovi dal Binder' : 'Aggiungi al Binder'}</button>` : ''}
                         <button onclick="apriGraficoPrezzo('${idAttr}', '${card.tabella}', '${nomeAttr}')"><i class="fa-solid fa-chart-line"></i> Andamento</button>
                         <button onclick="apriFotoDettaglio('${idAttr}', '${card.tabella}', '${nomeAttr}')"><i class="fa-solid fa-camera"></i> Foto</button>
                         <button onclick="eliminaCarta('${card.id}')" style="color:var(--danger);"><i class="fa-solid fa-trash"></i> Elimina</button>
@@ -5513,6 +5528,62 @@
             }
 
             await caricaCarteReali();
+        }
+
+        // ── A6 — Aggiungi/Rimuovi dal Binder ──────────────────────────────────
+        // Azione leggera: NON richiama caricaCarteReali() per intero (troppo
+        // pesante per un singolo insert/delete su binder_carte). Aggiorna solo
+        // _idsNelBinder in memoria + i pulsanti a schermo con quell'id (tabella
+        // desktop e schedina mobile compatta possono coesistere nel DOM).
+        // Se in quel momento la tab attiva è "binder", il prossimo giro di
+        // renderBinder() (es. cambiando tab e tornando) userà comunque il Set
+        // già aggiornato, quindi nessuna incoerenza — semplicemente non
+        // ridisegniamo la griglia Binder qui per non uscire dallo scope di
+        // questo pezzo (il click parte sempre da Visualizzazione/Wishlist,
+        // mai dalla tab Binder stessa in questa consegna).
+        async function toggleBinderMembership(id) {
+            const card = carteReali.find(c => String(c.id) === String(id));
+            if (!card || card.tabella !== 'carte' || card.stato !== 'collezione') return;
+
+            const giaNelBinder = _idsNelBinder.has(String(id));
+
+            if (giaNelBinder) {
+                if (!confirm(`Rimuovere "${card.name}" dal Binder?`)) return;
+            }
+
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) return;
+
+            if (giaNelBinder) {
+                const { error } = await supabaseClient.from('binder_carte')
+                    .delete().eq('owner_id', userId).eq('carta_id', id);
+                if (error) { alert('❌ Errore nel rimuovere la carta dal Binder: ' + error.message); return; }
+                _idsNelBinder.delete(String(id));
+            } else {
+                const { error } = await supabaseClient.from('binder_carte')
+                    .insert({ owner_id: userId, carta_id: id });
+                if (error) { alert('❌ Errore nell\'aggiungere la carta al Binder: ' + error.message); return; }
+                _idsNelBinder.add(String(id));
+            }
+
+            _aggiornaBottoniBinderToggle(id);
+        }
+
+        // Aggiorna icona/testo/animazione di TUTTI i pulsanti a schermo legati
+        // a quell'id (tabella + vista compatta, se entrambi presenti nel DOM).
+        function _aggiornaBottoniBinderToggle(id) {
+            const idAttr = String(id);
+            const nelBinder = _idsNelBinder.has(idAttr);
+            document.querySelectorAll(`.btn-binder-toggle[data-id="${idAttr}"]`).forEach((btn) => {
+                btn.innerHTML = nelBinder
+                    ? '<i class="fa-solid fa-layer-group"></i> Rimuovi dal Binder'
+                    : '<i class="fa-solid fa-layer-group"></i> Aggiungi al Binder';
+                btn.classList.remove('binder-toggle-flash');
+                void btn.offsetWidth; // riavvia l'animazione anche se già stata giocata di recente
+                btn.classList.add('binder-toggle-flash');
+                setTimeout(() => btn.classList.remove('binder-toggle-flash'), 600);
+            });
         }
 
         async function eliminaCarta(id) {
