@@ -1033,6 +1033,184 @@
             justify-content: flex-end;
         }
 
+        /* FASE 2 (backcarte) — EDITOR RETRO CARTA PERSONALIZZATO ───────────
+           Portato da modalita-crea-la-tua-sleeve.html (pacchetto backcarte),
+           namespace "cardback-" per non toccare nessuna classe esistente.
+           Stage a 900x1260 (5:7, vedi ROADMAP sez.1 punto 8), non più
+           750x1040 come nel file originale. */
+        .cardback-stage-wrap {
+            position: relative;
+            width: 100%;
+            max-width: 420px;
+            margin: 0.8rem auto 0;
+            overflow: hidden;
+            touch-action: none;
+        }
+        .cardback-stage {
+            position: relative;
+            width: 900px;
+            height: 1260px;
+            transform-origin: top left;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #444;
+            border: 1px solid var(--border-color);
+        }
+        .cardback-stage img.cardback-bg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            pointer-events: none;
+            user-select: none;
+            object-fit: cover;
+        }
+        .cardback-field {
+            position: absolute;
+            cursor: move;
+            touch-action: none;
+            user-select: none;
+        }
+        .cardback-field.dragging, .cardback-field.resizing {
+            z-index: 50;
+            outline: 2px dashed #6c7fe0;
+            outline-offset: 4px;
+        }
+        .cardback-drag-handle {
+            position: absolute;
+            top: -14px; left: -14px;
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: #2a3f8f;
+            border: 2px solid #fff;
+            color: #fff;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+            cursor: move;
+        }
+        .cardback-resize-handle {
+            position: absolute;
+            bottom: -14px; right: -14px;
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            background: #1f8a4c;
+            border: 2px solid #fff;
+            color: #fff;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+            cursor: nwse-resize;
+        }
+        .cardback-field-content { transform-origin: top left; pointer-events: none; }
+
+        /* Campo 1 — nome carta */
+        #cardBackField-pokemon .cardback-box {
+            display: inline-block;
+            white-space: pre;
+            min-width: 30px;
+            max-width: 545px;
+            padding: 7px 14px;
+            font-size: 26px;
+            font-weight: 800;
+            color: #14142a;
+            background: rgba(255,255,255,0.95);
+            border: 2px solid #2a3f8f;
+            border-radius: 7px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.35);
+        }
+        /* Campo 2 — condizione (medaglia) */
+        #cardBackField-condition .cardback-medal-wrap { position: relative; width: 246px; height: 246px; }
+        #cardBackField-condition .cardback-ribbon {
+            position: absolute;
+            width: 56px; height: 120px;
+            background: #b0303f;
+            top: 124px; left: 67px;
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+            z-index: 1;
+        }
+        #cardBackField-condition .cardback-ribbon.left { transform: rotate(-18deg); left: 53px; }
+        #cardBackField-condition .cardback-ribbon.right { transform: rotate(18deg); left: 130px; background:#8a2530; }
+        #cardBackField-condition .cardback-medal {
+            position: absolute;
+            top: 0; left: 22px;
+            width: 200px; height: 200px;
+            border-radius: 50%;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-weight: 800;
+            font-size: 42px;
+            color: #333;
+            border: 7px solid rgba(0,0,0,0.35);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.35), 0 4px 7px rgba(0,0,0,0.4);
+            background: radial-gradient(circle at 35% 30%, #f5f5f5, #b8b8b8 60%, #8c8c8c);
+            padding: 6px;
+        }
+        /* Campo 3 — variazione prezzo (fumetto) */
+        #cardBackField-variazione .cardback-bubble { position: relative; }
+        #cardBackField-variazione .cardback-bubble-text {
+            display: inline-block;
+            min-width: 61px;
+            max-width: 317px;
+            min-height: 18px;
+            padding: 11px 14px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #14142a;
+            background: #ffffff;
+            border: 2px solid #2a3f8f;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        #cardBackField-variazione .cardback-bubble::after {
+            content: "";
+            position: absolute;
+            left: 25px; bottom: -14px;
+            width: 0; height: 0;
+            border-left: 11px solid transparent;
+            border-right: 11px solid transparent;
+            border-top: 14px solid #2a3f8f;
+        }
+        #cardBackField-variazione .cardback-bubble::before {
+            content: "";
+            position: absolute;
+            left: 27px; bottom: -8px;
+            width: 0; height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 11px solid #ffffff;
+            z-index: 1;
+        }
+        /* Campo 4 — prezzo */
+        #cardBackField-price .cardback-price-wrap { position: relative; width: 167px; height: 80px; }
+        #cardBackField-price svg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.45));
+        }
+        #cardBackField-price .cardback-price-text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 26px;
+            font-weight: 800;
+            color: #14142a;
+            text-align: center;
+            min-width: 44px;
+            max-width: 114px;
+            line-height: 1.05;
+        }
+
         .close-modal-btn {
             position: absolute; top: 12px; right: 16px;
             background: none; border: none; font-size: 1.4rem;
@@ -1894,6 +2072,115 @@
                             </label>
                             <div id="binderCoverError" style="display:none; color:var(--danger); font-size:0.78rem; margin-top:0.4rem;"></div>
                             <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.4rem;">Qualsiasi foto, qualsiasi dimensione — convertita automaticamente.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RETRO CARTA PERSONALIZZATO (Fase 2, backcarte, 20/08/2026) —
+                     stesso pattern di "Copertina del Binder" sopra: slot
+                     'card_back' su user_media, bucket 'user-media', upload →
+                     status 'pending' → richiesta in pending_requests. In più
+                     qui c'è l'editor di posizionamento dei 4 campi (nome/
+                     condizione/variazione prezzo/prezzo), portato da
+                     modalita-crea-la-tua-sleeve.html del pacchetto backcarte.
+                     Si apre SUBITO sotto non appena esiste una sleeve
+                     (appena caricata o già salvata in precedenza) — non è
+                     dietro un bottone separato, su richiesta di Claudio. -->
+                <div class="settings-card" style="margin-bottom: 1.2rem; padding: 1rem;">
+                    <h4 style="margin: 0 0 0.5rem; font-size: 0.9rem; font-weight: 700; display:flex; align-items:center; gap:0.5rem;">
+                        <i class="fa-solid fa-clone" style="color: var(--primary);"></i> Retro carta personalizzato
+                    </h4>
+                    <p style="font-size:0.72rem; color:var(--text-muted); margin:0 0 0.8rem;">
+                        Sostituisce il retro standard ovunque giri una carta nel sito. Se non carichi nulla, viene mostrato un retro di sistema.
+                    </p>
+                    <div id="cardBackPreviewWrap" style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+                        <div id="cardBackPreview" style="width:60px; height:84px; border-radius:8px; background:var(--border-color); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+                            <i class="fa-solid fa-image" style="color:var(--text-muted);"></i>
+                        </div>
+                        <div style="flex:1; min-width:180px;">
+                            <div id="cardBackStato" style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem;">Caricamento stato…</div>
+                            <label class="btn-secondary" id="cardBackUploadLabel" style="display:inline-flex; align-items:center; gap:0.5rem; padding:0.55rem 0.9rem; font-size:0.8rem; cursor:pointer;">
+                                <i class="fa-solid fa-upload"></i> Carica sleeve
+                                <input type="file" id="cardBackInput" accept="image/*" style="display:none;" onchange="gestisciUploadCardBack(event)">
+                            </label>
+                            <div id="cardBackError" style="display:none; color:var(--danger); font-size:0.78rem; margin-top:0.4rem;"></div>
+                            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.4rem;">Qualsiasi foto, qualsiasi dimensione — ritagliata automaticamente in 900×1260.</div>
+                        </div>
+                    </div>
+
+                    <div id="cardBackEditorWrap" style="display:none; margin-top:0.6rem;">
+                        <p style="font-size:0.75rem; color:var(--text-muted); margin:0 0 0.3rem;">
+                            Trascina i 4 campi dove vuoi sopra la sleeve. Maniglia blu = sposta, maniglia verde = ridimensiona.
+                        </p>
+                        <div class="cardback-stage-wrap" id="cardBackStageWrap">
+                            <div class="cardback-stage" id="cardBackStage">
+                                <img class="cardback-bg" id="cardBackBgImg" src="" alt="Sleeve retro carta">
+
+                                <div class="cardback-field" id="cardBackField-pokemon" data-field="pokemon" style="left:13.48%; top:9.33%;">
+                                    <div class="cardback-drag-handle">✥</div>
+                                    <div class="cardback-resize-handle">⤡</div>
+                                    <div class="cardback-field-content">
+                                        <div class="cardback-box">PIKACHU VMAX 044</div>
+                                    </div>
+                                </div>
+
+                                <div class="cardback-field" id="cardBackField-condition" data-field="condition" style="left:27.19%; top:31.82%;">
+                                    <div class="cardback-drag-handle">✥</div>
+                                    <div class="cardback-resize-handle">⤡</div>
+                                    <div class="cardback-field-content">
+                                        <div class="cardback-medal-wrap">
+                                            <div class="cardback-ribbon left"></div>
+                                            <div class="cardback-ribbon right"></div>
+                                            <div class="cardback-medal">NM</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="cardback-field" id="cardBackField-variazione" data-field="variazione" style="left:27.19%; top:55.25%;">
+                                    <div class="cardback-drag-handle">✥</div>
+                                    <div class="cardback-resize-handle">⤡</div>
+                                    <div class="cardback-field-content">
+                                        <div class="cardback-bubble">
+                                            <div class="cardback-bubble-text">+5,2% questa settimana</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="cardback-field" id="cardBackField-price" data-field="price" style="left:66.44%; top:78.27%;">
+                                    <div class="cardback-drag-handle">✥</div>
+                                    <div class="cardback-resize-handle">⤡</div>
+                                    <div class="cardback-field-content">
+                                        <div class="cardback-price-wrap">
+                                            <svg viewBox="0 0 300 145" preserveAspectRatio="none">
+                                                <path d="
+                                                    M 26 6
+                                                    L 274 6
+                                                    Q 292 6 292 22
+                                                    C 292 40, 258 46, 258 72.5
+                                                    C 258 99, 292 105, 292 123
+                                                    Q 292 139 274 139
+                                                    L 26 139
+                                                    Q 8 139 8 123
+                                                    C 8 105, 42 99, 42 72.5
+                                                    C 42 46, 8 40, 8 22
+                                                    Q 8 6 26 6
+                                                    Z"
+                                                    fill="#fdfdf3" stroke="#14142a" stroke-width="6" stroke-linejoin="round"/>
+                                            </svg>
+                                            <div class="cardback-price-text">12,50 €</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:0.5rem; margin-top:0.7rem; flex-wrap:wrap;">
+                            <button type="button" class="btn-main" style="padding:0.5rem 0.9rem; font-size:0.8rem;" onclick="salvaPosizioniCardBack()">
+                                <i class="fa-solid fa-floppy-disk"></i> Salva posizioni
+                            </button>
+                            <button type="button" class="btn-secondary" style="padding:0.5rem 0.9rem; font-size:0.8rem;" onclick="ripristinaPosizioniCardBackDefault()">
+                                <i class="fa-solid fa-rotate-left"></i> Ripristina posizioni di default
+                            </button>
+                            <span id="cardBackPosStato" style="font-size:0.78rem; color:var(--text-muted); align-self:center;"></span>
                         </div>
                     </div>
                 </div>
@@ -5055,6 +5342,338 @@
             await caricaBinderCoverStato();
         }
 
+        // ── RETRO CARTA PERSONALIZZATO (Fase 2, backcarte, 20/08/2026) ───
+        // Slot 'card_back' su user_media (bucket privato 'user-media', path
+        // {user_id}/card_back). Stesso pattern upload/pending di
+        // gestisciUploadBinderCover() sopra. In più: campo 'metadata' jsonb
+        // (Fase 1 SQL) contiene il fieldState — posizioni % dei 4 campi
+        // (pokemon/condition/variazione/price) disegnati sopra la sleeve.
+        // Editor drag/resize portato da modalita-crea-la-tua-sleeve.html del
+        // pacchetto backcarte, stage aggiornato da 750x1040 a 900x1260 (vedi
+        // ROADMAP sez.1 punto 8 — formato 5:7, standard reale delle carte
+        // trading 63,5x88,9mm, coerente con l'aspect-ratio già usato dal
+        // modale flip di index.html).
+        const CARD_BACK_W = 900;
+        const CARD_BACK_H = 1260;
+
+        // Posizioni di fabbrica dei 4 campi — stessi valori % del file
+        // backcarte originale (DEFAULT_STATE), solo 'altro_0' rinominato in
+        // 'variazione' (mostra la variazione di prezzo, non più un fumetto
+        // libero — vedi decisione di Claudio, 20/08/2026).
+        const DEFAULT_STATE_CARD_BACK = {
+            pokemon:    { left: 13.48, top: 9.33,  scale: 1 },
+            condition:  { left: 27.19, top: 31.82, scale: 1 },
+            variazione: { left: 27.19, top: 55.25, scale: 1 },
+            price:      { left: 66.44, top: 78.27, scale: 1 }
+        };
+
+        // Stato correntemente mostrato nell'editor (mutato dal drag/resize,
+        // salvato solo quando l'utente preme "Salva posizioni"). null finché
+        // non esiste nessuna sleeve da editare.
+        let _cardBackFieldState = null;
+        let _cardBackDragInitDone = false;
+
+        // Converte un file immagine qualsiasi in PNG 900x1260 con ritaglio
+        // centrato ("cover", nessuna deformazione) — stessa identica logica
+        // di _convertiImmagineCopertina() sopra, solo dimensioni diverse.
+        // Funzione separata e non generalizzata su richiesta esplicita di
+        // Claudio (niente parametrizzazione cross-funzione a rischio).
+        function _convertiImmagineCardBack(file) {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = CARD_BACK_W;
+                    canvas.height = CARD_BACK_H;
+                    const ctx = canvas.getContext('2d');
+
+                    const scala = Math.max(CARD_BACK_W / img.width, CARD_BACK_H / img.height);
+                    const wScalata = img.width * scala;
+                    const hScalata = img.height * scala;
+                    const dx = (CARD_BACK_W - wScalata) / 2;
+                    const dy = (CARD_BACK_H - hScalata) / 2;
+                    ctx.drawImage(img, dx, dy, wScalata, hScalata);
+
+                    canvas.toBlob((blob) => {
+                        if (!blob) { reject(new Error('Conversione non riuscita.')); return; }
+                        resolve(blob);
+                    }, 'image/png');
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    reject(new Error('FORMATO_NON_LEGGIBILE'));
+                };
+                img.src = url;
+            });
+        }
+
+        function applyCardBackFieldState(fieldKey) {
+            const el = document.getElementById('cardBackField-' + fieldKey);
+            const s = _cardBackFieldState[fieldKey];
+            if (!el || !s) return;
+            el.style.left = s.left + '%';
+            el.style.top = s.top + '%';
+            el.querySelector('.cardback-field-content').style.transform = `scale(${s.scale})`;
+        }
+
+        function _cardBackCurrentStageScale() {
+            const stage = document.getElementById('cardBackStage');
+            return stage.getBoundingClientRect().width / CARD_BACK_W;
+        }
+
+        function _cardBackClampIntoStage(fieldKey) {
+            const el = document.getElementById('cardBackField-' + fieldKey);
+            const s = _cardBackFieldState[fieldKey];
+            const content = el.querySelector('.cardback-field-content');
+            const naturalW = content.scrollWidth;
+            const naturalH = content.scrollHeight;
+            const scaledW = naturalW * s.scale;
+            const scaledH = naturalH * s.scale;
+
+            let leftPx = (s.left / 100) * CARD_BACK_W;
+            let topPx = (s.top / 100) * CARD_BACK_H;
+
+            leftPx = Math.max(0, Math.min(leftPx, CARD_BACK_W - scaledW));
+            topPx = Math.max(0, Math.min(topPx, CARD_BACK_H - scaledH));
+
+            s.left = (leftPx / CARD_BACK_W) * 100;
+            s.top = (topPx / CARD_BACK_H) * 100;
+            applyCardBackFieldState(fieldKey);
+        }
+
+        function _cardBackRescale() {
+            const stageWrap = document.getElementById('cardBackStageWrap');
+            const stage = document.getElementById('cardBackStage');
+            if (!stageWrap || !stage || stageWrap.clientWidth === 0) return;
+            const scale = stageWrap.clientWidth / CARD_BACK_W;
+            stage.style.transform = `scale(${scale})`;
+            stageWrap.style.height = (CARD_BACK_H * scale) + 'px';
+        }
+        window.addEventListener('resize', _cardBackRescale);
+
+        // Collega drag (corpo campo + maniglia blu) e resize (maniglia
+        // verde) ai 4 campi, via Pointer Events (mouse + touch). Va fatto
+        // UNA sola volta: i campi sono statici nel DOM, cambia solo
+        // _cardBackFieldState (mutato qui) e l'immagine di sfondo.
+        function _initCardBackDragHandlers() {
+            if (_cardBackDragInitDone) return;
+            _cardBackDragInitDone = true;
+
+            document.querySelectorAll('.cardback-field').forEach(field => {
+                const fieldKey = field.dataset.field;
+                let dragging = false;
+                let startX = 0, startY = 0, startLeftPx = 0, startTopPx = 0;
+
+                function onDragStart(e) {
+                    if (e.target.closest('.cardback-resize-handle')) return;
+                    dragging = true;
+                    field.classList.add('dragging');
+                    field.setPointerCapture(e.pointerId);
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    startLeftPx = (_cardBackFieldState[fieldKey].left / 100) * CARD_BACK_W;
+                    startTopPx = (_cardBackFieldState[fieldKey].top / 100) * CARD_BACK_H;
+                    e.preventDefault();
+                }
+                function onDragMove(e) {
+                    if (!dragging) return;
+                    const scale = _cardBackCurrentStageScale();
+                    const dx = (e.clientX - startX) / scale;
+                    const dy = (e.clientY - startY) / scale;
+                    _cardBackFieldState[fieldKey].left = ((startLeftPx + dx) / CARD_BACK_W) * 100;
+                    _cardBackFieldState[fieldKey].top = ((startTopPx + dy) / CARD_BACK_H) * 100;
+                    _cardBackClampIntoStage(fieldKey);
+                }
+                function onDragEnd() {
+                    if (!dragging) return;
+                    dragging = false;
+                    field.classList.remove('dragging');
+                }
+                field.addEventListener('pointerdown', onDragStart);
+                field.addEventListener('pointermove', onDragMove);
+                field.addEventListener('pointerup', onDragEnd);
+                field.addEventListener('pointercancel', onDragEnd);
+
+                const resizeHandle = field.querySelector('.cardback-resize-handle');
+                let resizing = false;
+                let startScale = 1;
+
+                function onResizeStart(e) {
+                    e.stopPropagation();
+                    resizing = true;
+                    field.classList.add('resizing');
+                    resizeHandle.setPointerCapture(e.pointerId);
+                    startScale = _cardBackFieldState[fieldKey].scale;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    e.preventDefault();
+                }
+                function onResizeMove(e) {
+                    if (!resizing) return;
+                    const scale = _cardBackCurrentStageScale();
+                    const dx = (e.clientX - startX) / scale;
+                    const delta = dx / 150;
+                    let newScale = startScale + delta;
+                    newScale = Math.max(0.4, Math.min(2.5, newScale));
+                    _cardBackFieldState[fieldKey].scale = newScale;
+                    _cardBackClampIntoStage(fieldKey);
+                }
+                function onResizeEnd() {
+                    if (!resizing) return;
+                    resizing = false;
+                    field.classList.remove('resizing');
+                }
+                resizeHandle.addEventListener('pointerdown', onResizeStart);
+                resizeHandle.addEventListener('pointermove', onResizeMove);
+                resizeHandle.addEventListener('pointerup', onResizeEnd);
+                resizeHandle.addEventListener('pointercancel', onResizeEnd);
+            });
+        }
+
+        async function caricaCardBackStato() {
+            const statoEl = document.getElementById('cardBackStato');
+            const previewEl = document.getElementById('cardBackPreview');
+            const editorWrap = document.getElementById('cardBackEditorWrap');
+            document.getElementById('cardBackError').style.display = 'none';
+
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) { statoEl.textContent = 'Accedi per gestire il retro carta.'; return; }
+
+            const { data: media, error } = await supabaseClient
+                .from('user_media')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('slot', 'card_back')
+                .maybeSingle();
+
+            if (error) { statoEl.textContent = 'Errore nel controllare lo stato: ' + error.message; return; }
+
+            if (!media) {
+                statoEl.textContent = 'Nessuna sleeve caricata ancora — verrà mostrato il retro di sistema.';
+                previewEl.innerHTML = '<i class="fa-solid fa-image" style="color:var(--text-muted);"></i>';
+                editorWrap.style.display = 'none';
+                _cardBackFieldState = null;
+                return;
+            }
+
+            const { data: signed } = await supabaseClient.storage.from('user-media').createSignedUrl(media.storage_path, 3600);
+            if (signed?.signedUrl) {
+                previewEl.innerHTML = `<img src="${signed.signedUrl}" style="width:100%; height:100%; object-fit:cover;">`;
+                document.getElementById('cardBackBgImg').src = signed.signedUrl;
+            }
+
+            if (media.status === 'pending') {
+                statoEl.innerHTML = '<span style="color:#b8860b; font-weight:600;">⏳ In revisione da un admin — la vedi solo tu, gli altri vedono il retro di sistema nel frattempo</span>';
+            } else if (media.status === 'approved') {
+                statoEl.innerHTML = '<span style="color:var(--success); font-weight:600;">✅ Approvata</span>';
+            } else if (media.status === 'rejected') {
+                statoEl.innerHTML = '<span style="color:var(--danger); font-weight:600;">❌ Rifiutata' + (media.admin_note ? ' — ' + media.admin_note : '') + '</span>';
+            }
+
+            _cardBackFieldState = media.metadata ? JSON.parse(JSON.stringify(media.metadata)) : JSON.parse(JSON.stringify(DEFAULT_STATE_CARD_BACK));
+            Object.keys(DEFAULT_STATE_CARD_BACK).forEach(applyCardBackFieldState);
+            editorWrap.style.display = 'block';
+            _initCardBackDragHandlers();
+            _cardBackRescale();
+            document.getElementById('cardBackPosStato').textContent = '';
+        }
+
+        async function gestisciUploadCardBack(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            const errEl = document.getElementById('cardBackError');
+            errEl.style.display = 'none';
+
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) { errEl.textContent = 'Sessione non valida, ricarica la pagina.'; errEl.style.display = 'block'; return; }
+
+            let pngBlob;
+            try {
+                pngBlob = await _convertiImmagineCardBack(file);
+            } catch (e) {
+                if (e.message === 'FORMATO_NON_LEGGIBILE') {
+                    errEl.textContent = '❌ Il tuo dispositivo ha salvato questa foto in un formato che il sito non riesce a leggere (capita spesso con le foto scattate su iPhone, formato HEIC). Su iPhone: Impostazioni → Foto → Formato foto → scegli "Più compatibile", oppure scegli "Più piccola" quando condividi/esporti la foto. Poi riprova.';
+                } else {
+                    errEl.textContent = '❌ Errore nella conversione dell\'immagine: ' + e.message;
+                }
+                errEl.style.display = 'block';
+                event.target.value = '';
+                return;
+            }
+
+            const path = `${userId}/card_back`;
+            const { error: errUpload } = await supabaseClient.storage.from('user-media').upload(path, pngBlob, { upsert: true, contentType: 'image/png' });
+            if (errUpload) { errEl.textContent = '❌ Errore nel caricamento: ' + errUpload.message; errEl.style.display = 'block'; event.target.value = ''; return; }
+
+            // NOTA: ogni nuova sleeve riparte con le posizioni di default
+            // (assunzione di Claude, non esplicitamente decisa da Claudio —
+            // una nuova immagine ha probabilmente una composizione diversa
+            // da quella vecchia, riusare le vecchie posizioni rischierebbe
+            // di piazzare i campi in punti sbagliati).
+            const { data: mediaRow, error: errUpsert } = await supabaseClient
+                .from('user_media')
+                .upsert({
+                    user_id: userId,
+                    slot: 'card_back',
+                    storage_path: path,
+                    status: 'pending',
+                    admin_note: null,
+                    reviewed_at: null,
+                    reviewed_by: null,
+                    metadata: DEFAULT_STATE_CARD_BACK
+                }, { onConflict: 'user_id,slot' })
+                .select()
+                .single();
+
+            if (errUpsert) { errEl.textContent = '❌ Foto caricata ma non registrata: ' + errUpsert.message; errEl.style.display = 'block'; event.target.value = ''; return; }
+
+            const { error: errRichiesta } = await supabaseClient.from('pending_requests').insert({
+                user_id: userId,
+                type: 'photo_upload',
+                status: 'pending',
+                payload: { media_id: mediaRow.id }
+            });
+            if (errRichiesta) console.error('Media registrato ma richiesta non collegata:', errRichiesta.message);
+
+            event.target.value = '';
+            await caricaCardBackStato();
+        }
+
+        // Salva SOLO il fieldState (metadata) sulla riga già esistente, senza
+        // toccare status/pending_requests: spostare i campi non richiede una
+        // nuova approvazione admin (quella riguarda l'immagine, non le
+        // posizioni). Richiede la policy UPDATE già estesa a qualsiasi stato
+        // (06_user_media_update_sempre.sql, già confermata sul DB per
+        // binder_cover — stessa RLS slot-agnostica, vedi ROADMAP sez.1).
+        async function salvaPosizioniCardBack() {
+            const statoEl = document.getElementById('cardBackPosStato');
+            if (!_cardBackFieldState) return;
+
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) { statoEl.textContent = 'Sessione non valida.'; return; }
+
+            statoEl.textContent = 'Salvataggio…';
+            const { error } = await supabaseClient
+                .from('user_media')
+                .update({ metadata: _cardBackFieldState })
+                .eq('user_id', userId)
+                .eq('slot', 'card_back');
+
+            statoEl.textContent = error ? ('❌ Errore: ' + error.message) : '✅ Posizioni salvate.';
+        }
+
+        function ripristinaPosizioniCardBackDefault() {
+            if (!_cardBackFieldState) return;
+            _cardBackFieldState = JSON.parse(JSON.stringify(DEFAULT_STATE_CARD_BACK));
+            Object.keys(DEFAULT_STATE_CARD_BACK).forEach(applyCardBackFieldState);
+            document.getElementById('cardBackPosStato').textContent = 'Posizioni ripristinate ai valori di default. Ricordati di premere "Salva posizioni".';
+        }
+
         // A6, punto 4 — rimozione diretta dallo slot pieno nel Binder.
         // Riusa toggleBinderMembership() così com'è (già gestisce la conferma
         // di rimozione e l'update di _idsNelBinder) — qui aggiungo solo il
@@ -6141,7 +6760,7 @@
                 if (tabId === 'prezzi' && !_locationCaricate) caricaListaLocationCheckbox();
                 if (tabId === 'inserimento' && !_locationComuneCaricata) caricaSelectLocationComune();
                 if (tabId === 'inserimento') caricaCarteConProblemi();
-                if (tabId === 'binder') { renderBinder(); caricaBinderCoverStato(); }
+                if (tabId === 'binder') { renderBinder(); caricaBinderCoverStato(); caricaCardBackStato(); }
                 if (tabId === 'home') { caricaAvvisiHome(); caricaUltimaSincronizzazioneHome(); caricaAttivitaRecentiHome(); renderBinderInPrimoPianoHome(); }
             } else {
                 filterTable();
