@@ -325,7 +325,7 @@ async function caricaRichieste() {
   const cont = document.getElementById('richieste-list');
   const { data, error } = await supabaseClient
     .from('pending_requests')
-    .select('*, profiles:user_id (username)')
+    .select('*, profiles!user_id (username)')
     .is('deleted_at', null)
     .order('created_at', { ascending: false });
 
