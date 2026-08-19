@@ -328,6 +328,14 @@ function escAttr(s) {
 }
 
 // ── RICHIESTE PENDENTI ─────────────────────────────────────────
+// Etichette leggibili per i 3 tipi di richiesta gestiti dal dispatcher.
+function _etichettaTipoRichiesta(type) {
+  if (type === 'password_reset') return 'Reset password';
+  if (type === 'username_change') return 'Cambio username';
+  if (type === 'photo_upload') return 'Foto Binder';
+  return type;
+}
+
 async function caricaRichieste() {
   const cont = document.getElementById('richieste-list');
   const { data, error } = await supabaseClient
@@ -353,44 +361,128 @@ async function caricaRichieste() {
     }
   }
 
+  // Per le richieste photo_upload pending, recuperiamo l'anteprima
+  // dell'immagine da approvare/rifiutare (Fase 3 — prima non era
+  // visibile, l'admin doveva approvare "alla cieca").
+  const mediaIds = [...new Set((data || [])
+    .filter(r => r.type === 'photo_upload' && r.status === 'pending' && r.payload?.media_id)
+    .map(r => r.payload.media_id))];
+  let mappaAnteprimaFoto = {};
+  if (mediaIds.length > 0) {
+    const { data: mediaRows } = await supabaseClient
+      .from('user_media')
+      .select('id, storage_path')
+      .in('id', mediaIds);
+    if (mediaRows) {
+      const urls = await Promise.all(mediaRows.map(async (m) => {
+        const { data: signed } = await supabaseClient.storage.from('user-media').createSignedUrl(m.storage_path, 600);
+        return [m.id, signed?.signedUrl || null];
+      }));
+      mappaAnteprimaFoto = Object.fromEntries(urls);
+    }
+  }
+
   const nPending = (data || []).filter(r => r.status === 'pending').length;
   document.getElementById('count-richieste').textContent = nPending;
 
   if (!data || data.length === 0) { cont.innerHTML = '<div class="empty-state">Nessuna richiesta al momento.</div>'; return; }
 
-  cont.innerHTML = data.map(r => `
-    <div class="row" data-id="${r.id}">
+  cont.innerHTML = data.map(r => {
+    let dettaglio = '';
+    if (r.type === 'username_change' && r.payload?.nuovo_username) {
+      dettaglio = `<div class="meta">→ nuovo username: <b>${r.payload.nuovo_username}</b></div>`;
+    }
+    const urlFoto = r.type === 'photo_upload' ? mappaAnteprimaFoto[r.payload?.media_id] : null;
+
+    return `
+    <div class="row" data-id="${r.id}" data-type="${r.type}" data-user-id="${r.user_id || ''}">
+      ${urlFoto ? `<img src="${urlFoto}" style="width:52px; height:52px; border-radius:8px; object-fit:cover; flex-shrink:0; cursor:pointer;" onclick="window.open('${urlFoto}','_blank')">` : ''}
       <div class="main">
-        <div class="name">${r.type} <span class="badge ${r.status}">${r.status}</span></div>
+        <div class="name">${_etichettaTipoRichiesta(r.type)} <span class="badge ${r.status}">${r.status}</span></div>
         <div class="meta mono">${mappaUsername[r.user_id] || r.user_id} · ${fmtData(r.created_at)}</div>
+        ${dettaglio}
+        ${r.admin_note ? `<div class="meta">Nota: ${r.admin_note}</div>` : ''}
       </div>
-      ${r.status === 'pending' ? `
-        <button class="btn-small btn-approve" data-action="approve">✔ Approva</button>
-        <button class="btn-small btn-reject" data-action="reject">✘ Rifiuta</button>
-      ` : ''}
-    </div>
-  `).join('');
+      <div class="row-azioni" style="display:flex; gap:8px;">
+        ${r.status === 'pending' ? `
+          <button class="btn-small btn-approve" data-action="approve">✔ Approva</button>
+          <button class="btn-small btn-reject" data-action="reject">✘ Rifiuta</button>
+        ` : ''}
+      </div>
+    </div>`;
+  }).join('');
 
   cont.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const riga = btn.closest('.row');
       const id = riga.dataset.id;
-      const nuovoStato = btn.dataset.action === 'approve' ? 'approved' : 'rejected';
+      const tipo = riga.dataset.type;
+      const azione = btn.dataset.action; // 'approve' | 'reject'
+
+      if (azione === 'approve' && tipo === 'username_change') {
+        if (!confirm('Confermi il cambio username? Le sessioni attive di questo utente verranno revocate: dovrà rifare login con il nuovo username. Verifica di aver letto correttamente il nuovo username prima di procedere.')) return;
+      }
+      if (azione === 'approve' && tipo === 'photo_upload') {
+        if (!confirm('Approvare questa foto come copertina del Binder?')) return;
+      }
+
+      let nota = null;
+      if (azione === 'reject') {
+        nota = prompt('Motivo del rifiuto (facoltativo, lasciare vuoto per saltare):');
+        if (nota === null) return; // annullato dal prompt
+        nota = nota.trim() || null;
+      }
+
       riga.querySelectorAll('button').forEach(b => b.disabled = true);
 
-      const { data: sessionData } = await supabaseClient.auth.getSession();
-      const { error } = await supabaseClient
-        .from('pending_requests')
-        .update({ status: nuovoStato, reviewed_at: new Date().toISOString(), reviewed_by: sessionData.session.user.id })
-        .eq('id', id);
+      // ── Ramo password_reset in approvazione: genera la password qui,
+      // la passa al dispatcher, poi la mostra con tasto Condividi. Per
+      // tutti gli altri casi il payload è nota (rifiuto) o assente.
+      let payloadRpc = nota ? { nota } : null;
+      let nuovaPwGenerata = null;
+      if (azione === 'approve' && tipo === 'password_reset') {
+        nuovaPwGenerata = generaPassword();
+        payloadRpc = { new_password: nuovaPwGenerata };
+      }
 
-      if (error) { mostraStatus('Errore: ' + error.message, false); riga.querySelectorAll('button').forEach(b => b.disabled = false); return; }
-      await supabaseClient.rpc('log_admin_action', {
-        p_action: nuovoStato === 'approved' ? 'request_approved' : 'request_rejected',
-        p_target: null, p_details: { request_id: id }
+      const { error } = await supabaseClient.rpc('admin_process_pending_request', {
+        p_request_id: id,
+        p_decisione: azione === 'approve' ? 'approved' : 'rejected',
+        p_payload: payloadRpc
       });
+
+      if (error) {
+        mostraStatus('Errore: ' + error.message, false);
+        riga.querySelectorAll('button').forEach(b => b.disabled = false);
+        return;
+      }
+
+      if (nuovaPwGenerata) {
+        // Non ricarichiamo subito la lista: mostriamo prima la password
+        // generata con il tasto Condividi, stesso pattern già usato
+        // nella modale utente per "Genera e reimposta password".
+        const nomeUtente = mappaUsername[riga.dataset.userId] || 'utente';
+        riga.querySelector('.row-azioni').innerHTML = `
+          <div class="pw-reveal">
+            Nuova password per <b>${nomeUtente}</b>:
+            <div class="pw-value">${nuovaPwGenerata}</div>
+            <button class="btn-small btn-toggle-role" id="pw-share-${id}">📤 Condividi</button>
+          </div>`;
+        document.getElementById(`pw-share-${id}`).addEventListener('click', async () => {
+          const testo = `CardSync Pro — la tua nuova password è: ${nuovaPwGenerata}`;
+          if (navigator.share) { try { await navigator.share({ text: testo }); } catch (e) {} }
+          else { await navigator.clipboard.writeText(testo); mostraStatus('Copiato negli appunti (condivisione nativa non disponibile su questo browser).', true); }
+        });
+        mostraStatus('Richiesta approvata.', true);
+        caricaUtenti();
+        caricaLogAdmin();
+        return;
+      }
+
       mostraStatus('Richiesta aggiornata.', true);
       caricaRichieste();
+      caricaUtenti();
+      caricaLogAdmin();
     });
   });
 }
