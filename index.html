@@ -1822,6 +1822,32 @@
                     Anteprima grafica — per ora mostra tutta la collezione. La selezione "nel Binder" arriverà con il prossimo intervento sui dati.
                 </p>
 
+                <!-- COPERTINA BINDER (Fase 2c, 19/08/2026) — upload con
+                     moderazione admin. Slot 'binder_cover' su user_media,
+                     bucket privato 'user-media'. Upload → status 'pending'
+                     → richiesta collegata in pending_requests (type:
+                     photo_upload). Diventa visibile agli altri solo dopo
+                     approvazione admin (Fase 3, non ancora collegata). -->
+                <div class="settings-card" style="margin-bottom: 1.2rem; padding: 1rem;">
+                    <h4 style="margin: 0 0 0.5rem; font-size: 0.9rem; font-weight: 700; display:flex; align-items:center; gap:0.5rem;">
+                        <i class="fa-solid fa-image" style="color: var(--primary);"></i> Copertina del Binder
+                    </h4>
+                    <div id="binderCoverPreviewWrap" style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+                        <div id="binderCoverPreview" style="width:80px; height:80px; border-radius:10px; background:var(--border-color); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+                            <i class="fa-solid fa-image" style="color:var(--text-muted);"></i>
+                        </div>
+                        <div style="flex:1; min-width:180px;">
+                            <div id="binderCoverStato" style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem;">Caricamento stato…</div>
+                            <label class="btn-secondary" id="binderCoverUploadLabel" style="display:inline-flex; align-items:center; gap:0.5rem; padding:0.55rem 0.9rem; font-size:0.8rem; cursor:pointer;">
+                                <i class="fa-solid fa-upload"></i> Carica foto
+                                <input type="file" id="binderCoverInput" accept="image/*" style="display:none;" onchange="gestisciUploadBinderCover(event)">
+                            </label>
+                            <div id="binderCoverError" style="display:none; color:var(--danger); font-size:0.78rem; margin-top:0.4rem;"></div>
+                            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.4rem;">Qualsiasi foto, qualsiasi dimensione — convertita automaticamente.</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="binder-layout-switcher">
                     <button type="button" class="binder-layout-btn" data-layout="2x2" onclick="impostaBinderLayout('2x2')">2×2</button>
                     <button type="button" class="binder-layout-btn" data-layout="3x3" onclick="impostaBinderLayout('3x3')">3×3</button>
@@ -4809,6 +4835,151 @@
             document.getElementById('binderPagination').style.display = totalePagine > 1 ? 'flex' : 'none';
         }
 
+        // ── COPERTINA BINDER (Fase 2c) ──────────────────────────────
+        // Slot 'binder_cover' su user_media (bucket privato 'user-media',
+        // path {user_id}/binder_cover). Upload → converte SEMPRE in PNG
+        // 1024x1419 (ritaglio centrato, no deformazione) via Canvas
+        // prima di caricare — qualsiasi formato/dimensione in ingresso
+        // che il browser sa decodificare. Ogni sostituzione riparte da
+        // status 'pending' e resta visibile solo ad admin+proprietario
+        // finché non viene approvata. Grazie alla policy aggiornata
+        // (06_user_media_update_sempre.sql, eseguita sul DB il
+        // 19/08/2026) l'utente può sostituire la copertina in QUALSIASI
+        // stato precedente (pending/approved/rejected), non solo pending.
+        const BINDER_COVER_W = 1024;
+        const BINDER_COVER_H = 1419;
+
+        // Converte un file immagine qualsiasi in PNG 1024x1419 con
+        // ritaglio centrato (stile "cover", riempie tutto lo spazio
+        // senza deformare). Rigetta con errore esplicito i file che il
+        // browser non riesce a decodificare (es. HEIC su Safari/iOS).
+        function _convertiImmagineCopertina(file) {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = BINDER_COVER_W;
+                    canvas.height = BINDER_COVER_H;
+                    const ctx = canvas.getContext('2d');
+
+                    const scala = Math.max(BINDER_COVER_W / img.width, BINDER_COVER_H / img.height);
+                    const wScalata = img.width * scala;
+                    const hScalata = img.height * scala;
+                    const dx = (BINDER_COVER_W - wScalata) / 2;
+                    const dy = (BINDER_COVER_H - hScalata) / 2;
+                    ctx.drawImage(img, dx, dy, wScalata, hScalata);
+
+                    canvas.toBlob((blob) => {
+                        if (!blob) { reject(new Error('Conversione non riuscita.')); return; }
+                        resolve(blob);
+                    }, 'image/png');
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    reject(new Error('FORMATO_NON_LEGGIBILE'));
+                };
+                img.src = url;
+            });
+        }
+
+        async function caricaBinderCoverStato() {
+            const statoEl = document.getElementById('binderCoverStato');
+            const previewEl = document.getElementById('binderCoverPreview');
+            document.getElementById('binderCoverError').style.display = 'none';
+
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) { statoEl.textContent = 'Accedi per gestire la copertina.'; return; }
+
+            const { data: media, error } = await supabaseClient
+                .from('user_media')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('slot', 'binder_cover')
+                .maybeSingle();
+
+            if (error) { statoEl.textContent = 'Errore nel controllare lo stato: ' + error.message; return; }
+
+            if (!media) {
+                statoEl.textContent = 'Nessuna copertina caricata ancora.';
+                previewEl.innerHTML = '<i class="fa-solid fa-image" style="color:var(--text-muted);"></i>';
+                return;
+            }
+
+            const { data: signed } = await supabaseClient.storage.from('user-media').createSignedUrl(media.storage_path, 3600);
+            if (signed?.signedUrl) {
+                previewEl.innerHTML = `<img src="${signed.signedUrl}" style="width:100%; height:100%; object-fit:cover;">`;
+            }
+
+            if (media.status === 'pending') {
+                statoEl.innerHTML = '<span style="color:#b8860b; font-weight:600;">⏳ In revisione da un admin</span>';
+            } else if (media.status === 'approved') {
+                statoEl.innerHTML = '<span style="color:var(--success); font-weight:600;">✅ Approvata</span>';
+            } else if (media.status === 'rejected') {
+                statoEl.innerHTML = '<span style="color:var(--danger); font-weight:600;">❌ Rifiutata' + (media.admin_note ? ' — ' + media.admin_note : '') + '</span>';
+            }
+            // Il bottone "Carica foto" resta sempre visibile e attivo:
+            // la nuova policy permette di sostituire in qualsiasi stato.
+        }
+
+        async function gestisciUploadBinderCover(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            const errEl = document.getElementById('binderCoverError');
+            errEl.style.display = 'none';
+
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) { errEl.textContent = 'Sessione non valida, ricarica la pagina.'; errEl.style.display = 'block'; return; }
+
+            let pngBlob;
+            try {
+                pngBlob = await _convertiImmagineCopertina(file);
+            } catch (e) {
+                if (e.message === 'FORMATO_NON_LEGGIBILE') {
+                    errEl.textContent = '❌ Il tuo dispositivo ha salvato questa foto in un formato che il sito non riesce a leggere (capita spesso con le foto scattate su iPhone, formato HEIC). Su iPhone: Impostazioni → Foto → Formato foto → scegli "Più compatibile", oppure scegli "Più piccola" quando condividi/esporti la foto. Poi riprova.';
+                } else {
+                    errEl.textContent = '❌ Errore nella conversione dell\'immagine: ' + e.message;
+                }
+                errEl.style.display = 'block';
+                event.target.value = '';
+                return;
+            }
+
+            const path = `${userId}/binder_cover`;
+            const { error: errUpload } = await supabaseClient.storage.from('user-media').upload(path, pngBlob, { upsert: true, contentType: 'image/png' });
+            if (errUpload) { errEl.textContent = '❌ Errore nel caricamento: ' + errUpload.message; errEl.style.display = 'block'; event.target.value = ''; return; }
+
+            const { data: mediaRow, error: errUpsert } = await supabaseClient
+                .from('user_media')
+                .upsert({
+                    user_id: userId,
+                    slot: 'binder_cover',
+                    storage_path: path,
+                    status: 'pending',
+                    admin_note: null,
+                    reviewed_at: null,
+                    reviewed_by: null
+                }, { onConflict: 'user_id,slot' })
+                .select()
+                .single();
+
+            if (errUpsert) { errEl.textContent = '❌ Foto caricata ma non registrata: ' + errUpsert.message; errEl.style.display = 'block'; event.target.value = ''; return; }
+
+            const { error: errRichiesta } = await supabaseClient.from('pending_requests').insert({
+                user_id: userId,
+                type: 'photo_upload',
+                status: 'pending',
+                payload: { media_id: mediaRow.id }
+            });
+            if (errRichiesta) console.error('Media registrato ma richiesta non collegata:', errRichiesta.message);
+
+            event.target.value = '';
+            await caricaBinderCoverStato();
+        }
+
         function impostaBinderLayout(layout) {
             if (!BINDER_LAYOUTS[layout]) return;
             _binderLayout = layout;
@@ -5645,7 +5816,7 @@
                 if (tabId === 'prezzi' && !_locationCaricate) caricaListaLocationCheckbox();
                 if (tabId === 'inserimento' && !_locationComuneCaricata) caricaSelectLocationComune();
                 if (tabId === 'inserimento') caricaCarteConProblemi();
-                if (tabId === 'binder') renderBinder();
+                if (tabId === 'binder') { renderBinder(); caricaBinderCoverStato(); }
                 if (tabId === 'home') { caricaAvvisiHome(); caricaUltimaSincronizzazioneHome(); caricaAttivitaRecentiHome(); renderBinderInPrimoPianoHome(); }
             } else {
                 filterTable();
