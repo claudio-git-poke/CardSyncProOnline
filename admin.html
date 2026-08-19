@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CardSync Pro — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg-color: #f3eeff;
+    --card-bg: #ffffff;
+    --primary: #7c4dff;
+    --primary-light: #ede7ff;
+    --primary-dark: #5e35b1;
+    --text-dark: #2a2438;
+    --text-muted: #756a8a;
+    --border-color: #e2d9f3;
+    --row-hover: #f9f6ff;
+    --success: #2e7d32;
+    --success-bg: #e8f5e9;
+    --danger: #d32f2f;
+    --danger-bg: #ffebee;
+    --warn: #b8860b;
+    --warn-bg: #fff6e0;
+    --shadow-soft: 0 4px 20px rgba(124, 77, 255, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: var(--bg-color); color: var(--text-dark);
+    font-family: 'Space Grotesk', -apple-system, sans-serif;
+  }
+  code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ── LOGIN ────────────────────────────────────────────────── */
+  #login-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  }
+  #login-card {
+    background: var(--card-bg); border-radius: 18px; box-shadow: var(--shadow-soft);
+    padding: 32px 30px; width: min(340px, 90vw);
+  }
+  #login-card h1 { font-size: 19px; margin: 0 0 4px; }
+  #login-card p.sub { font-size: 12.5px; color: var(--text-muted); margin: 0 0 22px; }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 12px 0 5px; }
+  input[type="text"], input[type="password"] {
+    width: 100%; padding: 10px 12px; border-radius: 9px;
+    border: 1.5px solid var(--border-color); font-size: 14px; font-family: inherit;
+  }
+  input:focus { outline: none; border-color: var(--primary); }
+  button {
+    font-family: inherit; cursor: pointer; border: none; border-radius: 10px;
+  }
+  #login-submit {
+    width: 100%; margin-top: 20px; padding: 11px; background: var(--primary);
+    color: #fff; font-size: 14px; font-weight: 700;
+  }
+  #login-submit:disabled { opacity: .6; cursor: default; }
+  #login-error {
+    display: none; margin-top: 12px; padding: 9px 11px; background: var(--danger-bg);
+    color: var(--danger); border-radius: 8px; font-size: 12.5px; line-height: 1.4;
+  }
+
+  /* ── ACCESSO NEGATO ───────────────────────────────────────── */
+  #denied-screen { display: none; min-height: 100vh; align-items: center; justify-content: center; flex-direction: column; gap: 14px; text-align: center; padding: 20px; }
+  #denied-screen h1 { font-size: 20px; margin: 0; }
+  #denied-screen p { color: var(--text-muted); max-width: 360px; margin: 0; }
+
+  /* ── DASHBOARD ────────────────────────────────────────────── */
+  #dash { display: none; max-width: 920px; margin: 0 auto; padding: 28px 20px 60px; }
+  header.dash-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px;
+  }
+  header.dash-header h1 { font-size: 20px; margin: 0; }
+  header.dash-header .who { font-size: 12px; color: var(--text-muted); }
+  #logout-btn {
+    background: var(--primary-light); color: var(--primary-dark);
+    padding: 8px 14px; font-size: 12.5px; font-weight: 600; border-radius: 8px;
+  }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+  .tab-btn {
+    background: var(--card-bg); border: 1.5px solid var(--border-color);
+    padding: 9px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted);
+    border-radius: 10px;
+  }
+  .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card {
+    background: var(--card-bg); border-radius: 14px; box-shadow: var(--shadow-soft);
+    padding: 4px 0; margin-bottom: 14px; overflow: hidden;
+  }
+  .row {
+    display: flex; align-items: center; gap: 12px; padding: 13px 18px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .row:last-child { border-bottom: none; }
+  .row:hover { background: var(--row-hover); }
+  .row .main { flex: 1; min-width: 0; }
+  .row .main .name { font-weight: 600; font-size: 14px; }
+  .row .main .meta { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+  .badge {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: .3px; white-space: nowrap;
+  }
+  .badge.admin { background: var(--primary-light); color: var(--primary-dark); }
+  .badge.user { background: var(--border-color); color: var(--text-muted); }
+  .badge.pending { background: var(--warn-bg); color: var(--warn); }
+  .badge.approved { background: var(--success-bg); color: var(--success); }
+  .badge.rejected { background: var(--danger-bg); color: var(--danger); }
+
+  .btn-small {
+    padding: 7px 12px; font-size: 12px; font-weight: 600; border-radius: 8px;
+    white-space: nowrap;
+  }
+  .btn-toggle-role { background: var(--primary-light); color: var(--primary-dark); }
+  .btn-approve { background: var(--success-bg); color: var(--success); }
+  .btn-reject { background: var(--danger-bg); color: var(--danger); }
+  .btn-small:disabled { opacity: .5; cursor: default; }
+
+  .empty-state { padding: 30px 18px; text-align: center; color: var(--text-muted); font-size: 13px; }
+  .status-msg { font-size: 12.5px; padding: 9px 14px; border-radius: 9px; margin-bottom: 14px; display: none; }
+  .status-msg.ok { display: block; background: var(--success-bg); color: var(--success); }
+  .status-msg.err { display: block; background: var(--danger-bg); color: var(--danger); }
+</style>
+</head>
+<body>
+
+<!-- ── SCHERMATA LOGIN ─────────────────────────────────────────── -->
+<div id="login-screen">
+  <div id="login-card">
+    <h1>🔐 CardSync Pro — Admin</h1>
+    <p class="sub">Accedi con il tuo account CardSync Pro.</p>
+    <label for="login-user">Nome utente</label>
+    <input type="text" id="login-user" autocomplete="username" placeholder="es. claudio">
+    <label for="login-pass">Password</label>
+    <input type="password" id="login-pass" autocomplete="current-password">
+    <div id="login-error"></div>
+    <button id="login-submit">Accedi</button>
+  </div>
+</div>
+
+<!-- ── ACCESSO NEGATO ──────────────────────────────────────────── -->
+<div id="denied-screen">
+  <h1>⛔ Accesso riservato</h1>
+  <p>Il tuo account non ha i permessi di amministratore. Se pensi sia un errore, contatta chi gestisce CardSync Pro.</p>
+  <button id="denied-logout" style="background:var(--primary-light);color:var(--primary-dark);padding:9px 16px;font-size:13px;font-weight:600;">Esci</button>
+</div>
+
+<!-- ── DASHBOARD ───────────────────────────────────────────────── -->
+<div id="dash">
+  <header class="dash-header">
+    <div>
+      <h1>Dashboard admin</h1>
+      <div class="who" id="who-label"></div>
+    </div>
+    <button id="logout-btn">🚪 Esci</button>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="richieste">📋 Richieste pendenti</button>
+    <button class="tab-btn" data-tab="utenti">👥 Utenti</button>
+  </div>
+
+  <div id="status-msg" class="status-msg"></div>
+
+  <!-- RICHIESTE -->
+  <div class="panel active" id="panel-richieste">
+    <div class="card" id="richieste-list"><div class="empty-state">Caricamento…</div></div>
+  </div>
+
+  <!-- UTENTI -->
+  <div class="panel" id="panel-utenti">
+    <div class="card" id="utenti-list"><div class="empty-state">Caricamento…</div></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://iwdkgehbktvkujhwqdwq.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3ZGtnZWhia3R2a3VqaHdxZHdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMzM1MzYsImV4cCI6MjEwMTcwOTUzNn0.Pdcmuj5eXuh_z43CInsdGRkNwloHpqlhBGnBI9kvKe0';
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const loginScreen  = document.getElementById('login-screen');
+const deniedScreen = document.getElementById('denied-screen');
+const dash         = document.getElementById('dash');
+
+function mostraSolo(el) {
+  [loginScreen, deniedScreen, dash].forEach(e => e.style.display = 'none');
+  el.style.display = (el === dash) ? 'block' : 'flex';
+}
+
+// ── LOGIN ──────────────────────────────────────────────────────
+const elUser  = document.getElementById('login-user');
+const elPass  = document.getElementById('login-pass');
+const elErr   = document.getElementById('login-error');
+const elSubmit = document.getElementById('login-submit');
+
+async function tentaLogin() {
+  const inputUtente = elUser.value.trim();
+  const password = elPass.value;
+  if (!inputUtente || !password) {
+    elErr.textContent = 'Inserisci nome utente e password.';
+    elErr.style.display = 'block';
+    return;
+  }
+  const email = inputUtente.includes('@') ? inputUtente : inputUtente.toLowerCase() + '@cardsyncpro.local';
+  elSubmit.disabled = true;
+  elSubmit.textContent = 'Accesso in corso…';
+  elErr.style.display = 'none';
+
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) {
+    elErr.textContent = '❌ ' + (error.message === 'Invalid login credentials' ? 'Nome utente o password errati.' : error.message);
+    elErr.style.display = 'block';
+    elSubmit.disabled = false;
+    elSubmit.textContent = 'Accedi';
+    return;
+  }
+  await controllaRuoloEAvvia();
+}
+
+elSubmit.addEventListener('click', tentaLogin);
+[elUser, elPass].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') tentaLogin(); }));
+
+async function logout() {
+  await supabaseClient.auth.signOut();
+  location.reload();
+}
+document.getElementById('logout-btn').addEventListener('click', logout);
+document.getElementById('denied-logout').addEventListener('click', logout);
+
+// ── CONTROLLO RUOLO ADMIN ─────────────────────────────────────
+async function controllaRuoloEAvvia() {
+  const { data: sessionData } = await supabaseClient.auth.getSession();
+  if (!sessionData.session) { mostraSolo(loginScreen); return; }
+
+  const { data: profilo, error } = await supabaseClient
+    .from('profiles')
+    .select('role, username')
+    .eq('id', sessionData.session.user.id)
+    .single();
+
+  if (error || !profilo || profilo.role !== 'admin') {
+    mostraSolo(deniedScreen);
+    return;
+  }
+
+  document.getElementById('who-label').textContent =
+    (profilo.username || sessionData.session.user.email) + ' — admin';
+  mostraSolo(dash);
+  caricaRichieste();
+  caricaUtenti();
+}
+
+// ── TABS ───────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+function mostraStatus(msg, ok) {
+  const el = document.getElementById('status-msg');
+  el.textContent = msg;
+  el.className = 'status-msg ' + (ok ? 'ok' : 'err');
+  clearTimeout(mostraStatus._t);
+  mostraStatus._t = setTimeout(() => { el.className = 'status-msg'; }, 4000);
+}
+
+// ── RICHIESTE PENDENTI ─────────────────────────────────────────
+async function caricaRichieste() {
+  const cont = document.getElementById('richieste-list');
+  const { data, error } = await supabaseClient
+    .from('pending_requests')
+    .select('*')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false });
+
+  if (error) { cont.innerHTML = `<div class="empty-state">Errore: ${error.message}</div>`; return; }
+  if (!data || data.length === 0) { cont.innerHTML = '<div class="empty-state">Nessuna richiesta al momento.</div>'; return; }
+
+  cont.innerHTML = data.map(r => `
+    <div class="row" data-id="${r.id}">
+      <div class="main">
+        <div class="name">${r.type} <span class="badge ${r.status}">${r.status}</span></div>
+        <div class="meta mono">${r.user_id} · ${new Date(r.created_at).toLocaleString('it-IT')}</div>
+      </div>
+      ${r.status === 'pending' ? `
+        <button class="btn-small btn-approve" data-action="approve">✔ Approva</button>
+        <button class="btn-small btn-reject" data-action="reject">✘ Rifiuta</button>
+      ` : ''}
+    </div>
+  `).join('');
+
+  cont.querySelectorAll('button[data-action]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const riga = btn.closest('.row');
+      const id = riga.dataset.id;
+      const nuovoStato = btn.dataset.action === 'approve' ? 'approved' : 'rejected';
+      btn.closest('.row').querySelectorAll('button').forEach(b => b.disabled = true);
+
+      const { data: sessionData } = await supabaseClient.auth.getSession();
+      const { error } = await supabaseClient
+        .from('pending_requests')
+        .update({ status: nuovoStato, reviewed_at: new Date().toISOString(), reviewed_by: sessionData.session.user.id })
+        .eq('id', id);
+
+      if (error) { mostraStatus('Errore: ' + error.message, false); riga.querySelectorAll('button').forEach(b => b.disabled = false); return; }
+      mostraStatus('Richiesta aggiornata.', true);
+      caricaRichieste();
+    });
+  });
+}
+
+// ── UTENTI / RUOLI ────────────────────────────────────────────
+async function caricaUtenti() {
+  const cont = document.getElementById('utenti-list');
+  const { data, error } = await supabaseClient
+    .from('profiles')
+    .select('*')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true });
+
+  if (error) { cont.innerHTML = `<div class="empty-state">Errore: ${error.message}</div>`; return; }
+  if (!data || data.length === 0) { cont.innerHTML = '<div class="empty-state">Nessun utente trovato.</div>'; return; }
+
+  cont.innerHTML = data.map(u => `
+    <div class="row" data-id="${u.id}">
+      <div class="main">
+        <div class="name">${u.username || '(senza nome)'} <span class="badge ${u.role}">${u.role}</span></div>
+        <div class="meta mono">${u.id}</div>
+      </div>
+      <button class="btn-small btn-toggle-role" data-role="${u.role}">
+        ${u.role === 'admin' ? 'Rendi utente' : 'Rendi admin'}
+      </button>
+    </div>
+  `).join('');
+
+  cont.querySelectorAll('.btn-toggle-role').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const riga = btn.closest('.row');
+      const id = riga.dataset.id;
+      const ruoloAttuale = btn.dataset.role;
+      const nuovoRuolo = ruoloAttuale === 'admin' ? 'user' : 'admin';
+      const nome = riga.querySelector('.name').textContent.trim();
+
+      if (!confirm(`Confermi: cambiare il ruolo di "${nome}" in "${nuovoRuolo}"?`)) return;
+      btn.disabled = true;
+
+      const { error } = await supabaseClient.from('profiles').update({ role: nuovoRuolo }).eq('id', id);
+      if (error) { mostraStatus('Errore: ' + error.message, false); btn.disabled = false; return; }
+      mostraStatus('Ruolo aggiornato.', true);
+      caricaUtenti();
+    });
+  });
+}
+
+// ── AVVIO ─────────────────────────────────────────────────────
+controllaRuoloEAvvia();
+</script>
+</body>
+</html>
