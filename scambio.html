@@ -634,20 +634,22 @@
                     const media = righe && righe.length ? righe[0] : null;
 
                     if (media) {
-                        // LIMITE REALE (scoperto scrivendo questo codice, non
-                        // previsto prima): un viewer anonimo non ha modo di
-                        // vedere una sleeve 'upload' — vive nel bucket privato
-                        // 'user-media', firmabile solo con una sessione, che
-                        // qui non esiste. Solo le sleeve 'default' (scelte
-                        // dalla galleria pubblica) sono mostrabili qui. Una
-                        // sleeve 'upload' approvata, su questa pagina, cade
-                        // sul default di sistema — non è un bug, è il limite
-                        // architetturale del bucket privato.
+                        // FASE 4-bis (20/08/2026): risolto il limite di prima.
+                        // Le sleeve 'upload' approvate ora hanno una copia
+                        // pubblica in 'immaginivisibili/carta/{ownerId}.png',
+                        // creata da admin.html al momento dell'approvazione
+                        // (07_schema_bucket_immaginivisibili.sql). Se la copia
+                        // non esiste ancora (approvazione fatta prima di questa
+                        // modifica e mai risincronizzata), l'immagine risulterà
+                        // rotta e si cade comunque sul default di sistema sotto.
                         if (media.source === 'default') {
                             const { data: pub } = supabaseClient.storage.from('default-assets').getPublicUrl(media.storage_path);
                             sleeveUrl = pub?.publicUrl || null;
-                            fieldState = media.metadata || DEFAULT_STATE_CARD_BACK;
+                        } else {
+                            const { data: pub } = supabaseClient.storage.from('immaginivisibili').getPublicUrl(`carta/${_ownerUserId}.png`);
+                            sleeveUrl = pub?.publicUrl || null;
                         }
+                        fieldState = media.metadata || DEFAULT_STATE_CARD_BACK;
                     }
                 }
 
