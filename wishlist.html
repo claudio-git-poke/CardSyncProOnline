@@ -619,12 +619,15 @@
                         // FASE 4-bis (20/08/2026): stesso fix di scambio.html —
                         // copia pubblica in 'immaginivisibili/carta/{ownerId}.png',
                         // creata da admin.html all'approvazione.
+                        // FASE 4-ter (20/08/2026): "?v=reviewed_at" per bypassare
+                        // la cache del browser sul path pubblico fisso quando
+                        // viene approvata una nuova versione.
                         if (media.source === 'default') {
                             const { data: pub } = supabaseClient.storage.from('default-assets').getPublicUrl(media.storage_path);
                             sleeveUrl = pub?.publicUrl || null;
                         } else {
                             const { data: pub } = supabaseClient.storage.from('immaginivisibili').getPublicUrl(`carta/${_ownerUserId}.png`);
-                            sleeveUrl = pub?.publicUrl || null;
+                            sleeveUrl = pub?.publicUrl ? (pub.publicUrl + '?v=' + encodeURIComponent(media.reviewed_at || '')) : null;
                         }
                         fieldState = media.metadata || DEFAULT_STATE_CARD_BACK;
                     }

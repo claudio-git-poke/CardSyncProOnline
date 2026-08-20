@@ -641,12 +641,18 @@
                         // non esiste ancora (approvazione fatta prima di questa
                         // modifica e mai risincronizzata), l'immagine risulterà
                         // rotta e si cade comunque sul default di sistema sotto.
+                        //
+                        // FASE 4-ter (20/08/2026): il path pubblico è sempre lo
+                        // stesso file — senza cache-buster il browser continua a
+                        // servire la versione vecchia dalla cache anche dopo una
+                        // nuova approvazione. Aggiungo "?v=reviewed_at" (cambia
+                        // SOLO quando viene davvero approvata una nuova versione).
                         if (media.source === 'default') {
                             const { data: pub } = supabaseClient.storage.from('default-assets').getPublicUrl(media.storage_path);
                             sleeveUrl = pub?.publicUrl || null;
                         } else {
                             const { data: pub } = supabaseClient.storage.from('immaginivisibili').getPublicUrl(`carta/${_ownerUserId}.png`);
-                            sleeveUrl = pub?.publicUrl || null;
+                            sleeveUrl = pub?.publicUrl ? (pub.publicUrl + '?v=' + encodeURIComponent(media.reviewed_at || '')) : null;
                         }
                         fieldState = media.metadata || DEFAULT_STATE_CARD_BACK;
                     }
