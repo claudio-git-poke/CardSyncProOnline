@@ -2070,8 +2070,14 @@
                                 <i class="fa-solid fa-upload"></i> Carica foto
                                 <input type="file" id="binderCoverInput" accept="image/*" style="display:none;" onchange="gestisciUploadBinderCover(event)">
                             </label>
+                            <button type="button" class="btn-secondary" style="display:inline-flex; align-items:center; gap:0.5rem; padding:0.55rem 0.9rem; font-size:0.8rem; margin-left:0.4rem;" onclick="toggleGalleriaDefaultBinderCover()">
+                                <i class="fa-solid fa-images"></i> Scegli da galleria
+                            </button>
                             <div id="binderCoverError" style="display:none; color:var(--danger); font-size:0.78rem; margin-top:0.4rem;"></div>
                             <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.4rem;">Qualsiasi foto, qualsiasi dimensione — convertita automaticamente.</div>
+                            <div id="binderCoverGalleriaWrap" style="display:none; margin-top:0.6rem;">
+                                <div id="binderCoverGalleriaGrid" style="display:flex; gap:0.5rem; flex-wrap:wrap;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2103,8 +2109,14 @@
                                 <i class="fa-solid fa-upload"></i> Carica sleeve
                                 <input type="file" id="cardBackInput" accept="image/*" style="display:none;" onchange="gestisciUploadCardBack(event)">
                             </label>
+                            <button type="button" class="btn-secondary" style="display:inline-flex; align-items:center; gap:0.5rem; padding:0.55rem 0.9rem; font-size:0.8rem; margin-left:0.4rem;" onclick="toggleGalleriaDefaultCardBack()">
+                                <i class="fa-solid fa-images"></i> Scegli da galleria
+                            </button>
                             <div id="cardBackError" style="display:none; color:var(--danger); font-size:0.78rem; margin-top:0.4rem;"></div>
                             <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.4rem;">Qualsiasi foto, qualsiasi dimensione — ritagliata automaticamente in 900×1260.</div>
+                            <div id="cardBackGalleriaWrap" style="display:none; margin-top:0.6rem;">
+                                <div id="cardBackGalleriaGrid" style="display:flex; gap:0.5rem; flex-wrap:wrap;"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -5270,12 +5282,26 @@
                 return;
             }
 
-            const { data: signed } = await supabaseClient.storage.from('user-media').createSignedUrl(media.storage_path, 3600);
-            if (signed?.signedUrl) {
-                previewEl.innerHTML = `<img src="${signed.signedUrl}" style="width:100%; height:100%; object-fit:cover;">`;
+            // Fase 2bis (20/08/2026): se l'utente ha scelto un default dalla
+            // galleria (source='default'), storage_path punta al bucket
+            // pubblico 'default-assets', non a 'user-media' — URL pubblico
+            // diretto, niente signed URL (che richiederebbe comunque un
+            // bucket privato).
+            let previewUrl = null;
+            if (media.source === 'default') {
+                const { data: pub } = supabaseClient.storage.from('default-assets').getPublicUrl(media.storage_path);
+                previewUrl = pub?.publicUrl || null;
+            } else {
+                const { data: signed } = await supabaseClient.storage.from('user-media').createSignedUrl(media.storage_path, 3600);
+                previewUrl = signed?.signedUrl || null;
+            }
+            if (previewUrl) {
+                previewEl.innerHTML = `<img src="${previewUrl}" style="width:100%; height:100%; object-fit:cover;">`;
             }
 
-            if (media.status === 'pending') {
+            if (media.source === 'default') {
+                statoEl.innerHTML = '<span style="color:var(--success); font-weight:600;">✅ Sfondo predefinito selezionato</span>';
+            } else if (media.status === 'pending') {
                 statoEl.innerHTML = '<span style="color:#b8860b; font-weight:600;">⏳ In revisione da un admin</span>';
             } else if (media.status === 'approved') {
                 statoEl.innerHTML = '<span style="color:var(--success); font-weight:600;">✅ Approvata</span>';
@@ -5320,6 +5346,7 @@
                     user_id: userId,
                     slot: 'binder_cover',
                     storage_path: path,
+                    source: 'upload',
                     status: 'pending',
                     admin_note: null,
                     reviewed_at: null,
@@ -5559,13 +5586,22 @@
                 return;
             }
 
-            const { data: signed } = await supabaseClient.storage.from('user-media').createSignedUrl(media.storage_path, 3600);
-            if (signed?.signedUrl) {
-                previewEl.innerHTML = `<img src="${signed.signedUrl}" style="width:100%; height:100%; object-fit:cover;">`;
-                document.getElementById('cardBackBgImg').src = signed.signedUrl;
+            let previewUrl = null;
+            if (media.source === 'default') {
+                const { data: pub } = supabaseClient.storage.from('default-assets').getPublicUrl(media.storage_path);
+                previewUrl = pub?.publicUrl || null;
+            } else {
+                const { data: signed } = await supabaseClient.storage.from('user-media').createSignedUrl(media.storage_path, 3600);
+                previewUrl = signed?.signedUrl || null;
+            }
+            if (previewUrl) {
+                previewEl.innerHTML = `<img src="${previewUrl}" style="width:100%; height:100%; object-fit:cover;">`;
+                document.getElementById('cardBackBgImg').src = previewUrl;
             }
 
-            if (media.status === 'pending') {
+            if (media.source === 'default') {
+                statoEl.innerHTML = '<span style="color:var(--success); font-weight:600;">✅ Sfondo predefinito selezionato</span>';
+            } else if (media.status === 'pending') {
                 statoEl.innerHTML = '<span style="color:#b8860b; font-weight:600;">⏳ In revisione da un admin — la vedi solo tu, gli altri vedono il retro di sistema nel frattempo</span>';
             } else if (media.status === 'approved') {
                 statoEl.innerHTML = '<span style="color:var(--success); font-weight:600;">✅ Approvata</span>';
@@ -5620,6 +5656,7 @@
                     user_id: userId,
                     slot: 'card_back',
                     storage_path: path,
+                    source: 'upload',
                     status: 'pending',
                     admin_note: null,
                     reviewed_at: null,
@@ -5672,6 +5709,104 @@
             _cardBackFieldState = JSON.parse(JSON.stringify(DEFAULT_STATE_CARD_BACK));
             Object.keys(DEFAULT_STATE_CARD_BACK).forEach(applyCardBackFieldState);
             document.getElementById('cardBackPosStato').textContent = 'Posizioni ripristinate ai valori di default. Ricordati di premere "Salva posizioni".';
+        }
+
+        // ── GALLERIA SFONDI PREDEFINITI (Fase 2bis, 20/08/2026) ──────────
+        // Bucket pubblico 'default-assets' (05_schema_default_assets_bucket.sql),
+        // due cartelle: card_back/ e binder_cover/. Selezionare un default
+        // È immediato (status:'approved', niente pending_requests): sono
+        // asset già curati da Claudio/Claudio, non serve moderazione.
+        async function _caricaGalleriaDefault(prefix, gridElId, onSelect) {
+            const gridEl = document.getElementById(gridElId);
+            gridEl.innerHTML = '<span style="font-size:0.75rem; color:var(--text-muted);">Caricamento…</span>';
+
+            const { data, error } = await supabaseClient.storage.from('default-assets').list(prefix);
+            if (error) { gridEl.innerHTML = '<span style="font-size:0.75rem; color:var(--danger);">Errore: ' + error.message + '</span>'; return; }
+
+            const files = (data || []).filter(f => f.name && !f.name.startsWith('.'));
+            if (!files.length) { gridEl.innerHTML = '<span style="font-size:0.75rem; color:var(--text-muted);">Nessun default disponibile ancora.</span>'; return; }
+
+            gridEl.innerHTML = '';
+            files.forEach(f => {
+                const { data: pub } = supabaseClient.storage.from('default-assets').getPublicUrl(`${prefix}/${f.name}`);
+                const img = document.createElement('img');
+                img.src = pub.publicUrl;
+                img.title = f.name;
+                img.style.cssText = 'width:60px; height:84px; object-fit:cover; border-radius:6px; cursor:pointer; border:2px solid transparent;';
+                img.onmouseenter = () => { img.style.borderColor = 'var(--primary)'; };
+                img.onmouseleave = () => { img.style.borderColor = 'transparent'; };
+                img.onclick = () => onSelect(f.name);
+                gridEl.appendChild(img);
+            });
+        }
+
+        function toggleGalleriaDefaultBinderCover() {
+            const wrap = document.getElementById('binderCoverGalleriaWrap');
+            const show = wrap.style.display === 'none';
+            wrap.style.display = show ? 'block' : 'none';
+            if (show) _caricaGalleriaDefault('binder_cover', 'binderCoverGalleriaGrid', selezionaDefaultBinderCover);
+        }
+
+        async function selezionaDefaultBinderCover(filename) {
+            const errEl = document.getElementById('binderCoverError');
+            errEl.style.display = 'none';
+
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) { errEl.textContent = 'Sessione non valida, ricarica la pagina.'; errEl.style.display = 'block'; return; }
+
+            const { error } = await supabaseClient
+                .from('user_media')
+                .upsert({
+                    user_id: userId,
+                    slot: 'binder_cover',
+                    storage_path: `binder_cover/${filename}`,
+                    source: 'default',
+                    status: 'approved',
+                    admin_note: null,
+                    reviewed_at: null,
+                    reviewed_by: null
+                }, { onConflict: 'user_id,slot' });
+
+            if (error) { errEl.textContent = '❌ Errore: ' + error.message; errEl.style.display = 'block'; return; }
+
+            document.getElementById('binderCoverGalleriaWrap').style.display = 'none';
+            await caricaBinderCoverStato();
+        }
+
+        function toggleGalleriaDefaultCardBack() {
+            const wrap = document.getElementById('cardBackGalleriaWrap');
+            const show = wrap.style.display === 'none';
+            wrap.style.display = show ? 'block' : 'none';
+            if (show) _caricaGalleriaDefault('card_back', 'cardBackGalleriaGrid', selezionaDefaultCardBack);
+        }
+
+        async function selezionaDefaultCardBack(filename) {
+            const errEl = document.getElementById('cardBackError');
+            errEl.style.display = 'none';
+
+            const { data: sessionData } = await supabaseClient.auth.getSession();
+            const userId = sessionData?.session?.user?.id;
+            if (!userId) { errEl.textContent = 'Sessione non valida, ricarica la pagina.'; errEl.style.display = 'block'; return; }
+
+            const { error } = await supabaseClient
+                .from('user_media')
+                .upsert({
+                    user_id: userId,
+                    slot: 'card_back',
+                    storage_path: `card_back/${filename}`,
+                    source: 'default',
+                    status: 'approved',
+                    admin_note: null,
+                    reviewed_at: null,
+                    reviewed_by: null,
+                    metadata: DEFAULT_STATE_CARD_BACK
+                }, { onConflict: 'user_id,slot' });
+
+            if (error) { errEl.textContent = '❌ Errore: ' + error.message; errEl.style.display = 'block'; return; }
+
+            document.getElementById('cardBackGalleriaWrap').style.display = 'none';
+            await caricaCardBackStato();
         }
 
         // A6, punto 4 — rimozione diretta dallo slot pieno nel Binder.
