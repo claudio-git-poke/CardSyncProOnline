@@ -559,6 +559,12 @@
             return v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
         }
 
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str == null ? '' : String(str);
+            return div.innerHTML;
+        }
+
         async function caricaCatalogo() {
             const params = new URLSearchParams(window.location.search);
             const userId = params.get('u');
@@ -736,7 +742,7 @@
                                onchange="toggleSelezione('${c.id}', this.checked)">
                         ${(() => { const immagineSrc = _urlImmagineVisualizzabile(c.immagine); return immagineSrc ? `<img src="${immagineSrc}" alt="" class="card-thumb" onclick="event.stopPropagation(); apriImmagineIngrandita('${immagineSrc}')" onerror="this.style.display='none';">` : ''; })()}
                         <div class="card-info">
-                            <div class="card-name">${c.name}${c.code ? ` <span style="color:var(--text-muted); font-weight:600;">(${c.code})</span>` : ''}</div>
+                            <div class="card-name">${escapeHtml(c.name)}${c.code ? ` <span style="color:var(--text-muted); font-weight:600;">(${c.code})</span>` : ''}</div>
                             <div class="card-meta">
                                 <span class="badge">${c.lang}</span>
                                 <span class="badge">${c.cond}</span>
@@ -745,7 +751,7 @@
                                      location='SCAMBIO' applicato in caricaCatalogo(), ogni riga
                                      mostrata ha sempre lo stesso valore, quindi il badge sarebbe
                                      ridondante su ogni singola carta. -->
-                                ${c.notes ? `<span class="badge">✨ ${c.notes}</span>` : ''}
+                                ${c.notes ? `<span class="badge">✨ ${escapeHtml(c.notes)}</span>` : ''}
                             </div>
                         </div>
                         <div class="qty-control">

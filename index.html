@@ -3838,7 +3838,7 @@
             } else {
                 lista.innerHTML = _elencoPrezziScaduti.map(c => `
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:0.6rem; padding:0.5rem 0; border-bottom:1px solid var(--border-color);">
-                        <span style="font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><strong>${c.name}</strong> <code style="font-size:0.72rem;">${c.code}</code></span>
+                        <span style="font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><strong>${escapeHtml(c.name)}</strong> <code style="font-size:0.72rem;">${c.code}</code></span>
                         <span style="font-size:0.75rem; color:var(--text-muted); flex-shrink:0;">${c.ultimoTesto}</span>
                     </div>`).join('');
             }
@@ -3994,7 +3994,7 @@
                 ? '<p style="text-align:center; color:var(--text-muted); font-size:0.8rem; padding:0.5rem 0;">Nessuna carta ancora.</p>'
                 : ultimeAggiunte.map(c => `
                     <div class="home-activity-row" style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0; border-bottom:1px solid var(--border-color); font-size:0.82rem;">
-                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${c.name}</span>
+                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(c.name)}</span>
                         <span style="color:var(--text-muted); font-size:0.72rem; flex-shrink:0; margin-left:0.5rem;">${c.createdAt ? new Date(c.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) : '—'}</span>
                     </div>`).join('');
 
@@ -4007,7 +4007,7 @@
                 ? '<p style="text-align:center; color:var(--text-muted); font-size:0.8rem; padding:0.5rem 0;">Nessun controllo prezzi ancora.</p>'
                 : righePrezzi.map(({ evento, card }) => `
                     <div class="home-activity-row" style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0; border-bottom:1px solid var(--border-color); font-size:0.82rem;">
-                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${card.name} <span style="color:var(--text-muted);">${card.variation}</span></span>
+                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(card.name)} <span style="color:var(--text-muted);">${escapeHtml(card.variation)}</span></span>
                         <span style="color:var(--text-muted); font-size:0.72rem; flex-shrink:0; margin-left:0.5rem;">${new Date(evento.registrato_il).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })}</span>
                     </div>`).join('');
         }
@@ -4481,7 +4481,9 @@
         }
 
         function escapeHtml(str) {
-            return str.replace(/"/g, '&quot;');
+            const div = document.createElement('div');
+            div.textContent = str == null ? '' : String(str);
+            return div.innerHTML;
         }
 
         function stepEntryQty(btn, delta) {
@@ -4652,19 +4654,19 @@
                 tr.innerHTML = `
                     <td><input type="checkbox" class="riga-checkbox" data-id="${idAttr}" data-tabella="${card.tabella}" onclick="event.stopPropagation(); aggiornaSelezioneMultipla();"></td>
                     <td data-label="Q.tà" class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'qty', ${card.qty}, 'Quantità', 'intero')"><strong>${card.qty}</strong></td>
-                    <td data-label="Nome" class="cella-editabile" title="${card.name.replace(/"/g, '&quot;')} — clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'nome', '${nomeAttr}', 'Nome')" style="max-width:170px; overflow:hidden; text-overflow:ellipsis;">${thumb}<strong>${card.name}</strong>${obiettivoRaggiunto ? ` <span class="badge" style="background-color:var(--success-bg); color:var(--success);" title="Prezzo sceso al di sotto del tuo obiettivo (${card.prezzoObiettivo.toFixed(2)} €)">🎯 obiettivo!</span>` : ''}</td>
+                    <td data-label="Nome" class="cella-editabile" title="${card.name.replace(/"/g, '&quot;')} — clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'nome', '${nomeAttr}', 'Nome')" style="max-width:170px; overflow:hidden; text-overflow:ellipsis;">${thumb}<strong>${escapeHtml(card.name)}</strong>${obiettivoRaggiunto ? ` <span class="badge" style="background-color:var(--success-bg); color:var(--success);" title="Prezzo sceso al di sotto del tuo obiettivo (${card.prezzoObiettivo.toFixed(2)} €)">🎯 obiettivo!</span>` : ''}</td>
                     <td data-label="Codice" class="cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'codice', '${codeAttr}', 'Codice')"><code>${card.code}</code></td>
                     <td data-label="Location"><span class="badge badge-location" title="${(card.location || '').replace(/"/g, '&quot;')} — clicca per modificare" onclick="event.stopPropagation(); modificaLocationInline(event, '${idAttr}', '${card.tabella}', '${locAttr}')">${card.location || '—'}</span></td>
                     <td data-label="Lingua"><span class="badge ${langClass} cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaLinguaInline(event, '${idAttr}', '${card.tabella}', '${card.lang}')">${card.lang}</span></td>
                     <td data-label="Cond."><span class="badge ${condClass} cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCondizioneInline(event, '${idAttr}', '${card.tabella}', '${card.cond}')">${card.cond}</span></td>
                     <td data-label="Prezzo" id="prezzoCella-${idAttr}" class="price cella-editabile" title="Clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'prezzo', ${card.price}, 'Prezzo (€)', 'numero')">${card.price.toFixed(2)} €</td>
-                    <td data-label="Var." class="${varClass}">${card.variation}</td>
+                    <td data-label="Var." class="${varClass}">${escapeHtml(card.variation)}</td>
                     <td data-label="Link">
                         <a href="${card.link}" target="_blank" class="link-icon">
                             <i class="fa-solid fa-arrow-up-right-from-square"></i>
                         </a>
                     </td>
-                    <td data-label="Note" class="cella-editabile" title="${card.notes ? card.notes.replace(/"/g, '&quot;') + ' — ' : ''}clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'note', '${notesAttr}', 'Note', 'facoltativo')" style="max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-muted); font-size:0.75rem;">${card.notes ? card.notes : '—'}</td>
+                    <td data-label="Note" class="cella-editabile" title="${card.notes ? card.notes.replace(/"/g, '&quot;') + ' — ' : ''}clicca per modificare" onclick="event.stopPropagation(); modificaCampoInline('${idAttr}', '${card.tabella}', 'note', '${notesAttr}', 'Note', 'facoltativo')" style="max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-muted); font-size:0.75rem;">${card.notes ? escapeHtml(card.notes) : '—'}</td>
                     <td style="text-align:center;">
                         <div style="position:relative; display:inline-block;">
                             <button class="btn-danger" style="color:var(--text-muted);" onclick="event.stopPropagation(); toggleMenuAzioniTabella('${idAttr}')" title="Azioni"><i class="fa-solid fa-ellipsis-vertical"></i></button>
@@ -4724,7 +4726,7 @@
                         <input type="checkbox" class="riga-checkbox" data-id="${idAttr}" data-tabella="${card.tabella}" onclick="event.stopPropagation(); aggiornaSelezioneMultipla();">
                         ${thumbCompatta}
                         <span class="riga-compatta-nome">
-                            <span class="riga-compatta-nome-testo">${card.name}</span>
+                            <span class="riga-compatta-nome-testo">${escapeHtml(card.name)}</span>
                             ${linkIcona}
                         </span>
                         ${iconaVariazione}
@@ -4985,7 +4987,7 @@
                         <div id="${idOpzioni}" style="display:flex; flex-direction:column; gap:0.3rem; max-height:280px; overflow-y:auto;">
                             ${opzioni.map(o => `
                                 <div data-filtro-testo="${(o.label || '').toLowerCase()}" style="display:flex; align-items:stretch; gap:0.3rem;">
-                                    <button class="btn-secondary" style="flex:1; text-align:left; font-size:0.75rem; padding:0.4rem 0.6rem;" onclick="sceglieOpzioneDisambiguazione('${r.id}', '${(o.label || '').replace(/'/g, "\\'")}', '${(o.urlSingles || '').replace(/'/g, "\\'")}')">▸ ${o.label || o.urlSingles || 'opzione senza nome'}</button>
+                                    <button class="btn-secondary" style="flex:1; text-align:left; font-size:0.75rem; padding:0.4rem 0.6rem;" onclick="sceglieOpzioneDisambiguazione('${r.id}', '${(o.label || '').replace(/'/g, "\\'")}', '${(o.urlSingles || '').replace(/'/g, "\\'")}')">▸ ${escapeHtml(o.label || o.urlSingles || 'opzione senza nome')}</button>
                                     ${o.urlSingles ? `<a href="${o.urlSingles}" target="_blank" onclick="event.stopPropagation()" class="btn-secondary" style="flex-shrink:0; padding:0.4rem 0.6rem;" title="Apri su Cardmarket per vederla prima di scegliere"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>` : ''}
                                 </div>
                             `).join('')}
@@ -4995,8 +4997,8 @@
                 return `
                     <div style="display:flex; align-items:center; gap:0.6rem; padding:0.6rem 0; border-bottom:1px solid var(--border-color); flex-wrap:wrap;">
                         <div style="flex:1; min-width:160px;">
-                            <strong style="font-size:0.85rem;">${r.nome}</strong>
-                            <div style="font-size:0.72rem; color:var(--danger);">${r.errore_msg || 'Errore sconosciuto'}</div>
+                            <strong style="font-size:0.85rem;">${escapeHtml(r.nome)}</strong>
+                            <div style="font-size:0.72rem; color:var(--danger);">${escapeHtml(r.errore_msg || 'Errore sconosciuto')}</div>
                         </div>
                         <button class="btn-secondary" onclick="modificaERiprovaCartaFallita('${r.id}', '${nomeAttr}')" style="font-size:0.75rem; padding:0.4rem 0.7rem;"><i class="fa-solid fa-pen"></i> Correggi e riprova</button>
                         <button class="btn-secondary" onclick="riprovaCartaFallita('${r.id}')" style="font-size:0.75rem; padding:0.4rem 0.7rem;"><i class="fa-solid fa-rotate-right"></i> Riprova</button>
@@ -5118,11 +5120,11 @@
             const righe = data.map(m => {
                 if (tabId === 'scambio') {
                     return `<div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0; border-bottom:1px solid var(--border-color);">
-                        <span style="font-size:0.85rem;"><strong>${m.mio_nome}</strong> (tuo, ${Number(m.mio_prezzo || 0).toFixed(2)} €) — cercato da <strong>${(m.altra_email || '').split('@')[0]}</strong>${m.altro_prezzo_obiettivo != null ? ` (fino a ${Number(m.altro_prezzo_obiettivo).toFixed(2)} €)` : ''}</span>
+                        <span style="font-size:0.85rem;"><strong>${escapeHtml(m.mio_nome)}</strong> (tuo, ${Number(m.mio_prezzo || 0).toFixed(2)} €) — cercato da <strong>${escapeHtml((m.altra_email || '').split('@')[0])}</strong>${m.altro_prezzo_obiettivo != null ? ` (fino a ${Number(m.altro_prezzo_obiettivo).toFixed(2)} €)` : ''}</span>
                     </div>`;
                 }
                 return `<div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0; border-bottom:1px solid var(--border-color);">
-                    <span style="font-size:0.85rem;"><strong>${m.mio_nome}</strong> (in wishlist${m.mio_prezzo_obiettivo != null ? `, fino a ${Number(m.mio_prezzo_obiettivo).toFixed(2)} €` : ''}) — in scambio da <strong>${(m.altra_email || '').split('@')[0]}</strong> a ${Number(m.altro_prezzo || 0).toFixed(2)} €</span>
+                    <span style="font-size:0.85rem;"><strong>${escapeHtml(m.mio_nome)}</strong> (in wishlist${m.mio_prezzo_obiettivo != null ? `, fino a ${Number(m.mio_prezzo_obiettivo).toFixed(2)} €` : ''}) — in scambio da <strong>${escapeHtml((m.altra_email || '').split('@')[0])}</strong> a ${Number(m.altro_prezzo || 0).toFixed(2)} €</span>
                 </div>`;
             }).join('');
 
@@ -5419,7 +5421,7 @@
             } else if (media.status === 'approved') {
                 statoEl.innerHTML = '<span style="color:var(--success); font-weight:600;">✅ Approvata</span>';
             } else if (media.status === 'rejected') {
-                statoEl.innerHTML = '<span style="color:var(--danger); font-weight:600;">❌ Rifiutata' + (media.admin_note ? ' — ' + media.admin_note : '') + '</span>';
+                statoEl.innerHTML = '<span style="color:var(--danger); font-weight:600;">❌ Rifiutata' + (media.admin_note ? ' — ' + escapeHtml(media.admin_note) : '') + '</span>';
             }
             // Il bottone "Carica foto" resta sempre visibile e attivo:
             // la nuova policy permette di sostituire in qualsiasi stato.
@@ -5719,7 +5721,7 @@
             } else if (media.status === 'approved') {
                 statoEl.innerHTML = '<span style="color:var(--success); font-weight:600;">✅ Approvata</span>';
             } else if (media.status === 'rejected') {
-                statoEl.innerHTML = '<span style="color:var(--danger); font-weight:600;">❌ Rifiutata' + (media.admin_note ? ' — ' + media.admin_note : '') + '</span>';
+                statoEl.innerHTML = '<span style="color:var(--danger); font-weight:600;">❌ Rifiutata' + (media.admin_note ? ' — ' + escapeHtml(media.admin_note) : '') + '</span>';
             }
 
             _cardBackFieldState = media.metadata ? JSON.parse(JSON.stringify(media.metadata)) : JSON.parse(JSON.stringify(DEFAULT_STATE_CARD_BACK));
@@ -6419,7 +6421,7 @@
                 const idAttr = String(c.id).replace(/'/g, "\\'");
                 return `
                     <div class="risultato-ricerca-globale" onclick="vaiARisultatoRicerca('${idAttr}', '${c.tabella}')">
-                        <span class="risultato-ricerca-globale-nome">${c.name}${c.code ? ` <span style="color:var(--text-muted); font-weight:600;">(${c.code})</span>` : ''}</span>
+                        <span class="risultato-ricerca-globale-nome">${escapeHtml(c.name)}${c.code ? ` <span style="color:var(--text-muted); font-weight:600;">(${c.code})</span>` : ''}</span>
                         <span class="risultato-ricerca-globale-pill" style="background-color:${et.bg}; color:${et.colore};">${et.testo}</span>
                     </div>
                 `;
@@ -6671,7 +6673,7 @@
                 return `
                     <label class="risultato-ricerca-globale" style="display:flex; align-items:center; gap:0.6rem; cursor:pointer;">
                         <input type="checkbox" data-id="${idAttr}" ${spuntata ? 'checked' : ''} onchange="_segnaModificaBinderPendente('${idAttr}', this.checked)">
-                        <span class="risultato-ricerca-globale-nome" style="flex:1;">${c.name}${c.code ? ` <span style="color:var(--text-muted); font-weight:600;">(${c.code})</span>` : ''}${c.qty > 1 ? ` <span style="color:var(--text-muted); font-weight:600;">×${c.qty}</span>` : ''}</span>
+                        <span class="risultato-ricerca-globale-nome" style="flex:1;">${escapeHtml(c.name)}${c.code ? ` <span style="color:var(--text-muted); font-weight:600;">(${c.code})</span>` : ''}${c.qty > 1 ? ` <span style="color:var(--text-muted); font-weight:600;">×${c.qty}</span>` : ''}</span>
                     </label>
                 `;
             }).join('');

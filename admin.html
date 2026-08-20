@@ -489,7 +489,7 @@ function renderRichieste() {
   cont.innerHTML = elenco.map(r => {
     let dettaglio = '';
     if (r.type === 'username_change' && r.payload?.nuovo_username) {
-      dettaglio = `<div class="meta">→ nuovo username: <b>${r.payload.nuovo_username}</b></div>`;
+      dettaglio = `<div class="meta">→ nuovo username: <b>${escAttr(r.payload.nuovo_username)}</b></div>`;
     }
     const urlFoto = r.type === 'photo_upload' ? _mappaAnteprimaFotoRichieste[r.payload?.media_id] : null;
     const slotFoto = r.type === 'photo_upload' ? _mappaSlotRichieste[r.payload?.media_id] : null;
@@ -499,9 +499,9 @@ function renderRichieste() {
       ${urlFoto ? `<img src="${urlFoto}" style="width:52px; height:52px; border-radius:8px; object-fit:cover; flex-shrink:0; cursor:pointer;" onclick="window.open('${urlFoto}','_blank')">` : ''}
       <div class="main">
         <div class="name">${_etichettaTipoRichiesta(r.type, slotFoto)} <span class="badge ${r.status}">${r.status}</span></div>
-        <div class="meta mono">${_mappaUsernameRichieste[r.user_id] || r.user_id} · ${fmtData(r.created_at)}</div>
+        <div class="meta mono">${escAttr(_mappaUsernameRichieste[r.user_id] || r.user_id)} · ${fmtData(r.created_at)}</div>
         ${dettaglio}
-        ${r.admin_note ? `<div class="meta">Nota: ${r.admin_note}</div>` : ''}
+        ${r.admin_note ? `<div class="meta">Nota: ${escAttr(r.admin_note)}</div>` : ''}
       </div>
       <div class="row-azioni" style="display:flex; gap:8px;">
         ${r.status === 'pending' ? `
@@ -835,7 +835,7 @@ function renderUtenti() {
     return `
     <div class="row" data-id="${u.id}">
       <div class="main clickable" data-open="${u.id}">
-        <div class="name">${u.username || '(senza nome)'} <span class="badge ${u.role}">${u.role}</span> <span class="badge ${s.key}">${s.label}</span></div>
+        <div class="name">${escAttr(u.username) || '(senza nome)'} <span class="badge ${u.role}">${u.role}</span> <span class="badge ${s.key}">${s.label}</span></div>
         <div class="meta mono">${u.id}</div>
       </div>
       <button class="btn-small btn-toggle-role" data-role="${u.role}" data-id="${u.id}">
@@ -1033,7 +1033,7 @@ async function gestisciAzioneUtente(u, azione) {
       const pwArea = document.getElementById('pw-area');
       pwArea.innerHTML = `
         <div class="pw-reveal">
-          Nuova password per <b>${u.username}</b>:
+          Nuova password per <b>${escAttr(u.username)}</b>:
           <div class="pw-value">${nuovaPw}</div>
           <button class="btn-small btn-toggle-role" id="pw-share">📤 Condividi</button>
         </div>`;

@@ -589,9 +589,9 @@
             if (!immagineSrc) frontImg.style.display = 'none';
 
             document.getElementById('flipCardStats').innerHTML = `
-                <div style="font-weight:800; font-size:0.95rem; margin-bottom:0.2rem;">${card.name}</div>
+                <div style="font-weight:800; font-size:0.95rem; margin-bottom:0.2rem;">${escapeHtml(card.name)}</div>
                 <div style="font-size:0.78rem; opacity:0.85; margin-bottom:0.6rem;"><code style="background:none; color:inherit; padding:0;">${card.code}</code></div>
-                ${card.notes ? `<div style="font-size:0.78rem; opacity:0.85; margin-top:0.4rem;">✨ ${card.notes}</div>` : ''}
+                ${card.notes ? `<div style="font-size:0.78rem; opacity:0.85; margin-top:0.4rem;">✨ ${escapeHtml(card.notes)}</div>` : ''}
             `;
             renderRetroCartaViewer(card);
 
@@ -709,6 +709,12 @@
             return v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
         }
 
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str == null ? '' : String(str);
+            return div.innerHTML;
+        }
+
         async function caricaCatalogo() {
             const params = new URLSearchParams(window.location.search);
             const userId = params.get('u');
@@ -782,12 +788,12 @@
                                onchange="toggleSelezione('${c.id}', this.checked)">
                         ${(() => { const immagineSrc = _urlImmagineVisualizzabile(c.immagine); return immagineSrc ? `<img src="${immagineSrc}" alt="" class="card-thumb" onclick="event.stopPropagation(); apriFlipCard('${c.id}')" onerror="this.style.display='none';">` : ''; })()}
                         <div class="card-info">
-                            <div class="card-name">${c.name}${c.code ? ` <span style="color:var(--text-muted); font-weight:600;">(${c.code})</span>` : ''}</div>
+                            <div class="card-name">${escapeHtml(c.name)}${c.code ? ` <span style="color:var(--text-muted); font-weight:600;">(${c.code})</span>` : ''}</div>
                             <div class="card-meta">
                                 <span class="badge">${c.lang}</span>
                                 <span class="badge">${c.cond}</span>
                                 <span class="badge">Disp. ${c.qtyDisponibile}</span>
-                                ${c.notes ? `<span class="badge">✨ ${c.notes}</span>` : ''}
+                                ${c.notes ? `<span class="badge">✨ ${escapeHtml(c.notes)}</span>` : ''}
                                 <!-- A16: placeholder badge "cercata da X persone nel gruppo" —
                                      SEMPRE nascosto finché non esiste la RPC conta_desiderata_gruppo
                                      (Fase A0). Specifica completa: DECISIONI_SESSIONE_BINDER.txt,
