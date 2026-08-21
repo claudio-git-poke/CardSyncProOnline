@@ -167,6 +167,11 @@ REM l'estensione ogni volta.
 REM --- Passo 4: estrae (crea la cartella se non esiste ancora) ---------------
 echo Installo...
 if not exist "!CARTELLA_ESTENSIONE!" mkdir "!CARTELLA_ESTENSIONE!" >nul 2>&1
+REM FIX (bug [13]): svuota la cartella PRIMA di estrarre, cosi' un file
+REM rimosso/rinominato in una release non resta come "orfano" inutilizzato
+REM insieme ai nuovi file (Expand-Archive -Force sovrascrive solo gli
+REM omonimi, non cancella quelli che non fanno piu' parte dello zip).
+powershell -NoProfile -Command "Remove-Item -Path '!CARTELLA_ESTENSIONE!\*' -Recurse -Force" >nul 2>&1
 powershell -NoProfile -Command "Expand-Archive -Path '%TEMP_ZIP%' -DestinationPath '!CARTELLA_ESTENSIONE!' -Force"
 del "%TEMP_ZIP%" >nul 2>&1
 echo Fatto.
