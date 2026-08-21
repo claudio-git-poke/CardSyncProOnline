@@ -65,10 +65,24 @@ echo Cerco la cartella dell'estensione nelle impostazioni di Chrome...
 >> "%PS_RILEVA%" echo }
 
 set "CARTELLA_ESTENSIONE="
+set "CARTELLA_ESTENSIONE_CONTEGGIO=0"
 for /f "usebackq delims=" %%F in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%PS_RILEVA%"`) do (
     set "CARTELLA_ESTENSIONE=%%F"
+    set /a CARTELLA_ESTENSIONE_CONTEGGIO+=1
 )
 del "%PS_RILEVA%" >nul 2>&1
+
+REM FIX (bug [23]): prima, con l'estensione caricata come "non pacchettizzata"
+REM su più di un profilo Chrome sulla stessa macchina, il ciclo sopra teneva
+REM silenziosamente solo l'ultima cartella rilevata, senza dire che ne
+REM esistevano altre. Ora almeno avvisa (non sceglie comunque per te quale
+REM usare, resta l'ultima trovata) — caso raro con un solo profilo Chrome.
+if %CARTELLA_ESTENSIONE_CONTEGGIO% GTR 1 (
+    echo ATTENZIONE: rilevati %CARTELLA_ESTENSIONE_CONTEGGIO% profili Chrome con CardSync Pro caricata.
+    echo Verra' aggiornata solo l'ultima rilevata: !CARTELLA_ESTENSIONE!
+    echo Se non e' quella giusta, aggiorna manualmente gli altri profili.
+    echo.
+)
 
 if defined CARTELLA_ESTENSIONE goto :trovata_automaticamente
 goto :non_trovata_automaticamente
