@@ -354,6 +354,16 @@ function mostraStatus(msg, ok) {
 
 function fmtData(d) { return d ? new Date(d).toLocaleString('it-IT') : '—'; }
 
+// FIX (bug [15]): formatta una Date come YYYY-MM-DD usando i componenti
+// LOCALI, non .toISOString() (sempre UTC — causava uno shift di un giorno
+// nei preset data tra mezzanotte e le ~2 del mattino in Italia).
+function _dataLocaleISO(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 // Escaping minimo per valori utente inseriti in attributi HTML (campi
 // anagrafici editabili sotto) — evita che virgolette/tag nel dato
 // rompano il markup della modale.
@@ -579,6 +589,21 @@ function renderRichieste() {
       }
 
       if (nuovaPwGenerata) {
+        // FIX (bug [14]): _ultimeRichiesteCaricate non viene ricaricato da
+        // qui (di proposito: il pannello password sotto va mostrato SUBITO,
+        // un refresh lo farebbe sparire visto che la password non è salvata
+        // da nessuna parte, va copiata ora). Ma senza aggiornare anche solo
+        // lo status in memoria, un clic su "Nascondi già gestite"/"Mostra
+        // tutte" PRIMA del prossimo caricaRichieste() ricostruiva la riga
+        // da un record ancora 'pending' — pannello password sparito,
+        // bottoni Approva/Rifiuta ricomparsi, un secondo Approva sarebbe
+        // andato in errore RPC (richiesta non più pending). Aggiornando lo
+        // status qui, un render successivo la mostra correttamente come
+        // "approved" (nessun bottone, vedi renderRichieste), niente stato
+        // inconsistente.
+        const rigaInMemoria = _ultimeRichiesteCaricate.find(r => String(r.id) === String(id));
+        if (rigaInMemoria) rigaInMemoria.status = 'approved';
+
         // Non ricarichiamo subito la lista: mostriamo prima la password
         // generata con il tasto Condividi, stesso pattern già usato
         // nella modale utente per "Genera e reimposta password".
@@ -621,8 +646,12 @@ document.querySelectorAll('[data-preset]').forEach(btn => {
     if (btn.dataset.preset === 'oggi') da = new Date(oggi);
     else if (btn.dataset.preset === '7g') { da = new Date(oggi); da.setDate(da.getDate() - 6); }
     else if (btn.dataset.preset === 'mese') da = new Date(oggi.getFullYear(), oggi.getMonth(), 1);
-    document.getElementById('filtroDataDaRichieste').value = da.toISOString().slice(0, 10);
-    document.getElementById('filtroDataARichieste').value = oggi.toISOString().slice(0, 10);
+    // FIX (bug [15]): .toISOString() converte sempre a UTC — con orario
+    // Italia, cliccando un preset tra mezzanotte e le ~2 del mattino la
+    // data calcolata risultava quella di ieri invece di oggi. _dataLocaleISO
+    // usa i componenti locali (anno/mese/giorno) invece di passare per UTC.
+    document.getElementById('filtroDataDaRichieste').value = _dataLocaleISO(da);
+    document.getElementById('filtroDataARichieste').value = _dataLocaleISO(oggi);
     caricaRichieste();
   });
 });
